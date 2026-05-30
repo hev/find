@@ -9,7 +9,7 @@ interface Props {
 }
 
 const {
-  endpoint = '/api/agentic-search',
+  endpoint = '/api/find',
   placeholder = 'Search the docs…',
   debounce = 300,
 } = Astro.props;
@@ -41,22 +41,22 @@ const {
     </div>
 
     <div class="as-results" role="listbox" aria-label="Search results" tabindex="-1"></div>
+    <div class="as-searched" hidden></div>
 
     <div class="as-footer">
       <span class="as-hint">
-        <kbd class="as-kbd">↑</kbd><kbd class="as-kbd">↓</kbd> navigate
-        <kbd class="as-kbd">↵</kbd> open
+        <kbd class="as-kbd">↵</kbd> ask AI · <kbd class="as-kbd">↑</kbd><kbd class="as-kbd">↓</kbd> open
       </span>
       <span class="as-meta">
         <span class="as-mode" hidden>
           <span class="as-mode-label"></span>
           <button class="as-mode-toggle" type="button"></button>
         </span>
-        <span class="as-brand">Agent search by <a
+        <span class="as-brand"><a
             class="as-brandlink"
             href="https://hevmind.com"
             target="_blank"
-            rel="noopener noreferrer">hev</a></span>
+            rel="noopener noreferrer">hev find</a></span>
       </span>
     </div>
   </div>
@@ -143,6 +143,17 @@ const {
     background: var(--as-hover);
   }
 
+  .as-hint :global(.as-kbd) {
+    font-family: var(--font-mono, "JetBrains Mono Variable", ui-monospace, monospace);
+    font-size: 0.7rem;
+    line-height: 1;
+    padding: 3px 6px;
+    border: 1px solid var(--as-border);
+    border-radius: 5px;
+    color: var(--as-muted);
+    background: var(--as-hover);
+  }
+
   .as-results {
     max-height: min(56vh, 440px);
     overflow-y: auto;
@@ -212,6 +223,13 @@ const {
     overflow: hidden;
   }
 
+  .as-results :global(.as-result-heading) {
+    margin-top: 1px;
+    font-size: 0.72rem;
+    color: var(--as-muted);
+    opacity: 0.86;
+  }
+
   .as-results :global(.as-state) {
     padding: 22px 16px;
     text-align: center;
@@ -221,6 +239,13 @@ const {
 
   .as-results :global(.as-state.as-error) {
     color: var(--as-accent);
+  }
+
+  .as-searched {
+    padding: 0 16px 9px;
+    color: var(--as-muted);
+    font-size: 0.72rem;
+    opacity: 0.72;
   }
 
   .as-footer {
@@ -306,15 +331,25 @@ const {
 <script>
   interface SearchResult {
     title: string;
+    heading?: string;
     url: string;
     group?: string;
     snippet: string;
   }
 
-  class AgenticSearchOverlay {
+  interface SearchResponse {
+    results?: SearchResult[];
+    searches?: string[];
+    model?: string;
+    error?: string;
+  }
+
+  class HevFindOverlay {
     private dialog: HTMLDialogElement;
     private input: HTMLInputElement;
     private results: HTMLDivElement;
+    private searched: HTMLDivElement;
+    private hint: HTMLElement;
     private modeEl: HTMLElement | null;
     private modeLabelEl: HTMLElement | null;
     private modeToggleEl: HTMLButtonElement | null;
@@ -327,14 +362,17 @@ const {
     private items: HTMLAnchorElement[] = [];
     private active = -1;
     private lastQuery = '';
+    private userSelected = false;
     private pressOnBackdrop = false;
 
     constructor(dialog: HTMLDialogElement) {
       this.dialog = dialog;
-      this.endpoint = dialog.dataset.endpoint || '/api/agentic-search';
+      this.endpoint = dialog.dataset.endpoint || '/api/find';
       this.debounceMs = Number(dialog.dataset.debounce) || 300;
       this.input = dialog.querySelector('.as-input') as HTMLInputElement;
       this.results = dialog.querySelector('.as-results') as HTMLDivElement;
+      this.searched = dialog.querySelector('.as-searched') as HTMLDivElement;
+      this.hint = dialog.querySelector('.as-hint') as HTMLElement;
       this.modeEl = dialog.querySelector('.as-mode');
       this.modeLabelEl = dialog.querySelector('.as-mode-label');
       this.modeToggleEl = dialog.querySelector('.as-mode-toggle');
@@ -371,9 +409,12 @@ const {
       window.clearTimeout(this.timer);
       this.input.value = '';
       this.results.innerHTML = '';
+      this.searched.hidden = true;
+      this.searched.textContent = '';
       this.items = [];
       this.active = -1;
       this.lastQuery = '';
+      this.userSelected = false;
     }
 
     private onInput() {
@@ -384,23 +425,37 @@ const {
         this.render([]);
         return;
       }
-      this.timer = window.setTimeout(() => this.search(q), this.debounceMs);
+      this.timer = window.setTimeout(() => this.searchKeyword(q), this.debounceMs);
     }
 
-    private async search(query: string) {
+    private async searchKeyword(query: string) {
       if (query === this.lastQuery) return;
       this.lastQuery = query;
+      await this.search(query, 'keyword');
+    }
+
+    private async runAgentic(query: string) {
+      this.lastQuery = '';
+      await this.search(query, 'agentic');
+    }
+
+    private async search(query: string, mode: 'keyword' | 'agentic') {
       this.controller?.abort();
       this.controller = new AbortController();
+      this.searched.hidden = true;
+      this.searched.textContent = '';
       this.setState('Searching…');
+      const rankingTimer =
+        mode === 'agentic' ? window.setTimeout(() => this.setState('Ranking…'), 700) : undefined;
 
       try {
         const res = await fetch(this.endpoint, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ query, mode: this.agentic ? 'agentic' : 'keyword' }),
+          body: JSON.stringify({ query, mode }),
           signal: this.controller.signal,
         });
+        if (rankingTimer) window.clearTimeout(rankingTimer);
         const contentType = res.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
           throw new Error(
@@ -409,7 +464,7 @@ const {
               : `Unexpected response from search endpoint (${res.status}).`,
           );
         }
-        const data = await res.json();
+        const data = (await res.json()) as SearchResponse;
         if (!res.ok) throw new Error(data.error || 'Search failed.');
         if (data.model) this.setModel(data.model);
         // Ignore stale responses if the query moved on.
@@ -418,8 +473,9 @@ const {
           this.setState('No results.');
           return;
         }
-        this.render(data.results as SearchResult[]);
+        this.render(data.results, data.searches);
       } catch (err) {
+        if (rankingTimer) window.clearTimeout(rankingTimer);
         if ((err as Error).name === 'AbortError') return;
         this.setState((err as Error).message, true);
       }
@@ -428,13 +484,16 @@ const {
     private setState(message: string, isError = false) {
       this.items = [];
       this.active = -1;
+      this.userSelected = false;
+      this.searched.hidden = true;
+      this.searched.textContent = '';
       this.results.innerHTML = `<div class="as-state${isError ? ' as-error' : ''}"></div>`;
       (this.results.firstElementChild as HTMLElement).textContent = message;
     }
 
     private readPref(): boolean {
       try {
-        return localStorage.getItem('agentic-search:mode') !== 'keyword';
+        return localStorage.getItem('hev-find:mode') !== 'keyword';
       } catch {
         return true;
       }
@@ -442,7 +501,7 @@ const {
 
     private writePref() {
       try {
-        localStorage.setItem('agentic-search:mode', this.agentic ? 'agentic' : 'keyword');
+        localStorage.setItem('hev-find:mode', this.agentic ? 'agentic' : 'keyword');
       } catch {
         /* storage unavailable — preference is session-only */
       }
@@ -457,16 +516,20 @@ const {
       if (!this.modeEl || !this.modeLabelEl || !this.modeToggleEl) return;
       if (this.agentic) {
         this.modeEl.classList.remove('as-mode--off');
-        this.modeLabelEl.textContent = this.model || 'AI ranking';
+        this.modeLabelEl.textContent = this.model || 'AI on Enter';
         this.modeToggleEl.textContent = '✕';
-        this.modeToggleEl.title = 'Switch to keyword search';
-        this.modeToggleEl.setAttribute('aria-label', 'Switch to keyword search');
+        this.modeToggleEl.title = 'Disable AI on Enter';
+        this.modeToggleEl.setAttribute('aria-label', 'Disable AI on Enter');
+        this.hint.innerHTML =
+          '<kbd class="as-kbd">↵</kbd> ask AI · <kbd class="as-kbd">↑</kbd><kbd class="as-kbd">↓</kbd> open';
       } else {
         this.modeEl.classList.add('as-mode--off');
-        this.modeLabelEl.textContent = 'keyword search';
-        this.modeToggleEl.textContent = this.model ? `use ${this.model}` : 'use AI ranking';
-        this.modeToggleEl.title = 'Switch to AI ranking';
-        this.modeToggleEl.setAttribute('aria-label', 'Switch to AI ranking');
+        this.modeLabelEl.textContent = 'keyword only';
+        this.modeToggleEl.textContent = 'AI';
+        this.modeToggleEl.title = 'Enable AI on Enter';
+        this.modeToggleEl.setAttribute('aria-label', 'Enable AI on Enter');
+        this.hint.innerHTML =
+          '<kbd class="as-kbd">↑</kbd><kbd class="as-kbd">↓</kbd> navigate <kbd class="as-kbd">↵</kbd> open';
       }
       this.modeEl.hidden = false;
     }
@@ -478,14 +541,17 @@ const {
       const q = this.input.value.trim();
       if (q) {
         this.lastQuery = '';
-        this.search(q);
+        this.searchKeyword(q);
       }
     }
 
-    private render(results: SearchResult[]) {
+    private render(results: SearchResult[], searches: string[] = []) {
       this.results.innerHTML = '';
+      this.searched.hidden = true;
+      this.searched.textContent = '';
       this.items = [];
       this.active = -1;
+      this.userSelected = false;
       for (const r of results) {
         const a = document.createElement('a');
         a.className = 'as-result';
@@ -505,22 +571,36 @@ const {
           top.appendChild(group);
         }
 
+        const heading = document.createElement('div');
+        heading.className = 'as-result-heading';
+        heading.textContent = r.heading ? `${r.group ? `${r.group} › ` : ''}${r.heading}` : '';
+        heading.hidden = !r.heading;
+
         const snippet = document.createElement('div');
         snippet.className = 'as-result-snippet';
         snippet.textContent = r.snippet;
 
-        a.append(top, snippet);
-        a.addEventListener('mousemove', () => this.setActive(this.items.indexOf(a)));
+        a.append(top, heading, snippet);
+        a.addEventListener('mousemove', () => this.setActive(this.items.indexOf(a), true));
         this.results.appendChild(a);
         this.items.push(a);
+      }
+      if (searches.length) {
+        this.searched.textContent = `searched: ${searches.join(', ')}`;
+        this.searched.hidden = false;
       }
       if (this.items.length) this.setActive(0);
     }
 
-    private setActive(i: number) {
-      if (i < 0 || i >= this.items.length || i === this.active) return;
+    private setActive(i: number, userSelected = false) {
+      if (i < 0 || i >= this.items.length) return;
+      if (i === this.active) {
+        if (userSelected) this.userSelected = true;
+        return;
+      }
       this.items[this.active]?.setAttribute('aria-selected', 'false');
       this.active = i;
+      if (userSelected) this.userSelected = true;
       const el = this.items[i];
       el.setAttribute('aria-selected', 'true');
       el.scrollIntoView({ block: 'nearest' });
@@ -529,15 +609,19 @@ const {
     private onKeydown(e: KeyboardEvent) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        this.setActive(Math.min(this.active + 1, this.items.length - 1));
+        this.setActive(Math.min(this.active + 1, this.items.length - 1), true);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        this.setActive(Math.max(this.active - 1, 0));
+        this.setActive(Math.max(this.active - 1, 0), true);
       } else if (e.key === 'Enter') {
         const el = this.items[this.active];
-        if (el) {
+        const q = this.input.value.trim();
+        if (el && (this.userSelected || !this.agentic || !q)) {
           e.preventDefault();
           window.location.href = el.href;
+        } else if (q && this.agentic) {
+          e.preventDefault();
+          this.runAgentic(q);
         }
       }
     }
@@ -546,7 +630,7 @@ const {
   function init() {
     const dialog = document.querySelector('.as-overlay') as HTMLDialogElement | null;
     if (!dialog) return;
-    const overlay = new AgenticSearchOverlay(dialog);
+    const overlay = new HevFindOverlay(dialog);
 
     // Global hotkeys: ⌘K / Ctrl+K anywhere, or "/" when not typing in a field.
     document.addEventListener('keydown', (e) => {
@@ -563,8 +647,8 @@ const {
       }
     });
 
-    // Any element with [data-agentic-search-open] opens the overlay.
-    document.querySelectorAll('[data-agentic-search-open]').forEach((el) => {
+    // Any element with [data-hev-find-open] opens the overlay.
+    document.querySelectorAll('[data-hev-find-open]').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.preventDefault();
         overlay.open();

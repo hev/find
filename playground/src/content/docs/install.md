@@ -8,9 +8,13 @@ order: 2
 There are two supported ways to install Layer: the native binary and the Docker
 image.
 
+## Native binary
+
 For the native binary, download the release for your platform and place it on
 your `PATH`. Verify the install with `layer --version`. The binary is
 self-contained and has no runtime dependencies.
+
+## Docker
 
 To run with Docker, pull `ghcr.io/layer/layer:latest` and mount your config
 directory. The provided `docker-compose.yml` brings up Layer alongside a local

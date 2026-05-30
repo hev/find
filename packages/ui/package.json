@@ -1,8 +1,8 @@
 {
-  "name": "@hev/astro-agentic-search",
+  "name": "@hev/find",
   "version": "0.0.1",
   "type": "module",
-  "description": "A ⌘K agentic search overlay for Astro docs sites — a search-results generator powered by Claude, not a chatbot.",
+  "description": "hev find: a heading-anchored, agentic search overlay for Astro docs sites.",
   "keywords": [
     "astro",
     "astro-integration",
@@ -16,11 +16,14 @@
     "ai"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/hev/astro-agentic-search#readme",
+  "homepage": "https://github.com/hev/find#readme",
   "sideEffects": false,
   "files": [
     "src"
   ],
+  "bin": {
+    "hev-find-kg": "./src/kg/cli.ts"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./endpoint": "./src/endpoint.ts",
@@ -28,7 +31,13 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "kg:build": "node src/kg/cli.ts build",
+    "kg:verify": "node src/kg/cli.ts verify",
+    "test": "node --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "github-slugger": "^2.0.0"
   },
   "peerDependencies": {
     "astro": ">=5.0.0"

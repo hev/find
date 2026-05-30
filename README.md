@@ -1,24 +1,23 @@
-# @hev/astro-agentic-search
+# hev find
 
-A ⌘K agentic search overlay for Astro docs sites. It is a **search-results
-generator**, not a chatbot: given a query, it reranks your content collections
-with Claude (Haiku by default, for speed) and returns a list of result cards
-with AI-written one-line snippets — never a conversational answer.
+hev find is a ⌘K search overlay for Astro docs sites. It combines instant
+keyword search over heading anchors with an optional Claude-powered search loop
+that runs when the reader presses `Enter`.
 
-- **Overlay UX** — native `<dialog>` command palette, open with `⌘K` / `Ctrl+K`
-  or `/`, arrow-key navigation, `Enter` to open a result.
-- **Search-results generator** — Claude selects, ranks, and writes a snippet per
-  result. URLs are mapped server-side from document IDs, so they can't be
-  hallucinated.
-- **Zero runtime dependencies** — talks to the Anthropic API over `fetch`.
-- **Themeable** — inherits your site's CSS custom properties (`--paper`,
-  `--signal`, …) with sensible dark-mode fallbacks.
+- **Instant keyword path** — every typed query searches content chunks locally
+  on the server; no API key is needed for this mode.
+- **Anchor results** — docs are chunked by headings, so results can link to
+  `/docs/page#section` instead of only the page root.
+- **Agentic Enter** — Claude decides focused sub-queries, uses the keyword
+  search tool, and presents ranked section results with one-line snippets.
+- **Knowledge graph** — an optional committed `.hev-find/kg.json` adds domain
+  context and glossary aliases for better retrieval.
 
 ## Repo layout
 
 ```
 .
-├─ packages/ui      # the published package: @hev/astro-agentic-search
+├─ packages/ui      # the published package: @hev/find
 └─ playground       # a local Astro docs site that mirrors layer/site for dev
 ```
 
@@ -26,24 +25,48 @@ with AI-written one-line snippets — never a conversational answer.
 
 ```sh
 pnpm install
-cp playground/.env.example playground/.env   # add your ANTHROPIC_API_KEY
-pnpm dev                                      # runs the playground
+cp playground/.env.example playground/.env   # add ANTHROPIC_API_KEY for AI search/KG builds
+pnpm dev
 ```
 
 Open the playground and press `⌘K`.
 
+Useful checks:
+
+```sh
+pnpm test
+pnpm typecheck
+pnpm build
+pnpm kg:build
+pnpm kg:verify
+```
+
 ## Use in a site
+
+Install the package from npm when published:
+
+```sh
+pnpm add @hev/find
+```
+
+Until then, consume the latest GitHub version from the package subdirectory:
+
+```sh
+pnpm add "git+ssh://git@github.com/hev/find.git#main&path:/packages/ui"
+```
 
 ```js
 // astro.config.mjs
-import agenticSearch from '@hev/astro-agentic-search';
+import hevFind from '@hev/find';
 
 export default defineConfig({
   integrations: [
-    agenticSearch({
-      collections: ['docs'],     // content collections to index
-      basePath: '/docs/',        // how slugs map to URLs
-      // model: 'claude-haiku-4-5', maxResults: 6, endpoint: '/api/agentic-search'
+    hevFind({
+      collections: ['docs'],
+      basePath: '/docs/',
+      // endpoint: '/api/find',
+      // model: 'claude-haiku-4-5',
+      // kgModel: 'claude-opus-4-8',
     }),
   ],
 });
@@ -51,12 +74,25 @@ export default defineConfig({
 
 ```astro
 ---
-// In your layout, once:
-import SearchOverlay from '@hev/astro-agentic-search/components/SearchOverlay.astro';
+import SearchOverlay from '@hev/find/components/SearchOverlay.astro';
 ---
-<button data-agentic-search-open>Search <kbd>⌘K</kbd></button>
+<button data-hev-find-open>Search <kbd>⌘K</kbd></button>
 <SearchOverlay />
 ```
 
-Set `ANTHROPIC_API_KEY` in the deploy environment. The injected endpoint is
-on-demand, so the site needs a server adapter in production.
+Set `ANTHROPIC_API_KEY` in the server environment for AI search. Without it,
+the endpoint still returns keyword results.
+
+## Knowledge Graph
+
+The optional knowledge graph is generated offline and committed into the
+consumer site:
+
+```sh
+pnpm exec hev-find-kg build
+pnpm exec hev-find-kg verify
+```
+
+`build` writes `.hev-find/kg.json` and skips the model call when the current
+content hash already matches. `verify` builds the site and checks that every
+heading chunk URL points at a real rendered anchor.

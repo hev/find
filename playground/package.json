@@ -5,11 +5,18 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "kg:build": "hev-find-kg build",
+    "kg:verify": "hev-find-kg verify",
     "preview": "astro preview",
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@hev/astro-agentic-search": "workspace:*",
+    "@hev/find": "workspace:*",
     "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/node": "^9.5.5",
+    "typescript": "^6.0.3"
   }
 }

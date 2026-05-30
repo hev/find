@@ -7,14 +7,25 @@ declare module 'astro:content' {
   export function getCollection(name: string): Promise<any[]>;
 }
 
-declare module 'virtual:agentic-search/config' {
+declare module 'virtual:hev-find/config' {
   const config: {
     collections: string[] | null;
     model: string;
+    kgModel: string;
     basePath: string;
     maxResults: number;
-    candidatePool: number;
+    maxIterations: number;
+    chunkHeadingDepth: number;
+    candidatePerSearch: number;
+    perDocCap: number;
+    kgPath: string;
+    kgContentGlobs?: string[];
     endpoint: string;
   };
   export default config;
+}
+
+declare module 'virtual:hev-find/kg' {
+  const kg: import('../src/kg/schema').KnowledgeGraph;
+  export default kg;
 }

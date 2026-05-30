@@ -9,6 +9,18 @@ export interface AnthropicMessage {
   content: unknown;
 }
 
+export interface AnthropicTextBlock {
+  type: 'text';
+  text: string;
+  cache_control?: { type: 'ephemeral' };
+}
+
+export interface AnthropicToolResultBlock {
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string;
+}
+
 export interface AnthropicTool {
   name: string;
   description: string;
@@ -18,7 +30,7 @@ export interface AnthropicTool {
 export interface CallClaudeOptions {
   apiKey: string;
   model: string;
-  system: string;
+  system: string | AnthropicTextBlock[];
   messages: AnthropicMessage[];
   tools?: AnthropicTool[];
   toolChoice?: { type: 'tool'; name: string } | { type: 'auto' };
@@ -43,7 +55,7 @@ export async function callClaude(opts: CallClaudeOptions): Promise<AnthropicResp
     },
     body: JSON.stringify({
       model: opts.model,
-      max_tokens: opts.maxTokens ?? 1024,
+      max_tokens: opts.maxTokens ?? 2048,
       system: opts.system,
       messages: opts.messages,
       tools: opts.tools,

@@ -7,9 +7,13 @@ order: 2
 
 The `layer` CLI is the primary way to manage pipelines locally and in CI.
 
+## Authentication
+
 Authenticate once with `layer auth login`; credentials are cached in your home
 directory. Use `layer pipeline run ./pipeline.toml` to start a pipeline from a
 config file, and `layer pipeline ls` to list running pipelines and their lag.
+
+## Pipeline commands
 
 Common commands:
 

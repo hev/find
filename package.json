@@ -1,11 +1,14 @@
 {
-  "name": "astro-agentic-search-monorepo",
+  "name": "hev-find",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.29.3",
   "scripts": {
     "dev": "pnpm --filter playground dev",
     "build": "pnpm --filter playground build",
+    "kg:build": "pnpm --filter playground kg:build",
+    "kg:verify": "pnpm --filter playground kg:verify",
+    "test": "pnpm --filter @hev/find test",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

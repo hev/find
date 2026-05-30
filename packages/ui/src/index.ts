@@ -1,2 +1,2 @@
 export { default } from './integration';
-export type { AgenticSearchOptions } from './types';
+export type { HevFindOptions } from './types';
