@@ -103,6 +103,10 @@ The package is structured for npm distribution as `@hev/find`, with `src`
 exports for Astro/Vite consumers and a plain JavaScript `hev-find-kg` bin for
 CLI use from `node_modules`.
 
+Current consumers can pin the GitHub package while the API settles, but npm is
+the intended distribution channel. Once `@hev/find` is published, downstream
+sites should depend on a normal semver range instead of a Git SHA.
+
 Before publishing:
 
 1. Set the intended semver in `packages/ui/package.json`.

@@ -99,6 +99,9 @@ pnpm publish --access public
 After publish, consumers should depend on the npm semver range instead of the
 Git `path:/packages/ui` dependency.
 
+Git dependencies are acceptable for local integration while the package is not
+yet published, but they are not the long-term distribution path.
+
 ## Server Requirements
 
 - Set `ANTHROPIC_API_KEY` for AI search and fresh KG generation.
