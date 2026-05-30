@@ -21,6 +21,7 @@ export default function hevFind(options: HevFindOptions = {}): AstroIntegration 
     endpoint: options.endpoint ?? '/api/find',
     basePath: options.basePath ?? '/docs/',
     maxResults: options.maxResults ?? 6,
+    answerMaxTokens: options.answerMaxTokens ?? 1024,
     maxIterations: options.maxIterations ?? 4,
     chunkHeadingDepth: options.chunkHeadingDepth ?? 3,
     candidatePerSearch: options.candidatePerSearch ?? 8,

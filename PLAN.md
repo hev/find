@@ -309,3 +309,32 @@ collections, endpoint, basePath  // unchanged
 - **Recall ceiling** is still keyword+glossary retrieval — the agent ranks
   independently but can't rank what retrieval never surfaces. Embeddings remain
   the deferred upgrade if paraphrase recall proves insufficient.
+
+## 15. Addendum: streaming RAG (supersedes the top-k output)
+
+The agentic path no longer ends in a `present_results` top-k list. It now
+**streams a grounded answer**. The search loop is unchanged in spirit — the
+model still drives its own `search` sub-queries — but the output is prose with
+inline deep links rather than ranked rows.
+
+- **Two phases.** Phase 1 is the non-streaming `search`-tool loop (intermediate
+  turns are tool-use turns we reconstruct before searching). When the model
+  issues no search, or `maxIterations` is hit, phase 2 calls the model **once
+  more with no tools** and **streams** its answer token-by-token. Removing the
+  tools is what forces an answer instead of another search — no need to stream
+  speculative text and retract it.
+- **Grounding.** The system prompt restricts links to the exact `url`s returned
+  by `search`; the answer turn is also handed the allow-list of seen URLs. The
+  overlay validates every emitted link against the streamed `sources` set and
+  renders any off-list link as plain text — two layers against hallucinated
+  anchors.
+- **Transport.** `endpoint.ts` returns `text/event-stream` for agentic mode with
+  `search` / `sources` / `token` / `done` / `error` events; keyword mode and the
+  no-key downgrade stay JSON, and the overlay branches on `content-type`.
+  `llm.ts` gains `streamClaude` (+ a pure `parseSseChunk`) alongside the
+  unchanged `callClaude`. Edge-safe: `ReadableStream`, `TextDecoder({stream})`,
+  `cache-control: no-transform`.
+- **New code:** `search/loop.ts` → `runAgenticAnswerLoop` (async generator of
+  `AgenticEvent`); `components/markdown.ts` (minimal streaming-safe renderer,
+  no new dependency); `answerMaxTokens` option (default 1024). `maxResults` now
+  caps the cited source set, not a rendered list.

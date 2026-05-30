@@ -35,6 +35,8 @@ export interface CallClaudeOptions {
   tools?: AnthropicTool[];
   toolChoice?: { type: 'tool'; name: string } | { type: 'auto' };
   maxTokens?: number;
+  /** Aborts the upstream request when the client disconnects. */
+  signal?: AbortSignal;
 }
 
 export interface AnthropicResponse {
@@ -45,22 +47,32 @@ export interface AnthropicResponse {
   stop_reason: string | null;
 }
 
+function requestBody(opts: CallClaudeOptions, stream: boolean) {
+  return JSON.stringify({
+    model: opts.model,
+    max_tokens: opts.maxTokens ?? 2048,
+    system: opts.system,
+    messages: opts.messages,
+    tools: opts.tools,
+    tool_choice: opts.toolChoice,
+    stream: stream || undefined,
+  });
+}
+
+function headers(apiKey: string) {
+  return {
+    'content-type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': API_VERSION,
+  };
+}
+
 export async function callClaude(opts: CallClaudeOptions): Promise<AnthropicResponse> {
   const res = await fetch(API_URL, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': opts.apiKey,
-      'anthropic-version': API_VERSION,
-    },
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens ?? 2048,
-      system: opts.system,
-      messages: opts.messages,
-      tools: opts.tools,
-      tool_choice: opts.toolChoice,
-    }),
+    headers: headers(opts.apiKey),
+    body: requestBody(opts, false),
+    signal: opts.signal,
   });
 
   if (!res.ok) {
@@ -69,4 +81,134 @@ export async function callClaude(opts: CallClaudeOptions): Promise<AnthropicResp
   }
 
   return (await res.json()) as AnthropicResponse;
+}
+
+/** High-level events surfaced from the Anthropic SSE stream. */
+export type StreamEvent =
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: unknown }
+  | { type: 'stop'; stopReason: string | null };
+
+/**
+ * Streams a Messages API response, yielding text deltas as they arrive and
+ * fully-reconstructed tool_use blocks once their streamed JSON input completes.
+ */
+export async function* streamClaude(opts: CallClaudeOptions): AsyncGenerator<StreamEvent> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: headers(opts.apiKey),
+    body: requestBody(opts, true),
+    signal: opts.signal,
+  });
+
+  if (!res.ok || !res.body) {
+    const detail = res.ok ? 'no response body' : await res.text().catch(() => '');
+    throw new Error(`Anthropic API ${res.status}: ${detail.slice(0, 500)}`);
+  }
+
+  const reader = res.body.getReader();
+  // `{ stream: true }` so multibyte tokens split across network chunks decode
+  // without producing replacement characters.
+  const decoder = new TextDecoder('utf-8');
+  const state = newSseState();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const { events, state: next } = parseSseChunk(decoder.decode(value, { stream: true }), state);
+    Object.assign(state, next);
+    for (const event of events) yield event;
+  }
+}
+
+interface SseToolBlock {
+  kind: 'tool_use';
+  id: string;
+  name: string;
+  json: string;
+}
+interface SseTextBlock {
+  kind: 'text';
+}
+type SseBlock = SseToolBlock | SseTextBlock;
+
+export interface SseParseState {
+  /** Bytes not yet terminated by a blank line. */
+  buffer: string;
+  /** Content blocks indexed by their position in the message. */
+  blocks: Record<number, SseBlock>;
+}
+
+export function newSseState(): SseParseState {
+  return { buffer: '', blocks: {} };
+}
+
+/**
+ * Pure, network-free SSE frame parser. Feeds on decoded text chunks and returns
+ * any high-level events that completed, plus the carried-over parse state.
+ */
+export function parseSseChunk(
+  chunk: string,
+  prev: SseParseState,
+): { events: StreamEvent[]; state: SseParseState } {
+  const events: StreamEvent[] = [];
+  const blocks = prev.blocks;
+  let buffer = prev.buffer + chunk;
+
+  let sep: number;
+  while ((sep = buffer.indexOf('\n\n')) !== -1) {
+    const frame = buffer.slice(0, sep);
+    buffer = buffer.slice(sep + 2);
+
+    const data = frame
+      .split('\n')
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trim())
+      .join('');
+    if (!data || data === '[DONE]') continue;
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(data) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+
+    const type = payload.type;
+    if (type === 'content_block_start') {
+      const index = payload.index as number;
+      const block = payload.content_block as { type?: string; id?: string; name?: string };
+      if (block?.type === 'tool_use') {
+        blocks[index] = { kind: 'tool_use', id: block.id ?? '', name: block.name ?? '', json: '' };
+      } else {
+        blocks[index] = { kind: 'text' };
+      }
+    } else if (type === 'content_block_delta') {
+      const index = payload.index as number;
+      const delta = payload.delta as { type?: string; text?: string; partial_json?: string };
+      if (delta?.type === 'text_delta' && typeof delta.text === 'string') {
+        events.push({ type: 'text', text: delta.text });
+      } else if (delta?.type === 'input_json_delta') {
+        const block = blocks[index];
+        if (block?.kind === 'tool_use') block.json += delta.partial_json ?? '';
+      }
+    } else if (type === 'content_block_stop') {
+      const block = blocks[payload.index as number];
+      if (block?.kind === 'tool_use') {
+        let input: unknown = {};
+        try {
+          input = JSON.parse(block.json || '{}');
+        } catch {
+          input = {};
+        }
+        events.push({ type: 'tool_use', id: block.id, name: block.name, input });
+      }
+    } else if (type === 'message_delta') {
+      const delta = payload.delta as { stop_reason?: string | null };
+      events.push({ type: 'stop', stopReason: delta?.stop_reason ?? null });
+    }
+    // `ping`, `message_start`, and `message_stop` need no surfaced event.
+  }
+
+  return { events, state: { buffer, blocks } };
 }

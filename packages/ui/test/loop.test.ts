@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { CallClaude } from '../src/search/loop.ts';
-import { runAgenticSearchLoop, toolUse } from '../src/search/loop.ts';
+import type { AgenticEvent, CallClaude, StreamClaude } from '../src/search/loop.ts';
+import { runAgenticAnswerLoop, toolUse } from '../src/search/loop.ts';
+import type { StreamEvent } from '../src/llm.ts';
 import { chunkDocument, type Chunk } from '../src/search/chunk.ts';
 import type { KnowledgeGraph } from '../src/kg/schema.ts';
 
@@ -13,91 +14,94 @@ const kg: KnowledgeGraph = {
   glossary: [],
 };
 
-test('agentic loop handles two searches, dedupes picks, and applies maxResults', async () => {
-  const chunks = makeChunks();
-  const calls: Array<{ toolChoice: unknown; messages: unknown }> = [];
-  const mock: CallClaude = async (opts) => {
-    calls.push({ toolChoice: opts.toolChoice, messages: opts.messages });
+const config = {
+  model: 'test-model',
+  maxIterations: 4,
+  candidatePerSearch: 5,
+  perDocCap: 2,
+  maxResults: 6,
+  answerMaxTokens: 512,
+};
+
+function streamText(...chunks: string[]): StreamClaude {
+  return async function* () {
+    for (const text of chunks) yield { type: 'text', text } as StreamEvent;
+    yield { type: 'stop', stopReason: 'end_turn' } as StreamEvent;
+  } as unknown as StreamClaude;
+}
+
+async function drain(gen: AsyncGenerator<AgenticEvent>): Promise<AgenticEvent[]> {
+  const events: AgenticEvent[] = [];
+  for await (const ev of gen) events.push(ev);
+  return events;
+}
+
+test('answer loop runs searches, emits sources before tokens, then streams the answer', async () => {
+  const calls: Array<{ toolChoice: unknown; tools: unknown }> = [];
+  const call: CallClaude = async (opts) => {
+    calls.push({ toolChoice: opts.toolChoice, tools: opts.tools });
     if (calls.length === 1) return { stop_reason: 'tool_use', content: [toolUse('s1', 'search', { query: 'autoscaling' })] };
     if (calls.length === 2) return { stop_reason: 'tool_use', content: [toolUse('s2', 'search', { query: 'pipeline commands' })] };
-    return {
-      stop_reason: 'tool_use',
-      content: [
-        toolUse('p1', 'present_results', {
-          results: [
-            { id: 'concepts#kubernetes-autoscaling', snippet: 'Autoscaling details.' },
-            { id: 'concepts#kubernetes-autoscaling', snippet: 'Duplicate should be ignored.' },
-            { id: 'missing', snippet: 'Unknown id should be ignored.' },
-            { id: 'cli#pipeline-commands', snippet: 'CLI commands.' },
-          ],
-        }),
-      ],
-    };
+    return { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Ready to answer.' }] };
   };
 
-  const result = await runAgenticSearchLoop({
-    apiKey: 'test-key',
-    query: 'how does scaling work?',
-    chunks,
-    kg,
-    config: {
-      model: 'test-model',
-      maxIterations: 4,
-      candidatePerSearch: 5,
-      perDocCap: 1,
-      maxResults: 1,
-    },
-    call: mock,
-  });
+  const events = await drain(
+    runAgenticAnswerLoop({
+      apiKey: 'test-key',
+      query: 'how does scaling work?',
+      chunks: makeChunks(),
+      kg,
+      config,
+      call,
+      stream: streamText('Auto', 'scaling scales workers. ', 'See [autoscaling](/docs/concepts#kubernetes-autoscaling).'),
+    }),
+  );
 
-  assert.deepEqual(result.searches, ['autoscaling', 'pipeline commands']);
-  assert.deepEqual(result.results, [
-    {
-      title: 'Core Concepts',
-      heading: 'Kubernetes autoscaling',
-      url: '/docs/concepts#kubernetes-autoscaling',
-      group: undefined,
-      snippet: 'Autoscaling details.',
-    },
-  ]);
+  const searches = events.filter((e) => e.type === 'search').map((e) => (e as { query: string }).query);
+  assert.deepEqual(searches, ['autoscaling', 'pipeline commands']);
+
+  const sourcesIndex = events.findIndex((e) => e.type === 'sources');
+  const firstTokenIndex = events.findIndex((e) => e.type === 'token');
+  assert.ok(sourcesIndex !== -1, 'a sources event is emitted');
+  assert.ok(sourcesIndex < firstTokenIndex, 'sources are emitted before any token');
+
+  const sources = (events[sourcesIndex] as { sources: Array<{ url: string }> }).sources;
+  assert.ok(sources.some((s) => s.url === '/docs/concepts#kubernetes-autoscaling'));
+  // Deduped by url, capped at maxResults.
+  assert.equal(new Set(sources.map((s) => s.url)).size, sources.length);
+  assert.ok(sources.length <= config.maxResults);
+
+  const answer = events
+    .filter((e) => e.type === 'token')
+    .map((e) => (e as { text: string }).text)
+    .join('');
+  assert.equal(answer, 'Autoscaling scales workers. See [autoscaling](/docs/concepts#kubernetes-autoscaling).');
+
+  assert.equal(events.at(-1)?.type, 'done');
+  // The phase-1 loop never forces a tool choice; it only offers the search tool.
+  assert.deepEqual(calls[0].toolChoice, { type: 'auto' });
   assert.equal(calls.length, 3);
 });
 
-test('agentic loop forces present_results after a non-tool response', async () => {
-  const chunks = makeChunks();
-  const calls: Array<{ toolChoice: unknown; messages: unknown }> = [];
-  const mock: CallClaude = async (opts) => {
-    calls.push({ toolChoice: opts.toolChoice, messages: opts.messages });
-    if (calls.length === 1) return { stop_reason: 'end_turn', content: [{ type: 'text', text: 'No tool.' }] };
-    return {
-      stop_reason: 'tool_use',
-      content: [
-        toolUse('p1', 'present_results', {
-          results: [{ id: 'concepts#kubernetes-autoscaling', snippet: 'Fallback autoscaling result.' }],
-        }),
-      ],
-    };
-  };
+test('answer loop seeds a fallback search when the model never searches', async () => {
+  const call: CallClaude = async () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'no tool' }] });
 
-  const result = await runAgenticSearchLoop({
-    apiKey: 'test-key',
-    query: 'autoscaling',
-    chunks,
-    kg,
-    config: {
-      model: 'test-model',
-      maxIterations: 4,
-      candidatePerSearch: 5,
-      perDocCap: 2,
-      maxResults: 6,
-    },
-    call: mock,
-  });
+  const events = await drain(
+    runAgenticAnswerLoop({
+      apiKey: 'test-key',
+      query: 'autoscaling',
+      chunks: makeChunks(),
+      kg,
+      config,
+      call,
+      stream: streamText('Grounded answer.'),
+    }),
+  );
 
-  assert.equal(calls.length, 2);
-  assert.deepEqual(calls[1].toolChoice, { type: 'tool', name: 'present_results' });
-  assert.deepEqual(result.searches, ['autoscaling']);
-  assert.equal(result.results[0].url, '/docs/concepts#kubernetes-autoscaling');
+  const searches = events.filter((e) => e.type === 'search').map((e) => (e as { query: string }).query);
+  assert.deepEqual(searches, ['autoscaling']);
+  const sources = (events.find((e) => e.type === 'sources') as { sources: unknown[] }).sources;
+  assert.ok(sources.length > 0, 'fallback search grounds the answer');
 });
 
 function makeChunks(): Chunk[] {

@@ -14,6 +14,7 @@ declare module 'virtual:hev-find/config' {
     kgModel: string;
     basePath: string;
     maxResults: number;
+    answerMaxTokens: number;
     maxIterations: number;
     chunkHeadingDepth: number;
     candidatePerSearch: number;

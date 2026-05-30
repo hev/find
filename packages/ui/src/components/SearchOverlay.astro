@@ -45,6 +45,10 @@ const {
     </div>
 
     <div class="as-results" role="listbox" aria-label="Search results" tabindex="-1"></div>
+    <div class="as-answer" hidden>
+      <div class="as-answer-body" aria-live="polite"></div>
+      <div class="as-answer-sources" hidden></div>
+    </div>
     <div class="as-searched" hidden></div>
 
     <div class="as-footer">
@@ -283,6 +287,105 @@ const {
     color: var(--as-accent);
   }
 
+  .as-answer {
+    max-height: min(56vh, 440px);
+    overflow-y: auto;
+    padding: 14px 16px 6px;
+  }
+
+  .as-answer[hidden] { display: none; }
+
+  .as-answer-body {
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--as-fg);
+  }
+
+  .as-answer-body :global(p) {
+    margin: 0 0 0.7em;
+  }
+
+  .as-answer-body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .as-answer-body :global(ul),
+  .as-answer-body :global(ol) {
+    margin: 0 0 0.7em;
+    padding-left: 1.3em;
+  }
+
+  .as-answer-body :global(li) {
+    margin: 0.15em 0;
+  }
+
+  .as-answer-body :global(code) {
+    font-family: var(--font-mono, "JetBrains Mono Variable", ui-monospace, monospace);
+    font-size: 0.82em;
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: var(--as-hover);
+  }
+
+  .as-answer-body :global(.as-answer-link) {
+    color: var(--as-accent);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--as-accent) 45%, transparent);
+    transition: border-color 0.12s ease;
+  }
+
+  .as-answer-body :global(.as-answer-link:hover) {
+    border-bottom-color: var(--as-accent);
+  }
+
+  /* Streaming caret while tokens are still arriving. */
+  .as-answer-body.is-streaming::after {
+    content: "▌";
+    margin-left: 1px;
+    color: var(--as-accent);
+    animation: as-blink 1s step-end infinite;
+  }
+
+  @keyframes as-blink {
+    50% { opacity: 0; }
+  }
+
+  .as-answer-sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--as-border);
+  }
+
+  .as-answer-sources[hidden] { display: none; }
+
+  .as-answer-sources :global(.as-answer-sources-label) {
+    font-family: var(--font-mono, "JetBrains Mono Variable", ui-monospace, monospace);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--as-muted);
+    margin-right: 2px;
+  }
+
+  .as-answer-sources :global(.as-source-chip) {
+    font-size: 0.74rem;
+    padding: 3px 8px;
+    border: 1px solid var(--as-border);
+    border-radius: 6px;
+    color: var(--as-fg);
+    text-decoration: none;
+    transition: border-color 0.12s ease, color 0.12s ease;
+  }
+
+  .as-answer-sources :global(.as-source-chip:hover) {
+    border-color: var(--as-accent);
+    color: var(--as-accent);
+  }
+
   .as-searched {
     padding: 0 16px 9px;
     color: var(--as-muted);
@@ -386,6 +489,8 @@ const {
 </style>
 
 <script>
+  import { renderMarkdown, sourceBreadcrumb, type Source } from './markdown.ts';
+
   interface SearchResult {
     title: string;
     heading?: string;
@@ -407,6 +512,9 @@ const {
     private dialog: HTMLDialogElement;
     private input: HTMLInputElement;
     private results: HTMLDivElement;
+    private answer: HTMLDivElement;
+    private answerBody: HTMLDivElement;
+    private answerSources: HTMLDivElement;
     private searched: HTMLDivElement;
     private askButton: HTMLButtonElement;
     private askButtonLabel: HTMLElement;
@@ -427,6 +535,7 @@ const {
     private lastQuery = '';
     private userSelected = false;
     private pressOnBackdrop = false;
+    private answerRaf: number | undefined;
 
     constructor(dialog: HTMLDialogElement) {
       this.dialog = dialog;
@@ -434,6 +543,9 @@ const {
       this.debounceMs = Number(dialog.dataset.debounce) || 300;
       this.input = dialog.querySelector('.as-input') as HTMLInputElement;
       this.results = dialog.querySelector('.as-results') as HTMLDivElement;
+      this.answer = dialog.querySelector('.as-answer') as HTMLDivElement;
+      this.answerBody = dialog.querySelector('.as-answer-body') as HTMLDivElement;
+      this.answerSources = dialog.querySelector('.as-answer-sources') as HTMLDivElement;
       this.searched = dialog.querySelector('.as-searched') as HTMLDivElement;
       this.askButton = dialog.querySelector('.as-ai-button') as HTMLButtonElement;
       this.askButtonLabel = dialog.querySelector('.as-ai-label') as HTMLElement;
@@ -483,6 +595,7 @@ const {
       this.requestSeq += 1;
       this.input.value = '';
       this.results.innerHTML = '';
+      this.clearAnswer();
       this.searched.classList.remove('as-warning');
       this.searched.hidden = true;
       this.searched.textContent = '';
@@ -521,7 +634,7 @@ const {
       window.clearTimeout(this.timer);
       this.timer = undefined;
       this.lastQuery = '';
-      await this.search(query, 'agentic');
+      await this.streamAgentic(query);
     }
 
     private askAgentic() {
@@ -593,7 +706,199 @@ const {
       }
     }
 
+    private async streamAgentic(query: string) {
+      const requestId = this.requestSeq + 1;
+      this.requestSeq = requestId;
+      this.controller?.abort();
+      const controller = new AbortController();
+      this.controller = controller;
+      this.activeMode = 'agentic';
+      this.syncAskButton();
+      this.results.innerHTML = '';
+      this.items = [];
+      this.active = -1;
+      this.userSelected = false;
+      this.searched.hidden = true;
+      this.searched.textContent = '';
+      this.searched.classList.remove('as-warning');
+      this.showAnswer();
+      this.answerBody.classList.add('is-streaming');
+      this.answerBody.textContent = 'Searching…';
+
+      const searches: string[] = [];
+      let sources: Source[] = [];
+      let answer = '';
+      const stale = () =>
+        this.requestSeq !== requestId || controller.signal.aborted || this.input.value.trim() !== query;
+
+      try {
+        const res = await fetch(this.endpoint, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ query, mode: 'agentic' }),
+          signal: controller.signal,
+        });
+        const contentType = res.headers.get('content-type') || '';
+
+        // Graceful degradation (no API key) returns JSON keyword results.
+        if (contentType.includes('application/json')) {
+          const data = (await res.json()) as SearchResponse;
+          if (!res.ok) throw new Error(data.error || 'Search failed.');
+          if (data.model) this.setModel(data.model);
+          if (stale()) return;
+          this.clearAnswer();
+          if (!data.results?.length) {
+            this.setState('No results.');
+            return;
+          }
+          this.render(data.results, data.searches, data.warning || 'AI search is unavailable; showing keyword matches.');
+          return;
+        }
+
+        if (!contentType.includes('text/event-stream') || !res.body) {
+          throw new Error(
+            res.status === 404
+              ? 'Search endpoint not found — is the integration loaded? (Restart the dev server.)'
+              : `Unexpected response from search endpoint (${res.status}).`,
+          );
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let started = false;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let sep: number;
+          while ((sep = buffer.indexOf('\n\n')) !== -1) {
+            const frame = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            const evt = this.parseSseFrame(frame);
+            if (!evt) continue;
+            if (stale()) return;
+
+            if (evt.event === 'search') {
+              const q = (evt.data as { query?: string }).query;
+              if (q) {
+                searches.push(q);
+                this.showSearched(`searching: ${searches.join(', ')}`);
+              }
+            } else if (evt.event === 'sources') {
+              const payload = evt.data as { sources?: Source[]; model?: string };
+              sources = payload.sources || [];
+              if (payload.model) this.setModel(payload.model);
+              this.renderSources(sources);
+            } else if (evt.event === 'token') {
+              if (!started) {
+                started = true;
+                answer = '';
+              }
+              answer += (evt.data as { text?: string }).text || '';
+              this.scheduleAnswerRender(answer, sources);
+            } else if (evt.event === 'done') {
+              this.flushAnswerRender(answer, sources);
+              this.answerBody.classList.remove('is-streaming');
+              if (searches.length) this.showSearched(`searched: ${searches.join(', ')}`);
+            } else if (evt.event === 'error') {
+              throw new Error((evt.data as { error?: string }).error || 'AI search failed.');
+            }
+          }
+        }
+        this.answerBody.classList.remove('is-streaming');
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
+        if (stale()) return;
+        this.clearAnswer();
+        this.setState((err as Error).message, true);
+      } finally {
+        if (this.requestSeq === requestId) {
+          this.activeMode = null;
+          this.syncAskButton();
+        }
+      }
+    }
+
+    private parseSseFrame(frame: string): { event: string; data: unknown } | null {
+      let event = 'message';
+      const dataLines: string[] = [];
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+      }
+      if (!dataLines.length) return null;
+      try {
+        return { event, data: JSON.parse(dataLines.join('')) };
+      } catch {
+        return null;
+      }
+    }
+
+    private scheduleAnswerRender(answer: string, sources: Source[]) {
+      if (this.answerRaf !== undefined) return;
+      this.answerRaf = window.requestAnimationFrame(() => {
+        this.answerRaf = undefined;
+        this.answerBody.innerHTML = renderMarkdown(answer, sources);
+      });
+    }
+
+    private flushAnswerRender(answer: string, sources: Source[]) {
+      if (this.answerRaf !== undefined) {
+        window.cancelAnimationFrame(this.answerRaf);
+        this.answerRaf = undefined;
+      }
+      this.answerBody.innerHTML = renderMarkdown(answer, sources);
+    }
+
+    private renderSources(sources: Source[]) {
+      this.answerSources.innerHTML = '';
+      if (!sources.length) {
+        this.answerSources.hidden = true;
+        return;
+      }
+      const label = document.createElement('span');
+      label.className = 'as-answer-sources-label';
+      label.textContent = 'Sources';
+      this.answerSources.appendChild(label);
+      for (const source of sources) {
+        const chip = document.createElement('a');
+        chip.className = 'as-source-chip';
+        chip.href = source.url;
+        chip.textContent = sourceBreadcrumb(source);
+        this.answerSources.appendChild(chip);
+      }
+      this.answerSources.hidden = false;
+    }
+
+    private showAnswer() {
+      this.results.innerHTML = '';
+      this.answer.hidden = false;
+      this.answerSources.hidden = true;
+      this.answerSources.innerHTML = '';
+    }
+
+    private clearAnswer() {
+      if (this.answerRaf !== undefined) {
+        window.cancelAnimationFrame(this.answerRaf);
+        this.answerRaf = undefined;
+      }
+      this.answer.hidden = true;
+      this.answerBody.classList.remove('is-streaming');
+      this.answerBody.innerHTML = '';
+      this.answerSources.hidden = true;
+      this.answerSources.innerHTML = '';
+    }
+
+    private showSearched(text: string) {
+      this.searched.classList.remove('as-warning');
+      this.searched.textContent = text;
+      this.searched.hidden = false;
+    }
+
     private setState(message: string, isError = false) {
+      this.clearAnswer();
       this.items = [];
       this.active = -1;
       this.userSelected = false;
@@ -670,6 +975,7 @@ const {
     }
 
     private render(results: SearchResult[], searches: string[] = [], warning = '') {
+      this.clearAnswer();
       this.results.innerHTML = '';
       this.searched.classList.remove('as-warning');
       this.searched.hidden = true;

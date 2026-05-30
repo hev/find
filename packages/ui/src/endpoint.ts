@@ -3,7 +3,7 @@ import config from 'virtual:hev-find/config';
 import kg from 'virtual:hev-find/kg';
 import { hashableChunkText } from './search/chunk';
 import { buildIndex, prefilter, type Candidate, type Chunk } from './search/index';
-import { runAgenticSearchLoop, type SearchResult } from './search/loop';
+import { runAgenticAnswerLoop, type AgenticEvent } from './search/loop';
 
 export const prerender = false;
 
@@ -72,45 +72,77 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  let loop;
-  try {
-    loop = await runAgenticSearchLoop({
-      apiKey,
-      query,
-      chunks,
-      kg,
-      config: {
-        model: config.model,
-        maxIterations: config.maxIterations,
-        candidatePerSearch: config.candidatePerSearch,
-        perDocCap: config.perDocCap,
-        maxResults: config.maxResults,
-      },
-    });
-  } catch (err) {
-    return json({ error: (err as Error).message }, 502);
-  }
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: string, data: unknown) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
+      try {
+        for await (const ev of runAgenticAnswerLoop({
+          apiKey,
+          query: query as string,
+          chunks,
+          kg,
+          config: {
+            model: config.model,
+            maxIterations: config.maxIterations,
+            candidatePerSearch: config.candidatePerSearch,
+            perDocCap: config.perDocCap,
+            maxResults: config.maxResults,
+            answerMaxTokens: config.answerMaxTokens,
+          },
+          signal: request.signal,
+        })) {
+          if (request.signal.aborted) break;
+          forward(send, ev, config.model);
+        }
+      } catch (err) {
+        // The HTTP status is already committed once streaming starts, so surface
+        // failures as an SSE error event rather than a status change.
+        send('error', { error: (err as Error).message });
+      } finally {
+        controller.close();
+      }
+    },
+  });
 
-  return json({
-    results: loop.results,
-    searches: loop.searches,
-    query,
-    model: config.model,
-    mode: 'agentic',
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache, no-transform',
+      connection: 'keep-alive',
+    },
   });
 };
 
-function toResults(candidates: Candidate[], byId: Map<string, Chunk>, maxResults: number): SearchResult[] {
+function forward(send: (event: string, data: unknown) => void, ev: AgenticEvent, model: string): void {
+  if (ev.type === 'sources') send('sources', { sources: ev.sources, model, mode: 'agentic' });
+  else if (ev.type === 'token') send('token', { text: ev.text });
+  else if (ev.type === 'search') send('search', { query: ev.query });
+  else if (ev.type === 'done') send('done', {});
+}
+
+interface KeywordResult {
+  title: string;
+  heading?: string;
+  url: string;
+  group?: string;
+  snippet: string;
+}
+
+function toResults(candidates: Candidate[], byId: Map<string, Chunk>, maxResults: number): KeywordResult[] {
   return candidates
     .map((candidate) => {
       const chunk = byId.get(candidate.id);
       return chunk ? chunkToResult(chunk, candidate.snippet) : null;
     })
-    .filter((result): result is SearchResult => result !== null)
+    .filter((result): result is KeywordResult => result !== null)
     .slice(0, maxResults);
 }
 
-function chunkToResult(chunk: Chunk, snippet: string): SearchResult {
+function chunkToResult(chunk: Chunk, snippet: string): KeywordResult {
   return {
     title: chunk.docTitle,
     heading: chunk.heading,

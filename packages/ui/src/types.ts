@@ -24,10 +24,18 @@ export interface HevFindOptions {
   basePath?: string;
 
   /**
-   * Maximum number of results returned to the overlay.
+   * Maximum number of source sections the AI answer may ground in and cite
+   * (also the size of the Sources footer). Keyword mode uses it as the result
+   * row cap.
    * @default 6
    */
   maxResults?: number;
+
+  /**
+   * Token budget for the streamed AI answer.
+   * @default 1024
+   */
+  answerMaxTokens?: number;
 
   /**
    * Model used by the offline knowledge graph builder.
@@ -81,6 +89,7 @@ export interface ResolvedConfig {
   endpoint: string;
   basePath: string;
   maxResults: number;
+  answerMaxTokens: number;
   maxIterations: number;
   chunkHeadingDepth: number;
   candidatePerSearch: number;
