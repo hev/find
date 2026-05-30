@@ -1,0 +1,24 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  return docs.map((doc) => ({
+    params: { slug: doc.slug },
+    props: { doc },
+  }));
+}
+
+const { doc } = Astro.props;
+const { Content } = await doc.render();
+---
+
+<Base title={`${doc.data.title} — Layer Docs`}>
+  <p><a href="/">← All docs</a></p>
+  <h1>{doc.data.title}</h1>
+  {doc.data.description && <p><em>{doc.data.description}</em></p>}
+  <article>
+    <Content />
+  </article>
+</Base>

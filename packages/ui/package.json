@@ -1,0 +1,41 @@
+{
+  "name": "@hev/astro-agentic-search",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "A ⌘K agentic search overlay for Astro docs sites — a search-results generator powered by Claude, not a chatbot.",
+  "keywords": [
+    "astro",
+    "astro-integration",
+    "withastro",
+    "search",
+    "agentic",
+    "command-palette",
+    "cmdk",
+    "claude",
+    "anthropic",
+    "ai"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/hev/astro-agentic-search#readme",
+  "sideEffects": false,
+  "files": [
+    "src"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./endpoint": "./src/endpoint.ts",
+    "./components/SearchOverlay.astro": "./src/components/SearchOverlay.astro",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "astro": ">=5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "astro": "^5.0.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,28 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const docs = (await getCollection('docs')).sort(
+  (a, b) => (a.data.order ?? 99) - (b.data.order ?? 99),
+);
+---
+
+<Base title="Layer Docs (playground)">
+  <h1>Layer Documentation</h1>
+  <p>
+    A playground for <code>@hev/astro-agentic-search</code>. Press
+    <kbd>⌘K</kbd> (or <kbd>/</kbd>) and try a query like
+    <em>“how do I start a pipeline”</em> or <em>“run with docker”</em>.
+  </p>
+
+  <ul>
+    {
+      docs.map((doc) => (
+        <li>
+          <a href={`/docs/${doc.slug}`}>{doc.data.title}</a>
+          {doc.data.description && <span> — {doc.data.description}</span>}
+        </li>
+      ))
+    }
+  </ul>
+</Base>

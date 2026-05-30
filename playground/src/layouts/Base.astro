@@ -1,0 +1,103 @@
+---
+import SearchOverlay from '@hev/astro-agentic-search/components/SearchOverlay.astro';
+
+interface Props {
+  title?: string;
+}
+const { title = 'Layer Docs (playground)' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">layer<span>/docs</span></a>
+      <button class="search-trigger" data-agentic-search-open>
+        <span>Search the docs</span>
+        <kbd>⌘K</kbd>
+      </button>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <SearchOverlay />
+
+    <style is:global>
+      :root {
+        --paper: #111111;
+        --ink: #f2f2f2;
+        --muted: #8a8a8a;
+        --signal: #e25822;
+        --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
+        --font-sans: Inter, system-ui, -apple-system, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        line-height: 1.6;
+      }
+
+      a { color: var(--signal); }
+
+      .site-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid rgba(242, 242, 242, 0.12);
+        position: sticky;
+        top: 0;
+        background: var(--paper);
+      }
+
+      .brand {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .brand span { color: var(--muted); }
+
+      .search-trigger {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 12px;
+        border: 1px solid rgba(242, 242, 242, 0.14);
+        border-radius: 9px;
+        background: rgba(242, 242, 242, 0.04);
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+      .search-trigger:hover { border-color: rgba(242, 242, 242, 0.28); }
+      .search-trigger kbd {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border: 1px solid rgba(242, 242, 242, 0.14);
+        border-radius: 5px;
+      }
+
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 3rem 1.5rem;
+      }
+    </style>
+  </body>
+</html>
