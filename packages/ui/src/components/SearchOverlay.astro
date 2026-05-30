@@ -11,7 +11,7 @@ interface Props {
 const {
   endpoint = '/api/find',
   placeholder = 'Search the docs…',
-  debounce = 300,
+  debounce = 500,
 } = Astro.props;
 ---
 
@@ -37,6 +37,10 @@ const {
         spellcheck="false"
         aria-label="Search query"
       />
+      <button class="as-ai-button" type="button" disabled>
+        <span class="as-ai-label">Ask AI</span>
+        <kbd class="as-kbd">↵</kbd>
+      </button>
       <kbd class="as-kbd as-esc">esc</kbd>
     </div>
 
@@ -120,6 +124,7 @@ const {
 
   .as-input {
     flex: 1;
+    min-width: 0;
     border: none;
     outline: none;
     background: transparent;
@@ -131,6 +136,43 @@ const {
   .as-input::placeholder { color: var(--as-muted); }
   /* Hide native search clear button for a cleaner palette. */
   .as-input::-webkit-search-cancel-button { display: none; }
+
+  .as-ai-button {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 32px;
+    padding: 4px 8px 4px 10px;
+    border: 1px solid color-mix(in srgb, var(--as-accent) 70%, var(--as-border));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--as-accent) 18%, transparent);
+    color: var(--as-fg);
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+  }
+
+  .as-ai-button:hover:not(:disabled) {
+    border-color: var(--as-accent);
+    background: color-mix(in srgb, var(--as-accent) 26%, transparent);
+  }
+
+  .as-ai-button:disabled {
+    cursor: default;
+    opacity: 0.48;
+  }
+
+  .as-ai-button--loading {
+    opacity: 0.78;
+  }
+
+  .as-ai-button .as-kbd {
+    color: var(--as-fg);
+    border-color: color-mix(in srgb, var(--as-accent) 55%, var(--as-border));
+    background: color-mix(in srgb, var(--as-accent) 20%, transparent);
+  }
 
   .as-kbd {
     font-family: var(--font-mono, "JetBrains Mono Variable", ui-monospace, monospace);
@@ -248,6 +290,11 @@ const {
     opacity: 0.72;
   }
 
+  .as-searched.as-warning {
+    color: var(--as-accent);
+    opacity: 1;
+  }
+
   .as-footer {
     display: flex;
     align-items: center;
@@ -326,6 +373,16 @@ const {
   @media (prefers-reduced-motion: reduce) {
     .as-overlay[open] { animation: none; }
   }
+
+  @media (max-width: 520px) {
+    .as-ai-label {
+      display: none;
+    }
+
+    .as-ai-button {
+      padding-inline: 8px;
+    }
+  }
 </style>
 
 <script>
@@ -341,6 +398,8 @@ const {
     results?: SearchResult[];
     searches?: string[];
     model?: string;
+    mode?: 'keyword' | 'agentic';
+    warning?: string;
     error?: string;
   }
 
@@ -349,6 +408,8 @@ const {
     private input: HTMLInputElement;
     private results: HTMLDivElement;
     private searched: HTMLDivElement;
+    private askButton: HTMLButtonElement;
+    private askButtonLabel: HTMLElement;
     private hint: HTMLElement;
     private modeEl: HTMLElement | null;
     private modeLabelEl: HTMLElement | null;
@@ -359,6 +420,8 @@ const {
     private debounceMs: number;
     private timer: number | undefined;
     private controller: AbortController | undefined;
+    private activeMode: 'keyword' | 'agentic' | null = null;
+    private requestSeq = 0;
     private items: HTMLAnchorElement[] = [];
     private active = -1;
     private lastQuery = '';
@@ -372,13 +435,21 @@ const {
       this.input = dialog.querySelector('.as-input') as HTMLInputElement;
       this.results = dialog.querySelector('.as-results') as HTMLDivElement;
       this.searched = dialog.querySelector('.as-searched') as HTMLDivElement;
+      this.askButton = dialog.querySelector('.as-ai-button') as HTMLButtonElement;
+      this.askButtonLabel = dialog.querySelector('.as-ai-label') as HTMLElement;
       this.hint = dialog.querySelector('.as-hint') as HTMLElement;
       this.modeEl = dialog.querySelector('.as-mode');
       this.modeLabelEl = dialog.querySelector('.as-mode-label');
       this.modeToggleEl = dialog.querySelector('.as-mode-toggle');
       this.agentic = this.readPref();
+      this.askButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.askAgentic();
+      });
       this.modeToggleEl?.addEventListener('click', () => this.toggleMode());
       this.updateModeUI();
+      this.syncAskButton();
 
       this.input.addEventListener('input', () => this.onInput());
       this.dialog.addEventListener('keydown', (e) => this.onKeydown(e));
@@ -407,19 +478,30 @@ const {
     private reset() {
       this.controller?.abort();
       window.clearTimeout(this.timer);
+      this.timer = undefined;
+      this.activeMode = null;
+      this.requestSeq += 1;
       this.input.value = '';
       this.results.innerHTML = '';
+      this.searched.classList.remove('as-warning');
       this.searched.hidden = true;
       this.searched.textContent = '';
       this.items = [];
       this.active = -1;
       this.lastQuery = '';
       this.userSelected = false;
+      this.syncAskButton();
     }
 
     private onInput() {
       window.clearTimeout(this.timer);
+      this.timer = undefined;
       const q = this.input.value.trim();
+      if (this.activeMode === 'agentic') {
+        this.controller?.abort();
+        this.activeMode = null;
+      }
+      this.syncAskButton();
       if (!q) {
         this.controller?.abort();
         this.render([]);
@@ -429,31 +511,50 @@ const {
     }
 
     private async searchKeyword(query: string) {
+      if (this.activeMode === 'agentic') return;
       if (query === this.lastQuery) return;
       this.lastQuery = query;
       await this.search(query, 'keyword');
     }
 
     private async runAgentic(query: string) {
+      window.clearTimeout(this.timer);
+      this.timer = undefined;
       this.lastQuery = '';
       await this.search(query, 'agentic');
     }
 
+    private askAgentic() {
+      const q = this.input.value.trim();
+      if (!q) return;
+      void this.runAgentic(q);
+    }
+
     private async search(query: string, mode: 'keyword' | 'agentic') {
+      const requestId = this.requestSeq + 1;
+      this.requestSeq = requestId;
       this.controller?.abort();
-      this.controller = new AbortController();
+      const controller = new AbortController();
+      this.controller = controller;
+      this.activeMode = mode;
+      this.syncAskButton();
       this.searched.hidden = true;
       this.searched.textContent = '';
+      this.searched.classList.remove('as-warning');
       this.setState('Searching…');
       const rankingTimer =
-        mode === 'agentic' ? window.setTimeout(() => this.setState('Ranking…'), 700) : undefined;
+        mode === 'agentic'
+          ? window.setTimeout(() => {
+              if (this.requestSeq === requestId && this.activeMode === 'agentic') this.setState('Ranking…');
+            }, 700)
+          : undefined;
 
       try {
         const res = await fetch(this.endpoint, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ query, mode }),
-          signal: this.controller.signal,
+          signal: controller.signal,
         });
         if (rankingTimer) window.clearTimeout(rankingTimer);
         const contentType = res.headers.get('content-type') || '';
@@ -468,16 +569,27 @@ const {
         if (!res.ok) throw new Error(data.error || 'Search failed.');
         if (data.model) this.setModel(data.model);
         // Ignore stale responses if the query moved on.
+        if (this.requestSeq !== requestId || controller.signal.aborted) return;
         if (this.input.value.trim() !== query) return;
         if (!data.results?.length) {
           this.setState('No results.');
           return;
         }
-        this.render(data.results, data.searches);
+        const warning =
+          data.warning ||
+          (mode === 'agentic' && data.mode !== 'agentic'
+            ? 'AI search is unavailable; showing keyword matches.'
+            : '');
+        this.render(data.results, data.searches, warning);
       } catch (err) {
         if (rankingTimer) window.clearTimeout(rankingTimer);
         if ((err as Error).name === 'AbortError') return;
         this.setState((err as Error).message, true);
+      } finally {
+        if (this.requestSeq === requestId) {
+          this.activeMode = null;
+          this.syncAskButton();
+        }
       }
     }
 
@@ -487,6 +599,7 @@ const {
       this.userSelected = false;
       this.searched.hidden = true;
       this.searched.textContent = '';
+      this.searched.classList.remove('as-warning');
       this.results.innerHTML = `<div class="as-state${isError ? ' as-error' : ''}"></div>`;
       (this.results.firstElementChild as HTMLElement).textContent = message;
     }
@@ -521,7 +634,7 @@ const {
         this.modeToggleEl.title = 'Disable AI on Enter';
         this.modeToggleEl.setAttribute('aria-label', 'Disable AI on Enter');
         this.hint.innerHTML =
-          '<kbd class="as-kbd">↵</kbd> ask AI · <kbd class="as-kbd">↑</kbd><kbd class="as-kbd">↓</kbd> open';
+          '<kbd class="as-kbd">↵</kbd> ask AI · <kbd class="as-kbd">↑</kbd><kbd class="as-kbd">↓</kbd> select';
       } else {
         this.modeEl.classList.add('as-mode--off');
         this.modeLabelEl.textContent = 'keyword only';
@@ -538,6 +651,7 @@ const {
       this.agentic = !this.agentic;
       this.writePref();
       this.updateModeUI();
+      this.syncAskButton();
       const q = this.input.value.trim();
       if (q) {
         this.lastQuery = '';
@@ -545,8 +659,19 @@ const {
       }
     }
 
-    private render(results: SearchResult[], searches: string[] = []) {
+    private syncAskButton() {
+      const hasQuery = Boolean(this.input.value.trim());
+      const isAsking = this.activeMode === 'agentic';
+      this.askButton.disabled = !hasQuery || isAsking;
+      this.askButton.classList.toggle('as-ai-button--loading', isAsking);
+      this.askButtonLabel.textContent = isAsking ? 'Asking' : 'Ask AI';
+      this.askButton.title = hasQuery ? 'Ask AI search' : 'Type a query to ask AI';
+      this.askButton.setAttribute('aria-label', this.askButton.title);
+    }
+
+    private render(results: SearchResult[], searches: string[] = [], warning = '') {
       this.results.innerHTML = '';
+      this.searched.classList.remove('as-warning');
       this.searched.hidden = true;
       this.searched.textContent = '';
       this.items = [];
@@ -585,7 +710,12 @@ const {
         this.results.appendChild(a);
         this.items.push(a);
       }
-      if (searches.length) {
+      if (warning) {
+        const searched = searches.length ? ` searched: ${searches.join(', ')}` : '';
+        this.searched.textContent = `${warning}${searched}`;
+        this.searched.classList.add('as-warning');
+        this.searched.hidden = false;
+      } else if (searches.length) {
         this.searched.textContent = `searched: ${searches.join(', ')}`;
         this.searched.hidden = false;
       }
@@ -609,18 +739,22 @@ const {
     private onKeydown(e: KeyboardEvent) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
+        e.stopPropagation();
         this.setActive(Math.min(this.active + 1, this.items.length - 1), true);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
+        e.stopPropagation();
         this.setActive(Math.max(this.active - 1, 0), true);
       } else if (e.key === 'Enter') {
         const el = this.items[this.active];
         const q = this.input.value.trim();
         if (el && (this.userSelected || !this.agentic || !q)) {
           e.preventDefault();
+          e.stopPropagation();
           window.location.href = el.href;
         } else if (q && this.agentic) {
           e.preventDefault();
+          e.stopPropagation();
           this.runAgentic(q);
         }
       }

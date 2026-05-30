@@ -50,9 +50,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
 
   const apiKey = resolveApiKey(locals);
+  const keywordResults = () =>
+    toResults(keywordCandidates, new Map(chunks.map((chunk) => [chunk.id, chunk])), config.maxResults);
+
+  if (mode === 'agentic' && !apiKey) {
+    return json({
+      results: keywordResults(),
+      query,
+      model: config.model,
+      mode: 'keyword',
+      warning: 'AI search is unavailable because ANTHROPIC_API_KEY is not configured.',
+    });
+  }
+
   if (mode === 'keyword' || !apiKey) {
     return json({
-      results: toResults(keywordCandidates, new Map(chunks.map((chunk) => [chunk.id, chunk])), config.maxResults),
+      results: keywordResults(),
       query,
       model: config.model,
       mode: 'keyword',
