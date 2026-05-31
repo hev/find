@@ -1,12 +1,12 @@
-# hev find — Agent Guide
+# hev ask — Agent Guide
 
-hev find is a `⌘K` search overlay for **Astro docs sites**, shipped as the npm
-package `@hev/find`. This file is for agents doing engineering, docs, and
+hev ask is a `⌘K` search overlay for **Astro docs sites**, shipped as the npm
+package `@hev/ask`. This file is for agents doing engineering, docs, and
 release work in this repo. Keep it practical and current.
 
 ## What this is
 
-`@hev/find` is an Astro integration. A consumer site adds `hevFind()` to
+`@hev/ask` is an Astro integration. A consumer site adds `hevAsk()` to
 `astro.config`, drops `SearchOverlay.astro` in a layout, and gets two search
 paths over its content collection:
 
@@ -17,15 +17,15 @@ paths over its content collection:
   loop that issues its own `search` sub-queries, then streams a grounded answer
   (SSE) with inline deep links to the doc sections it drew from.
 
-A committed, offline-built **knowledge graph** (`.hev-find/kg.json`) gives the
+A committed, offline-built **knowledge graph** (`.hev-ask/kg.json`) gives the
 loop domain context and a glossary. Read `PLAN.md` for the full v2 design.
 
 ## Repo layout
 
 ```
-packages/ui    # the package @hev/find — integration, endpoint, search, kg/, CLI
+packages/ui    # the package @hev/ask — integration, endpoint, search, kg/, CLI
 playground     # minimal Astro site for fast local dev of the package
-site           # the public docs + showcase site (find.hev.dev); dogfoods @hev/find
+site           # the public docs + showcase site (ask.hev.dev); dogfoods @hev/ask
 ```
 
 It's a pnpm workspace. `packages/ui` is the only published artifact; `playground`
@@ -49,9 +49,9 @@ docs are also the search corpus, so doc edits are product edits.
 - **Corpus = configured content collection(s) only.** No crawler, no external
   index, no non-collection pages.
 - **Anchors come from `github-slugger`** (the one non-Astro dependency) to match
-  Astro's rendered `id`s byte-for-byte. `hev-find-kg verify` is the CI gate that
+  Astro's rendered `id`s byte-for-byte. `hev-ask-kg verify` is the CI gate that
   catches drift — keep it green.
-- **The KG is committed JSON, hash-gated.** `hev-find-kg build` skips the model
+- **The KG is committed JSON, hash-gated.** `hev-ask-kg build` skips the model
   call when the content hash is unchanged. Regenerate and commit after content
   changes. It's reviewable on purpose.
 - **Everything degrades, nothing hard-fails:** no key at runtime → keyword
@@ -62,20 +62,20 @@ docs are also the search corpus, so doc edits are product edits.
 
 ## Public surface (don't break without a version bump + doc update)
 
-- Default export `hevFind(options)` — options in `packages/ui/src/types.ts`,
+- Default export `hevAsk(options)` — options in `packages/ui/src/types.ts`,
   documented in `site/.../api/configuration.mdx`.
-- `@hev/find/components/SearchOverlay.astro` — props `endpoint`, `placeholder`,
-  `debounce`; opener attribute `data-hev-find-open`; localStorage key
-  `hev-find:mode`.
-- `@hev/find/endpoint` — `POST /api/find`: keyword mode returns JSON, agentic
+- `@hev/ask/components/SearchOverlay.astro` — props `endpoint`, `placeholder`,
+  `debounce`; opener attribute `data-hev-ask-open`; localStorage key
+  `hev-ask:mode`.
+- `@hev/ask/endpoint` — `POST /api/ask`: keyword mode returns JSON, agentic
   mode streams SSE (`text/event-stream`). Contract in `api/endpoint.mdx`.
-- `hev-find-kg` bin — `build` / `verify`, flags in `api/cli.mdx`.
-- Virtual modules `virtual:hev-find/config` and `virtual:hev-find/kg`.
+- `hev-ask-kg` bin — `build` / `verify`, flags in `api/cli.mdx`.
+- Virtual modules `virtual:hev-ask/config` and `virtual:hev-ask/kg`.
 
 When any of these change, update the matching `site/src/content/docs/api/*.mdx`
 page in the same PR.
 
-## The site (find.hev.dev)
+## The site (ask.hev.dev)
 
 - Styles, layouts, and doc components are copied from `../layer/site` (the hev
   house style: dark, JetBrains Mono, `--signal` orange). Reuse them; don't
@@ -86,28 +86,29 @@ page in the same PR.
   required. Nav order is driven by `site/src/lib/docs.ts`, not by `order` alone.
 - ASCII architecture diagrams live in `site/src/lib/diagrams.ts`.
 - `/llms.txt` and `/llms-full.txt` are generated from the docs collection.
-- **Hosting:** Cloudflare Pages, project `hev-find`. `pnpm --filter
-  hev-find-site deploy` builds and `wrangler pages deploy`s. The API key for the
-  live agentic path is a server secret, never bundled.
+- **Hosting:** Cloudflare Pages, project `hev-ask`, account
+  `ce0c7a0a6b9935ddf1a641fd32f596b5`. `pnpm --filter hev-ask-site deploy`
+  builds and `wrangler pages deploy`s. The API key for the live agentic path is
+  a server secret, never bundled.
 
 ## Common commands
 
 ```sh
 pnpm install                          # workspace install
-pnpm --filter hev-find-site dev       # docs site on :4334
-pnpm --filter hev-find-site build     # build site (runs KG build if key present)
-pnpm --filter hev-find-site check     # astro check
+pnpm --filter hev-ask-site dev       # docs site on :4334
+pnpm --filter hev-ask-site build     # build site (runs KG build if key present)
+pnpm --filter hev-ask-site check     # astro check
 pnpm test                             # package unit tests
 pnpm typecheck                        # tsc across the workspace
-pnpm exec hev-find-kg build           # (from a site dir) rebuild the KG
-pnpm exec hev-find-kg verify          # (from a site dir) verify anchors
+pnpm exec hev-ask-kg build           # (from a site dir) rebuild the KG
+pnpm exec hev-ask-kg verify          # (from a site dir) verify anchors
 ```
 
 ## Before changing the package's public API
 
 1. Update `packages/ui/src/types.ts` and the implementation.
 2. Update the matching `site/src/content/docs/api/*.mdx`.
-3. `pnpm test && pnpm typecheck && pnpm --filter hev-find-site check`.
-4. If anchors or chunking changed, run `hev-find-kg verify` on `site/`.
+3. `pnpm test && pnpm typecheck && pnpm --filter hev-ask-site check`.
+4. If anchors or chunking changed, run `hev-ask-kg verify` on `site/`.
 5. Public/breaking changes need a version bump in `packages/ui/package.json`
-   (see `PLAN.md` for the rename map and `README.md` for the publishing plan).
+   (see `PLAN.md` for architecture notes and `README.md` for publishing notes).

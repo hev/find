@@ -1,0 +1,654 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-31T14:54:22.351Z",
+  "contentHash": "18602a778ece7971b98b6e15fa38616ff5e7c01fb0a99923d5867e779a6c7839",
+  "context": "Layer documentation covers installing Layer, core streaming concepts, command-line operations, and pipeline design. Core concepts describe sources, pipelines, sinks, backpressure, and Kubernetes autoscaling from lag and throughput signals. Installation covers native binaries and Docker. CLI docs cover authentication plus pipeline run/list/log commands. Pipeline guides cover transform stages and restart behavior.",
+  "glossary": [
+    {
+      "term": "Kubernetes autoscaling",
+      "aliases": [
+        "k8s scaling",
+        "horizontal autoscaling",
+        "scale workers",
+        "lag scaling"
+      ],
+      "definition": "Scaling Layer workers based on lag and throughput signals."
+    },
+    {
+      "term": "pipeline",
+      "aliases": [
+        "data flow",
+        "stream",
+        "job"
+      ],
+      "definition": "A sequence of stages that transforms records from sources into sinks."
+    },
+    {
+      "term": "Docker",
+      "aliases": [
+        "container",
+        "compose",
+        "docker-compose"
+      ],
+      "definition": "Container-based local installation path for Layer."
+    },
+    {
+      "term": "CLI",
+      "aliases": [
+        "command line",
+        "terminal",
+        "layer command"
+      ],
+      "definition": "The layer command-line tool used to authenticate, run pipelines, list lag, and inspect logs."
+    }
+  ],
+  "overview": "## Guides\n- Building Pipelines — `pipelines`\n- Restarts — `pipelines#restarts`\n- Transform stages — `pipelines#transform-stages`\n## Overview\n- Core Concepts — `concepts`\n- Backpressure — `concepts#backpressure`\n- Kubernetes autoscaling — `concepts#kubernetes-autoscaling`\n- Sources, pipelines, and sinks — `concepts#sources-pipelines-and-sinks`\n- Installation — `install`\n- Docker — `install#docker`\n- Native binary — `install#native-binary`\n## Reference\n- CLI Reference — `cli`\n- Authentication — `cli#authentication`\n- Pipeline commands — `cli#pipeline-commands`",
+  "suggestions": [
+    "How do I install Layer with Docker?",
+    "How do I run a pipeline from the CLI?",
+    "How does Kubernetes autoscaling work?",
+    "What happens when a pipeline restarts?"
+  ],
+  "nodes": [
+    {
+      "id": "cli",
+      "kind": "section",
+      "title": "CLI Reference",
+      "heading": null,
+      "group": "Reference",
+      "url": "/docs/cli",
+      "summary": "Install, authenticate, and run pipelines from the command line. The layer CLI is the primary way to manage pipelines locally and in CI.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "layer",
+          "chunkId": "cli"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "cli",
+          "url": "/docs/cli",
+          "anchor": null
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "install",
+        "authenticate",
+        "pipelines",
+        "command",
+        "line",
+        "layer",
+        "primary",
+        "manage",
+        "locally"
+      ]
+    },
+    {
+      "id": "cli#authentication",
+      "kind": "section",
+      "title": "CLI Reference",
+      "heading": "Authentication",
+      "group": "Reference",
+      "url": "/docs/cli#authentication",
+      "summary": "Authentication Authenticate once with layer auth login; credentials are cached in your home directory.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "layer auth login",
+          "chunkId": "cli#authentication"
+        },
+        {
+          "kind": "code",
+          "literal": "layer pipeline run ./pipeline.toml",
+          "chunkId": "cli#authentication"
+        },
+        {
+          "kind": "code",
+          "literal": "layer pipeline ls",
+          "chunkId": "cli#authentication"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "cli#authentication",
+          "url": "/docs/cli#authentication",
+          "anchor": "authentication"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "authentication",
+        "authenticate",
+        "once",
+        "layer",
+        "auth",
+        "login",
+        "credentials",
+        "cached",
+        "home",
+        "directory",
+        "pipeline",
+        "toml",
+        "start",
+        "config",
+        "file",
+        "list",
+        "running",
+        "pipelines",
+        "their"
+      ]
+    },
+    {
+      "id": "cli#pipeline-commands",
+      "kind": "section",
+      "title": "CLI Reference",
+      "heading": "Pipeline commands",
+      "group": "Reference",
+      "url": "/docs/cli#pipeline-commands",
+      "summary": "Pipeline commands Common commands: layer auth login — authenticate the CLI. layer pipeline run — start a pipeline from a config file.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "layer auth login",
+          "chunkId": "cli#pipeline-commands"
+        },
+        {
+          "kind": "code",
+          "literal": "layer pipeline run <file>",
+          "chunkId": "cli#pipeline-commands"
+        },
+        {
+          "kind": "code",
+          "literal": "layer pipeline ls",
+          "chunkId": "cli#pipeline-commands"
+        },
+        {
+          "kind": "code",
+          "literal": "layer pipeline logs <id>",
+          "chunkId": "cli#pipeline-commands"
+        },
+        {
+          "kind": "code",
+          "literal": "layer sink test <name>",
+          "chunkId": "cli#pipeline-commands"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "cli#pipeline-commands",
+          "url": "/docs/cli#pipeline-commands",
+          "anchor": "pipeline-commands"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "pipeline",
+        "commands",
+        "common",
+        "layer",
+        "auth",
+        "login",
+        "authenticate",
+        "start",
+        "config",
+        "file",
+        "logs",
+        "sink",
+        "test",
+        "name",
+        "list",
+        "pipelines",
+        "current",
+        "tail",
+        "running",
+        "send",
+        "record",
+        "verify",
+        "connection"
+      ]
+    },
+    {
+      "id": "concepts",
+      "kind": "section",
+      "title": "Core Concepts",
+      "heading": null,
+      "group": "Overview",
+      "url": "/docs/concepts",
+      "summary": "The mental model behind Layer — sources, pipelines, and sinks. Layer moves data between systems as a continuous stream.",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "concepts",
+          "url": "/docs/concepts",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "mental",
+        "model",
+        "behind",
+        "layer",
+        "sources",
+        "pipelines",
+        "sinks",
+        "moves",
+        "data",
+        "between",
+        "systems",
+        "continuous",
+        "stream",
+        "three",
+        "building",
+        "blocks",
+        "records",
+        "originate",
+        "transformations",
+        "applied",
+        "flight",
+        "results",
+        "land"
+      ]
+    },
+    {
+      "id": "concepts#backpressure",
+      "kind": "section",
+      "title": "Core Concepts",
+      "heading": "Backpressure",
+      "group": "Overview",
+      "url": "/docs/concepts#backpressure",
+      "summary": "Backpressure Backpressure is handled automatically: when a sink slows down, the pipeline applies flow control upstream so no records are dropped.",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "concepts#backpressure",
+          "url": "/docs/concepts#backpressure",
+          "anchor": "backpressure"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "backpressure",
+        "handled",
+        "automatically",
+        "sink",
+        "slows",
+        "down",
+        "pipeline",
+        "applies",
+        "flow",
+        "control",
+        "upstream",
+        "records",
+        "dropped"
+      ]
+    },
+    {
+      "id": "concepts#kubernetes-autoscaling",
+      "kind": "section",
+      "title": "Core Concepts",
+      "heading": "Kubernetes autoscaling",
+      "group": "Overview",
+      "url": "/docs/concepts#kubernetes-autoscaling",
+      "summary": "Kubernetes autoscaling Layer exposes lag and throughput signals that Kubernetes can use for horizontal autoscaling.",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "concepts#kubernetes-autoscaling",
+          "url": "/docs/concepts#kubernetes-autoscaling",
+          "anchor": "kubernetes-autoscaling"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "kubernetes",
+        "autoscaling",
+        "layer",
+        "exposes",
+        "throughput",
+        "signals",
+        "horizontal",
+        "consumers",
+        "fall",
+        "behind",
+        "scale",
+        "rules",
+        "workers",
+        "drained",
+        "deployment",
+        "scales",
+        "back",
+        "down",
+        "without",
+        "interrupting",
+        "active",
+        "pipelines"
+      ]
+    },
+    {
+      "id": "concepts#sources-pipelines-and-sinks",
+      "kind": "section",
+      "title": "Core Concepts",
+      "heading": "Sources, pipelines, and sinks",
+      "group": "Overview",
+      "url": "/docs/concepts#sources-pipelines-and-sinks",
+      "summary": "Sources, pipelines, and sinks A source can be a database change feed, a message queue, or an HTTP endpoint.",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "concepts#sources-pipelines-and-sinks",
+          "url": "/docs/concepts#sources-pipelines-and-sinks",
+          "anchor": "sources-pipelines-and-sinks"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "sources",
+        "pipelines",
+        "sinks",
+        "source",
+        "database",
+        "change",
+        "feed",
+        "message",
+        "queue",
+        "http",
+        "endpoint",
+        "records",
+        "flow",
+        "through",
+        "more",
+        "pipeline",
+        "stages",
+        "filter",
+        "enrich",
+        "join",
+        "reshape",
+        "deliver",
+        "transformed",
+        "their",
+        "destination",
+        "another",
+        "object",
+        "store",
+        "downstream",
+        "service"
+      ]
+    },
+    {
+      "id": "install",
+      "kind": "section",
+      "title": "Installation",
+      "heading": null,
+      "group": "Overview",
+      "url": "/docs/install",
+      "summary": "Get Layer running locally with Docker or the native binary. There are two supported ways to install Layer: the native binary and the Docker image.",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "install",
+          "url": "/docs/install",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "layer",
+        "running",
+        "locally",
+        "docker",
+        "native",
+        "binary",
+        "there",
+        "supported",
+        "ways",
+        "install",
+        "image"
+      ]
+    },
+    {
+      "id": "install#docker",
+      "kind": "section",
+      "title": "Installation",
+      "heading": "Docker",
+      "group": "Overview",
+      "url": "/docs/install#docker",
+      "summary": "Docker To run with Docker, pull ghcr.io/layer/layer:latest and mount your config directory.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ghcr.io/layer/layer:latest",
+          "chunkId": "install#docker"
+        },
+        {
+          "kind": "code",
+          "literal": "docker-compose.yml",
+          "chunkId": "install#docker"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "install#docker",
+          "url": "/docs/install#docker",
+          "anchor": "docker"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "docker",
+        "pull",
+        "ghcr",
+        "layer",
+        "latest",
+        "mount",
+        "config",
+        "directory",
+        "compose",
+        "provided",
+        "brings",
+        "alongside",
+        "local",
+        "aerospike",
+        "instance",
+        "development",
+        "test",
+        "pipelines",
+        "without",
+        "provisioning",
+        "cloud",
+        "infrastructure"
+      ]
+    },
+    {
+      "id": "install#native-binary",
+      "kind": "section",
+      "title": "Installation",
+      "heading": "Native binary",
+      "group": "Overview",
+      "url": "/docs/install#native-binary",
+      "summary": "Native binary For the native binary, download the release for your platform and place it on your PATH.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "PATH",
+          "chunkId": "install#native-binary"
+        },
+        {
+          "kind": "code",
+          "literal": "layer --version",
+          "chunkId": "install#native-binary"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "install#native-binary",
+          "url": "/docs/install#native-binary",
+          "anchor": "native-binary"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "native",
+        "binary",
+        "download",
+        "release",
+        "platform",
+        "place",
+        "path",
+        "layer",
+        "version",
+        "verify",
+        "install",
+        "self",
+        "contained",
+        "runtime",
+        "dependencies"
+      ]
+    },
+    {
+      "id": "pipelines",
+      "kind": "section",
+      "title": "Building Pipelines",
+      "heading": null,
+      "group": "Guides",
+      "url": "/docs/pipelines",
+      "summary": "Define transformations, joins, and windowed aggregations. A pipeline is a sequence of stages declared in TOML.",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "pipelines",
+          "url": "/docs/pipelines",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "define",
+        "transformations",
+        "joins",
+        "windowed",
+        "aggregations",
+        "pipeline",
+        "sequence",
+        "stages",
+        "declared",
+        "toml",
+        "stage",
+        "reads",
+        "previous",
+        "emits",
+        "records",
+        "next",
+        "pure",
+        "functions",
+        "record",
+        "stream",
+        "makes",
+        "easy",
+        "test",
+        "isolation"
+      ]
+    },
+    {
+      "id": "pipelines#restarts",
+      "kind": "section",
+      "title": "Building Pipelines",
+      "heading": "Restarts",
+      "group": "Guides",
+      "url": "/docs/pipelines#restarts",
+      "summary": "Restarts When a pipeline restarts, Layer resumes from the last committed offset, so exactly-once delivery is preserved across deploys.",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "pipelines#restarts",
+          "url": "/docs/pipelines#restarts",
+          "anchor": "restarts"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "restarts",
+        "pipeline",
+        "layer",
+        "resumes",
+        "last",
+        "committed",
+        "offset",
+        "exactly",
+        "once",
+        "delivery",
+        "preserved",
+        "across",
+        "deploys"
+      ]
+    },
+    {
+      "id": "pipelines#transform-stages",
+      "kind": "section",
+      "title": "Building Pipelines",
+      "heading": "Transform stages",
+      "group": "Guides",
+      "url": "/docs/pipelines#transform-stages",
+      "summary": "Transform stages Use a filter stage to drop records that don't match a predicate, a map stage to reshape fields, and a join stage to enrich records from a second source keyed on a shared field.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "filter",
+          "chunkId": "pipelines#transform-stages"
+        },
+        {
+          "kind": "code",
+          "literal": "map",
+          "chunkId": "pipelines#transform-stages"
+        },
+        {
+          "kind": "code",
+          "literal": "join",
+          "chunkId": "pipelines#transform-stages"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "pipelines#transform-stages",
+          "url": "/docs/pipelines#transform-stages",
+          "anchor": "transform-stages"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "transform",
+        "stages",
+        "filter",
+        "stage",
+        "drop",
+        "records",
+        "match",
+        "predicate",
+        "reshape",
+        "fields",
+        "join",
+        "enrich",
+        "second",
+        "source",
+        "keyed",
+        "shared",
+        "field",
+        "windowed",
+        "aggregations",
+        "compute",
+        "rolling",
+        "counts",
+        "sums",
+        "averages",
+        "time",
+        "window",
+        "useful",
+        "metrics",
+        "alerts"
+      ]
+    }
+  ],
+  "edges": []
+}

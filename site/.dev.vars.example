@@ -1,5 +1,5 @@
 # Copy to .dev.vars (gitignored) for local `astro dev` / `wrangler pages dev`.
-# Enables the agentic /api/find path; without it, search degrades to keyword-only.
+# Enables the agentic /api/ask path; without it, search degrades to keyword-only.
 # In production, set the real value with:
-#   wrangler pages secret put ANTHROPIC_API_KEY --project-name=hev-find
+#   wrangler pages secret put ANTHROPIC_API_KEY --project-name=hev-ask
 ANTHROPIC_API_KEY=

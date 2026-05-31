@@ -1,15 +1,15 @@
 ---
 title: "Introduction"
-description: "hev find is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter."
+description: "hev ask is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter."
 group: "Overview"
 order: 0
 ---
 
 import Diagram from "../../components/docs/Diagram.astro";
 import Callout from "../../components/docs/Callout.astro";
-import { findMapDiagram } from "../../lib/diagrams";
+import { askMapDiagram } from "../../lib/diagrams";
 
-**hev find** is an ask-first search overlay for [Astro](https://astro.build)
+**hev ask** is an ask-first search overlay for [Astro](https://astro.build)
 documentation sites. You add one integration, drop one component in your layout,
 and readers get a `⌘K` command palette over your content collection that leans
 toward **answering the question they actually have**:
@@ -23,11 +23,11 @@ toward **answering the question they actually have**:
   (`/docs/page#section`), with no API key in the path.
 
 Readers who never want the model call can flip to keyword-only and it stays out
-of the way. This site is built with hev find and searches itself — press `⌘K`
+of the way. This site is built with hev ask and searches itself — press `⌘K`
 and try *"how does the knowledge graph stay fresh"* to watch the answer stream
 in over the real corpus you're reading.
 
-<Diagram label="hev find architecture">{findMapDiagram}</Diagram>
+<Diagram label="hev ask architecture">{askMapDiagram}</Diagram>
 
 ## Who this is for
 
@@ -46,23 +46,23 @@ the loop, [Pagefind](https://pagefind.app) is simpler and a great fit — see
 
 ## How it fits an Astro site
 
-hev find ships as a single package, `@hev/find`, exposing an Astro integration
+hev ask ships as a single package, `@hev/ask`, exposing an Astro integration
 as its default export:
 
-- The **integration** injects an on-demand `/api/find` route, exposes resolved
+- The **integration** injects an on-demand `/api/ask` route, exposes resolved
   config and the knowledge graph through virtual modules, and runs the
   knowledge-graph build during `astro build`.
 - The **`SearchOverlay.astro`** component renders the palette. Any element with
-  a `data-hev-find-open` attribute opens it; `⌘K` is wired automatically.
-- The **`/api/find`** endpoint answers queries — keyword mode with no key,
+  a `data-hev-ask-open` attribute opens it; `⌘K` is wired automatically.
+- The **`/api/ask`** endpoint answers queries — keyword mode with no key,
   agentic mode when `ANTHROPIC_API_KEY` is set — and serves the suggested
   questions the overlay shows on open.
 - The knowledge graph is built **offline** — most conveniently with a
   **Claude Code skill** (no API key, no per-build token spend), or with the
-  **`hev-find-kg`** CLI as a fallback — and verified with the same CLI.
+  **`hev-ask-kg`** CLI as a fallback — and verified with the same CLI.
 
 <Callout label="the corpus is your collection">
-hev find only searches the Astro content collection(s) you configure. There's
+hev ask only searches the Astro content collection(s) you configure. There's
 no external index and nothing to keep in sync — the docs you render *are* the
 search corpus.
 </Callout>
@@ -73,6 +73,6 @@ search corpus.
 - [Concepts](/docs/concepts) — chunks, anchors, the agentic loop, and the
   knowledge graph.
 - [Tradeoffs](/docs/tradeoffs) and [Limits](/docs/limits) — what you're choosing,
-  and what hev find deliberately doesn't do.
+  and what hev ask deliberately doesn't do.
 - [API reference](/docs/api/configuration) — every option, the component props,
   the endpoint contract, and the CLI.

@@ -1,23 +1,23 @@
 ---
 title: "Configuration"
-description: "Every option for the hevFind() Astro integration: collections, models, endpoint and basePath, chunking depth, retrieval caps, and knowledge-graph paths, with defaults."
+description: "Every option for the hevAsk() Astro integration: collections, models, endpoint and basePath, chunking depth, retrieval caps, and knowledge-graph paths, with defaults."
 group: "API"
 order: 0
 ---
 
 import Callout from "../../../components/docs/Callout.astro";
 
-The `hevFind()` integration is the default export of `@hev/find`. It takes one
+The `hevAsk()` integration is the default export of `@hev/ask`. It takes one
 options object. Only `collections` is effectively required; everything else has
 a default.
 
 ```js
 // astro.config.mjs
-import hevFind from "@hev/find";
+import hevAsk from "@hev/ask";
 
 export default defineConfig({
   integrations: [
-    hevFind({
+    hevAsk({
       collections: ["docs"],
       basePath: "/docs/",
       model: "claude-haiku-4-5",
@@ -33,7 +33,7 @@ export default defineConfig({
 |---|---|---|---|
 | `collections` | `string[]` | — | Content collection name(s) to index and search. Without it the endpoint errors and the integration warns at build. |
 | `basePath` | `string` | `'/docs/'` | Slug → URL prefix. A doc's URL is `basePath + slug`, plus `#anchor` for a section. |
-| `endpoint` | `string` | `'/api/find'` | Route the search endpoint is injected at. Must match the overlay's `endpoint` prop if you change it. |
+| `endpoint` | `string` | `'/api/ask'` | Route the search endpoint is injected at. Must match the overlay's `endpoint` prop if you change it. |
 | `model` | `string` | `'claude-haiku-4-5'` | Claude model for the agentic search loop. |
 | `kgModel` | `string` | `'claude-opus-4-8'` | Model for the offline knowledge-graph builder. |
 | `maxResults` | `number` | `6` | Source sections the AI answer may ground in and cite (the Sources footer size); also the keyword result row cap. |
@@ -42,11 +42,11 @@ export default defineConfig({
 | `chunkHeadingDepth` | `number` | `3` | Deepest heading used as a chunk boundary. `2` = `##`; `3` = `##` and `###`. |
 | `candidatePerSearch` | `number` | `8` | Chunks returned by each `search` tool call. |
 | `perDocCap` | `number` | `2` | Max chunks from one document returned by a single prefilter call. |
-| `kgPath` | `string` | `'.hev-find/kg.json'` | Path to the committed knowledge-graph artifact, relative to the site root. |
+| `kgPath` | `string` | `'.hev-ask/kg.json'` | Path to the committed knowledge-graph artifact, relative to the site root. |
 | `kgContentGlobs` | `string[]` | derived | Globs the offline builder reads. Defaults to Markdown/MDX under each configured collection directory. |
 
 <Callout label="changing the endpoint">
-If you set `endpoint` to something other than `/api/find`, pass the same value
+If you set `endpoint` to something other than `/api/ask`, pass the same value
 to the `SearchOverlay` component's `endpoint` prop so the overlay posts to the
 right route. See the [component reference](/docs/api/search-overlay).
 </Callout>
@@ -55,10 +55,10 @@ right route. See the [component reference](/docs/api/search-overlay).
 
 When Astro starts up (`astro:config:setup`) the integration:
 
-- injects the `endpoint` route, pointing at `@hev/find/endpoint`, with
+- injects the `endpoint` route, pointing at `@hev/ask/endpoint`, with
   `prerender: false` so it renders on demand;
-- registers two virtual modules — `virtual:hev-find/config` (the resolved
-  options) and `virtual:hev-find/kg` (the committed knowledge graph, inlined);
+- registers two virtual modules — `virtual:hev-ask/config` (the resolved
+  options) and `virtual:hev-ask/kg` (the committed knowledge graph, inlined);
 - adds `kgPath` as a watched file so dev reloads when the graph changes;
 - warns if `collections` is empty.
 
@@ -72,7 +72,7 @@ lack of a key.**
 The options type is exported for editor help and config typing:
 
 ```ts
-import type { HevFindOptions } from "@hev/find";
+import type { HevAskOptions } from "@hev/ask";
 ```
 
 ## Tuning notes

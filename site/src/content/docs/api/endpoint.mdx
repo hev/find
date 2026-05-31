@@ -1,20 +1,20 @@
 ---
 title: "Search endpoint"
-description: "The /api/find route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses."
+description: "The /api/ask route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses."
 group: "API"
 order: 2
 ---
 
 import Callout from "../../../components/docs/Callout.astro";
 
-The integration injects one on-demand route (default `/api/find`). The overlay
+The integration injects one on-demand route (default `/api/ask`). The overlay
 posts to it. **Keyword mode returns JSON**; **agentic mode streams a grounded
 answer as Server-Sent Events** (`text/event-stream`). A `GET` to the same route
 returns the suggested questions the overlay shows on open.
 
 ## Suggested questions (GET)
 
-`GET /api/find` returns the knowledge graph's baked-in suggestions and the loop
+`GET /api/ask` returns the knowledge graph's baked-in suggestions and the loop
 model — no query, no model call:
 
 ```json
@@ -147,4 +147,4 @@ sent to the browser.
 The chunk index is built once per server instance on the first request and
 cached for the process lifetime. On the first request the endpoint also compares
 the live content hash against the knowledge graph's hash and logs a one-time
-warning if they differ — your cue to run [`hev-find-kg build`](/docs/api/cli).
+warning if they differ — your cue to run [`hev-ask-kg build`](/docs/api/cli).

@@ -1,20 +1,20 @@
 import { defineConfig } from "astro/config";
 import mdx from "@astrojs/mdx";
 import cloudflare from "@astrojs/cloudflare";
-import hevFind from "@hev/find";
+import hevAsk from "@hev/ask";
 
-// This site documents hev find and searches itself with hev find — the docs
+// This site documents hev ask and searches itself with hev ask — the docs
 // are the product's own test corpus. Static pages stay prerendered; only the
-// on-demand /api/find route runs as a Cloudflare Pages Function.
+// on-demand /api/ask route runs as a Cloudflare Pages Function.
 export default defineConfig({
-	site: "https://find.hev.dev",
+	site: "https://ask.hev.dev",
 	devToolbar: { enabled: false },
 	// Pinned lane so dev fails loudly instead of hopping a neighbour's port.
 	server: { port: 4334, strictPort: true },
 	adapter: cloudflare({ platformProxy: { enabled: true } }),
 	integrations: [
 		mdx(),
-		hevFind({ collections: ["docs"], basePath: "/docs/" }),
+		hevAsk({ collections: ["docs"], basePath: "/docs/" }),
 	],
 	markdown: {
 		syntaxHighlight: false,

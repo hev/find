@@ -1,14 +1,14 @@
 import type { APIRoute } from "astro";
 import { docsNav, getAllDocs, getDocHref } from "../lib/docs";
 
-const SITE = "https://find.hev.dev";
+const SITE = "https://ask.hev.dev";
 
 export const GET: APIRoute = async () => {
 	const all = await getAllDocs();
 	const byId = new Map(all.map((entry) => [entry.id, entry]));
 
 	const parts: string[] = [];
-	parts.push("# hev find — full docs\n\n");
+	parts.push("# hev ask — full docs\n\n");
 	parts.push(`> Concatenated docs surface. Index at ${SITE}/llms.txt.\n\n`);
 
 	for (const group of docsNav) {

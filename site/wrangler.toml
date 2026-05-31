@@ -1,9 +1,10 @@
-# Cloudflare Pages config for find.hev.dev (project `hev-find`).
+# Cloudflare Pages config for ask.hev.dev (project `hev-ask`).
 # The @astrojs/cloudflare adapter emits a worker into dist/ for the on-demand
-# /api/find endpoint; nodejs_compat lets it use Node built-ins at the edge.
+# /api/ask endpoint; nodejs_compat lets it use Node built-ins at the edge.
 # `pages_build_output_dir` makes `wrangler pages deploy` (no positional) pick
 # up dist/ — so the compat flags live here in git, not in dashboard state.
-name = "hev-find"
+name = "hev-ask"
+account_id = "ce0c7a0a6b9935ddf1a641fd32f596b5"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./dist"

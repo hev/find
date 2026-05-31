@@ -1,4 +1,4 @@
-export interface HevFindOptions {
+export interface HevAskOptions {
   /**
    * Content collection name(s) to index and search over.
    * @example ['docs']
@@ -13,7 +13,7 @@ export interface HevFindOptions {
 
   /**
    * The route the search endpoint is injected at.
-   * @default '/api/find'
+   * @default '/api/ask'
    */
   endpoint?: string;
 
@@ -70,7 +70,7 @@ export interface HevFindOptions {
 
   /**
    * Path to the committed knowledge graph artifact, relative to the site root.
-   * @default '.hev-find/kg.json'
+   * @default '.hev-ask/kg.json'
    */
   kgPath?: string;
 
@@ -81,7 +81,7 @@ export interface HevFindOptions {
   kgContentGlobs?: string[];
 }
 
-/** The shape the integration serializes into `virtual:hev-find/config`. */
+/** The shape the integration serializes into `virtual:hev-ask/config`. */
 export interface ResolvedConfig {
   collections: string[] | null;
   model: string;

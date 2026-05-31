@@ -20,41 +20,41 @@ try {
       siteRoot: process.cwd(),
       collections: flags.collections.length ? flags.collections : ['docs'],
       basePath: flags.basePath ?? '/docs/',
-      kgPath: flags.kgPath ?? '.hev-find/kg.json',
+      kgPath: flags.kgPath ?? '.hev-ask/kg.json',
       kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
       kgModel: flags.kgModel ?? 'claude-opus-4-8',
     });
-    console.log(`[hev-find] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
+    console.log(`[hev-ask] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
   } else if (command === 'corpus') {
     const result = await writeCorpusInput({
       siteRoot: process.cwd(),
       collections: flags.collections.length ? flags.collections : ['docs'],
       basePath: flags.basePath ?? '/docs/',
-      kgPath: flags.kgPath ?? '.hev-find/kg.json',
-      outPath: flags.out ?? '.hev-find/kg-input.json',
+      kgPath: flags.kgPath ?? '.hev-ask/kg.json',
+      outPath: flags.out ?? '.hev-ask/kg-input.json',
       kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
     });
     const state = result.upToDate ? 'up-to-date' : 'needs-rebuild';
-    console.log(`[hev-find] kg:corpus ${result.path} (${result.sections} sections, ${state})`);
+    console.log(`[hev-ask] kg:corpus ${result.path} (${result.sections} sections, ${state})`);
   } else if (command === 'assemble') {
     const result = await assembleFromDistillation({
       siteRoot: process.cwd(),
       collections: flags.collections.length ? flags.collections : ['docs'],
       basePath: flags.basePath ?? '/docs/',
-      kgPath: flags.kgPath ?? '.hev-find/kg.json',
-      inputPath: flags.input ?? '.hev-find/kg-distill.json',
+      kgPath: flags.kgPath ?? '.hev-ask/kg.json',
+      inputPath: flags.input ?? '.hev-ask/kg-distill.json',
       kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
     });
-    console.log(`[hev-find] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
+    console.log(`[hev-ask] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
   } else if (command === 'verify') {
     const result = await verifyAnchors({
       siteRoot: process.cwd(),
       collections: flags.collections.length ? flags.collections : ['docs'],
       basePath: flags.basePath ?? '/docs/',
-      kgPath: flags.kgPath ?? '.hev-find/kg.json',
+      kgPath: flags.kgPath ?? '.hev-ask/kg.json',
       kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
       buildCommand: flags.buildCommand,
@@ -65,18 +65,18 @@ try {
 
     if (result.missing.length) {
       for (const miss of result.missing) {
-        console.error(`[hev-find] missing anchor ${miss.anchorId} for ${miss.url} in ${miss.file}`);
+        console.error(`[hev-ask] missing anchor ${miss.anchorId} for ${miss.url} in ${miss.file}`);
       }
       failed = true;
     }
     if (result.uncovered.length) {
       const sample = result.uncovered.slice(0, 5).join(', ');
       const more = result.uncovered.length > 5 ? `, …(+${result.uncovered.length - 5})` : '';
-      console.warn(`[hev-find] ${result.uncovered.length} section(s) missing from the graph: ${sample}${more} — run \`hev-find-kg build\`.`);
+      console.warn(`[hev-ask] ${result.uncovered.length} section(s) missing from the graph: ${sample}${more} — run \`hev-ask-kg build\`.`);
       if (flags.strict) failed = true;
     }
     if (result.dropped.length) {
-      console.warn(`[hev-find] ${result.dropped.length} source literal(s) dropped from agent-primary nodes — run \`hev-find-kg build\`:`);
+      console.warn(`[hev-ask] ${result.dropped.length} source literal(s) dropped from agent-primary nodes — run \`hev-ask-kg build\`:`);
       for (const drop of result.dropped.slice(0, 8)) console.warn(`  - ${drop.id}: ${drop.literal}`);
       if (flags.strict) failed = true;
     }
@@ -85,16 +85,16 @@ try {
       process.exitCode = 1;
     } else {
       const warnings = result.dropped.length || result.uncovered.length ? ' (with warnings)' : '';
-      console.log(`[hev-find] verified ${result.checked} anchors${warnings}`);
+      console.log(`[hev-ask] verified ${result.checked} anchors${warnings}`);
     }
   } else {
     console.error(
-      'Usage: hev-find-kg build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--out path] [--input path] [--strict]',
+      'Usage: hev-ask-kg build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--out path] [--input path] [--strict]',
     );
     process.exitCode = 1;
   }
 } catch (err) {
-  console.error(`[hev-find] ${err.message}`);
+  console.error(`[hev-ask] ${err.message}`);
   process.exitCode = 1;
 }
 }
@@ -203,7 +203,7 @@ async function assembleFromDistillation(options) {
   try {
     raw = JSON.parse(await readFile(inputPath, 'utf8'));
   } catch {
-    throw new Error(`Could not read distillation JSON at ${options.inputPath}. Run \`hev-find-kg corpus\` first.`);
+    throw new Error(`Could not read distillation JSON at ${options.inputPath}. Run \`hev-ask-kg corpus\` first.`);
   }
   const corpus = await buildCorpus(options);
   const graph = assembleGraph(normalizeEmit(raw), corpus);
@@ -236,7 +236,7 @@ async function verifyAnchors(options) {
 }
 
 async function verifyFidelity(options, chunks) {
-  const kgPath = path.resolve(options.siteRoot, options.kgPath ?? '.hev-find/kg.json');
+  const kgPath = path.resolve(options.siteRoot, options.kgPath ?? '.hev-ask/kg.json');
   const kg = await readExistingKg(kgPath);
   if (!kg || !kg.nodes.length) return { dropped: [], uncovered: [] };
 

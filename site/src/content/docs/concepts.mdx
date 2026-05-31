@@ -1,20 +1,20 @@
 ---
 title: "Concepts"
-description: "How hev find works: heading-chunk indexing with real anchors, keyword prefiltering widened by a glossary, the bounded agentic search loop, and the offline knowledge graph."
+description: "How hev ask works: heading-chunk indexing with real anchors, keyword prefiltering widened by a glossary, the bounded agentic search loop, and the offline knowledge graph."
 group: "Overview"
 order: 2
 ---
 
 import Diagram from "../../components/docs/Diagram.astro";
 import Callout from "../../components/docs/Callout.astro";
-import { findMapDiagram } from "../../lib/diagrams";
+import { askMapDiagram } from "../../lib/diagrams";
 
-hev find is three parts: a **heading-chunk index** with real anchors, a
+hev ask is three parts: a **heading-chunk index** with real anchors, a
 **bounded agentic loop** that navigates a knowledge graph, and that offline
 **knowledge graph** — a distilled, source-grounded "shadow site" the loop reads
 from. This page explains each and how they fit together.
 
-<Diagram label="build time versus runtime">{findMapDiagram}</Diagram>
+<Diagram label="build time versus runtime">{askMapDiagram}</Diagram>
 
 The split that matters: the knowledge graph is built **offline** with a strong
 model and committed to git; the index and search loop run **on demand** at the
@@ -22,7 +22,7 @@ edge. No durable state lives in the running site.
 
 ## Chunks and anchors
 
-hev find does not index pages — it indexes **sections**. Each document is split
+hev ask does not index pages — it indexes **sections**. Each document is split
 on its headings (up to a configurable depth, default `##` and `###`). Content
 before the first heading becomes the *intro chunk* whose URL is the page itself.
 
@@ -146,7 +146,7 @@ The model step can run two ways, and both feed the same deterministic assembler:
   inside your existing Claude Code subscription — **no `ANTHROPIC_API_KEY`, no
   per-build token spend on your own key**, and it fits the editor workflow most
   authors are already in.
-- **`hev-find-kg build` (fallback).** One `ANTHROPIC_API_KEY` call to
+- **`hev-ask-kg build` (fallback).** One `ANTHROPIC_API_KEY` call to
   **Claude Opus 4.8** (default) does the same distillation unattended — the right
   choice for CI or anyone not using Claude Code.
 
@@ -158,7 +158,7 @@ See the [knowledge graph reference](/docs/api/knowledge-graph) and the
 
 ## Degradation, by design
 
-hev find is built to keep working as pieces drop away:
+hev ask is built to keep working as pieces drop away:
 
 - **No key at runtime** → keyword mode only. The overlay still searches.
 - **No key at build** → the committed `kg.json` is kept; the build warns but

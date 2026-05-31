@@ -1,18 +1,18 @@
 ---
 title: "Limits"
-description: "The hard boundaries of hev find: corpus scope, recall ceiling, single-call knowledge-graph build, frontmatter parsing, latency, and adapter requirements — what it deliberately does not do."
+description: "The hard boundaries of hev ask: corpus scope, recall ceiling, single-call knowledge-graph build, frontmatter parsing, latency, and adapter requirements — what it deliberately does not do."
 group: "Overview"
 order: 4
 ---
 
 import Callout from "../../components/docs/Callout.astro";
 
-These are the boundaries you should know before adopting hev find. None of them
+These are the boundaries you should know before adopting hev ask. None of them
 are bugs — they're the edges of what the current design covers.
 
 ## The corpus is your content collection
 
-hev find searches the Astro content collection(s) you configure, and nothing
+hev ask searches the Astro content collection(s) you configure, and nothing
 else. There is no crawler, no external sitemap ingestion, and no way to index
 pages that aren't collection entries (hand-written `.astro` pages, for example).
 
@@ -63,9 +63,9 @@ instant lane and always available; agentic search is the considered one. Tune
 
 ## Anchors depend on Astro's slugger
 
-Deep links are only correct as long as the heading slugs hev find generates
-match Astro's rendered `id` attributes. hev find uses the same `github-slugger`
-to stay aligned, and ships a `hev-find-kg verify` command that fails if any
+Deep links are only correct as long as the heading slugs hev ask generates
+match Astro's rendered `id` attributes. hev ask uses the same `github-slugger`
+to stay aligned, and ships a `hev-ask-kg verify` command that fails if any
 chunk anchor is missing from the built HTML.
 
 **Wire `verify` into CI.** If Astro ever changes its slugging, the verifier is
@@ -73,7 +73,7 @@ what catches it before a broken link ships.
 
 ## A server route is required
 
-The `/api/find` endpoint renders on demand, so a **fully static build cannot
+The `/api/ask` endpoint renders on demand, so a **fully static build cannot
 serve search**. You need a server or hybrid adapter (Node, Cloudflare, Vercel,
 etc.). Static-only sites should use a static search tool instead — see
 [Tradeoffs](/docs/tradeoffs#how-it-compares).
@@ -81,6 +81,6 @@ etc.). Static-only sites should use a static search tool instead — see
 ## Secrets live server-side
 
 The agentic path needs `ANTHROPIC_API_KEY` in the **server environment** that
-runs `/api/find`. The key is never exposed to the browser. If the key isn't
+runs `/api/ask`. The key is never exposed to the browser. If the key isn't
 present at runtime, the endpoint serves keyword results — search degrades, it
 doesn't break.

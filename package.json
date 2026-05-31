@@ -1,5 +1,5 @@
 {
-  "name": "hev-find",
+  "name": "hev-ask",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.29.3",
@@ -8,7 +8,7 @@
     "build": "pnpm --filter playground build",
     "kg:build": "pnpm --filter playground kg:build",
     "kg:verify": "pnpm --filter playground kg:verify",
-    "test": "pnpm --filter @hev/find test",
+    "test": "pnpm --filter @hev/ask test",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

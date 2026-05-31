@@ -5,13 +5,13 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "kg:build": "hev-find-kg build",
-    "kg:verify": "hev-find-kg verify",
+    "kg:build": "hev-ask-kg build",
+    "kg:verify": "hev-ask-kg verify",
     "preview": "astro preview",
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@hev/find": "workspace:*",
+    "@hev/ask": "workspace:*",
     "astro": "^5.0.0"
   },
   "devDependencies": {

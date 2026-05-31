@@ -1,0 +1,85 @@
+---
+import SearchOverlay from '@hev/ask/components/SearchOverlay.astro';
+import { getCollection } from 'astro:content';
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+
+const docs = await getCollection('docs');
+const ORDER = ['Overview', 'Concepts', 'Guides', 'Operations', 'API', 'Reference'];
+const rank = (g: string) => {
+  const i = ORDER.indexOf(g);
+  return i < 0 ? ORDER.length : i;
+};
+const groups = new Map<string, { slug: string; title: string }[]>();
+for (const d of [...docs].sort((a, b) => a.data.title.localeCompare(b.data.title))) {
+  const g = d.data.group ?? 'Reference';
+  if (!groups.has(g)) groups.set(g, []);
+  groups.get(g)!.push({ slug: d.id, title: d.data.title });
+}
+const nav = [...groups.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
+const current = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · turbopuffer docs (hev ask bench)</title>
+    <style>
+      :root { color-scheme: dark; --bg:#0b0d10; --fg:#e6e7e9; --dim:#8b9099; --signal:#ff7a2f; --line:#23262c; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.6 ui-monospace,"JetBrains Mono",Menlo,monospace; }
+      header { display:flex; align-items:center; gap:.6rem; padding:.7rem 1rem; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); }
+      header .dim { color:var(--dim); }
+      header button { margin-left:auto; background:transparent; color:var(--dim); border:1px solid var(--line); border-radius:6px; padding:.35rem .7rem; cursor:pointer; font:inherit; }
+      header button:hover { color:var(--fg); border-color:var(--signal); }
+      .wrap { display:grid; grid-template-columns:260px minmax(0,1fr); gap:2rem; max-width:1100px; margin:0 auto; padding:1.5rem 1rem; }
+      nav { font-size:13px; position:sticky; top:4rem; align-self:start; max-height:calc(100vh - 5rem); overflow:auto; }
+      nav h4 { color:var(--signal); text-transform:uppercase; letter-spacing:.08em; font-size:11px; margin:1rem 0 .3rem; }
+      nav ul { list-style:none; margin:0; padding:0; }
+      nav a { display:block; color:var(--dim); text-decoration:none; padding:.12rem 0; }
+      nav a:hover, nav a[aria-current="page"] { color:var(--fg); }
+      nav a[aria-current="page"] { border-left:2px solid var(--signal); padding-left:.5rem; margin-left:-.5rem; }
+      main { min-width:0; }
+      main h1 { font-size:1.6rem; margin:.2rem 0 1rem; }
+      article :is(h2,h3) { margin-top:1.8rem; border-bottom:1px solid var(--line); padding-bottom:.2rem; }
+      article a { color:var(--signal); }
+      article pre { background:#05070a; border:1px solid var(--line); border-radius:8px; padding:1rem; overflow:auto; font-size:13px; }
+      article code { background:#05070a; padding:.1rem .3rem; border-radius:4px; }
+      article pre code { background:none; padding:0; }
+      article img { max-width:100%; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>turbopuffer docs</strong>
+      <span class="dim">· @hev/ask scale bench</span>
+      <button data-hev-ask-open>Search ⌘K</button>
+    </header>
+    <div class="wrap">
+      <nav>
+        {nav.map(([g, items]) => (
+          <div>
+            <h4>{g}</h4>
+            <ul>
+              {items.map((it) => (
+                <li>
+                  <a href={`/docs/${it.slug}`} aria-current={current === `/docs/${it.slug}` ? 'page' : undefined}>{it.title}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+      <main>
+        <h1>{title}</h1>
+        <article><slot /></article>
+      </main>
+    </div>
+    <SearchOverlay />
+  </body>
+</html>

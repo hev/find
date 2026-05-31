@@ -1,6 +1,6 @@
 ---
 title: "SearchOverlay component"
-description: "The SearchOverlay.astro command palette: props, the data-hev-find-open opener attribute, keyboard model, the mode toggle, and theming through CSS variables."
+description: "The SearchOverlay.astro command palette: props, the data-hev-ask-open opener attribute, keyboard model, the mode toggle, and theming through CSS variables."
 group: "API"
 order: 1
 ---
@@ -13,7 +13,7 @@ layout until opened.
 
 ```astro
 ---
-import SearchOverlay from "@hev/find/components/SearchOverlay.astro";
+import SearchOverlay from "@hev/ask/components/SearchOverlay.astro";
 ---
 <SearchOverlay />
 ```
@@ -22,14 +22,14 @@ import SearchOverlay from "@hev/find/components/SearchOverlay.astro";
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `endpoint` | `string` | `'/api/find'` | Endpoint the overlay posts queries to. Must match the integration's `endpoint` option. |
+| `endpoint` | `string` | `'/api/ask'` | Endpoint the overlay posts queries to. Must match the integration's `endpoint` option. |
 | `placeholder` | `string` | `'Search the docs…'` | Placeholder text for the input. |
 | `debounce` | `number` | `500` | Milliseconds after typing stops before a keyword query is sent. |
 
 ```astro
 <SearchOverlay
-  endpoint="/api/find"
-  placeholder="Search hev find…"
+  endpoint="/api/ask"
+  placeholder="Search hev ask…"
   debounce={400}
 />
 ```
@@ -39,15 +39,15 @@ import SearchOverlay from "@hev/find/components/SearchOverlay.astro";
 Two ways, both built in:
 
 - **`⌘K` / `Ctrl-K`** is bound automatically once the component is on the page.
-- **Any element with `data-hev-find-open`** opens it on click — wire up as many
+- **Any element with `data-hev-ask-open`** opens it on click — wire up as many
   triggers as you like (header button, sidebar, inline links).
 
 ```astro
-<button type="button" data-hev-find-open>
+<button type="button" data-hev-ask-open>
   Search <kbd>⌘K</kbd>
 </button>
 
-<a href="#" data-hev-find-open>Search the docs</a>
+<a href="#" data-hev-ask-open>Search the docs</a>
 ```
 
 ## Keyboard model
@@ -78,7 +78,7 @@ doesn't escalate to the model.
 ## Suggested questions
 
 When AI is on, the overlay fetches a short list of suggested questions from the
-endpoint (`GET /api/find`) the first time it opens and shows them in the empty
+endpoint (`GET /api/ask`) the first time it opens and shows them in the empty
 state. They come from the knowledge graph's `suggestions`, baked in at build
 time, so there's **no model call to render them** — and if the graph has none,
 the overlay simply shows nothing extra. Clicking a suggestion fills the input and
@@ -87,7 +87,7 @@ asks it immediately.
 ## The mode toggle
 
 The overlay persists an "AI on Enter" preference in `localStorage` under the key
-`hev-find:mode` (`agentic` or `keyword`). Readers who flip it to keyword-only
+`hev-ask:mode` (`agentic` or `keyword`). Readers who flip it to keyword-only
 never trigger a model call: a space just searches for a phrase, and no suggested
 questions are shown. The choice survives reloads.
 

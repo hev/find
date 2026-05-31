@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "generatedAt": "2026-05-31T04:02:40.818Z",
-  "contentHash": "6cd88798ad1bbd9df7101cecf3df9743f6d3fdcfa932f7519128316ff869f677",
-  "context": "hev find is an Astro 5 integration that adds a ⌘K command-palette search overlay to documentation sites whose content lives in Astro content collections. It offers two search paths from one endpoint: an instant, keyless keyword path that runs as the reader types, and an optional Claude-powered agentic path triggered by pressing Enter that streams a grounded answer with inline deep links. Both paths chunk documents by heading so links land on the exact section anchor rather than the top of a page. The agentic path reads from an offline-built, git-committed knowledge graph (kg.json) — a distilled \"shadow site\" of section nodes — built by the hev-find-kg CLI and inlined into the build via a virtual module. The system is designed to degrade gracefully (no key, stale or missing graph) and to never hard-fail. This corpus documents the concepts, quick start, tradeoffs, limits, and the full API surface (integration config, SearchOverlay component, /api/find endpoint, knowledge-graph format, and the CLI).",
+  "generatedAt": "2026-05-31T14:54:22.353Z",
+  "contentHash": "708cfaf64c82066aac3d7949e00b2dcdc62eeac3bfdf9bc15931e5413f102a63",
+  "context": "hev ask is an Astro 5 integration that adds a ⌘K command-palette search overlay to documentation sites whose content lives in Astro content collections. It offers two search paths from one endpoint: an instant, keyless keyword path that runs as the reader types, and an optional Claude-powered agentic path triggered by pressing Enter that streams a grounded answer with inline deep links. Both paths chunk documents by heading so links land on the exact section anchor rather than the top of a page. The agentic path reads from an offline-built, git-committed knowledge graph (kg.json) — a distilled \"shadow site\" of section nodes — built by the hev-ask-kg CLI and inlined into the build via a virtual module. The system is designed to degrade gracefully (no key, stale or missing graph) and to never hard-fail. This corpus documents the concepts, quick start, tradeoffs, limits, and the full API surface (integration config, SearchOverlay component, /api/ask endpoint, knowledge-graph format, and the CLI).",
   "glossary": [
     {
-      "term": "hev find",
+      "term": "hev ask",
       "aliases": [
         "hevfind",
-        "@hev/find",
-        "hev-find"
+        "@hev/ask",
+        "hev-ask"
       ],
       "definition": "An Astro integration that adds a ⌘K search overlay with instant keyword search and an optional Claude-powered agentic search path."
     },
@@ -49,7 +49,7 @@
         "heading chunk",
         "section"
       ],
-      "definition": "A document slice split on a heading, carrying the heading, cleaned prose, and a basePath+slug+#anchor URL; the unit hev find indexes."
+      "definition": "A document slice split on a heading, carrying the heading, cleaned prose, and a basePath+slug+#anchor URL; the unit hev ask indexes."
     },
     {
       "term": "anchor",
@@ -62,22 +62,22 @@
       "definition": "The #id appended to a section URL, generated with github-slugger so it matches Astro's rendered heading id."
     },
     {
-      "term": "hev-find-kg",
+      "term": "hev-ask-kg",
       "aliases": [
         "CLI",
-        "hev find cli",
+        "hev ask cli",
         "kg cli"
       ],
-      "definition": "The single binary shipping with @hev/find, offering build and verify subcommands to generate and check the committed knowledge graph."
+      "definition": "The single binary shipping with @hev/ask, offering build and verify subcommands to generate and check the committed knowledge graph."
     },
     {
-      "term": "hevFind()",
+      "term": "hevAsk()",
       "aliases": [
         "integration",
-        "hev find integration",
+        "hev ask integration",
         "astro integration"
       ],
-      "definition": "The default export of @hev/find: the Astro integration configured with an options object in astro.config.mjs."
+      "definition": "The default export of @hev/ask: the Astro integration configured with an options object in astro.config.mjs."
     },
     {
       "term": "SearchOverlay",
@@ -89,7 +89,7 @@
       "definition": "The Astro component that renders the ⌘K command palette and posts queries to the search endpoint."
     },
     {
-      "term": "/api/find",
+      "term": "/api/ask",
       "aliases": [
         "search endpoint",
         "find endpoint",
@@ -120,7 +120,7 @@
       "aliases": [
         "slugger"
       ],
-      "definition": "The same slug library Astro's renderer uses, adopted as hev find's single dependency to keep generated anchors byte-identical to rendered heading ids."
+      "definition": "The same slug library Astro's renderer uses, adopted as hev ask's single dependency to keep generated anchors byte-identical to rendered heading ids."
     },
     {
       "term": "source-primary",
@@ -166,42 +166,42 @@
       "definition": "The CLI subcommand that builds the site and checks anchors, coverage, and literal fidelity against the committed graph without calling the model."
     }
   ],
-  "overview": "## API\n- CLI: hev-find-kg — `api/cli`\n- assemble — `api/cli#assemble`\n- build — `api/cli#build`\n- Building with Claude Code (recommended) — `api/cli#building-with-claude-code-recommended`\n- corpus — `api/cli#corpus`\n- Flags — `api/cli#flags`\n- verify — `api/cli#verify`\n- Where it runs — `api/cli#where-it-runs`\n- Configuration — `api/configuration`\n- Options — `api/configuration#options`\n- Tuning notes — `api/configuration#tuning-notes`\n- TypeScript — `api/configuration#typescript`\n- What the integration does — `api/configuration#what-the-integration-does`\n- Search endpoint — `api/endpoint`\n- Agentic response (SSE) — `api/endpoint#agentic-response-sse`\n- Errors — `api/endpoint#errors`\n- Index lifecycle — `api/endpoint#index-lifecycle`\n- Keyword response (JSON) — `api/endpoint#keyword-response-json`\n- Mode selection — `api/endpoint#mode-selection`\n- Request — `api/endpoint#request`\n- Suggested questions (GET) — `api/endpoint#suggested-questions-get`\n- The API key — `api/endpoint#the-api-key`\n- Knowledge graph format — `api/knowledge-graph`\n- Degradation — `api/knowledge-graph#degradation`\n- Fields — `api/knowledge-graph#fields`\n- How each field is used — `api/knowledge-graph#how-each-field-is-used`\n- KnowledgeNode — `api/knowledge-graph#knowledgenode`\n- Regenerating — `api/knowledge-graph#regenerating`\n- Shape — `api/knowledge-graph#shape`\n- SearchOverlay component — `api/search-overlay`\n- Keyboard model — `api/search-overlay#keyboard-model`\n- Keyword results and deep links — `api/search-overlay#keyword-results-and-deep-links`\n- Opening the overlay — `api/search-overlay#opening-the-overlay`\n- Props — `api/search-overlay#props`\n- Suggested questions — `api/search-overlay#suggested-questions`\n- The mode toggle — `api/search-overlay#the-mode-toggle`\n- The streamed answer — `api/search-overlay#the-streamed-answer`\n- Theming — `api/search-overlay#theming`\n## Overview\n- Concepts — `concepts`\n- Asking is the default — `concepts#asking-is-the-default`\n- Chunks and anchors — `concepts#chunks-and-anchors`\n- Degradation, by design — `concepts#degradation-by-design`\n- Keyword search and the glossary — `concepts#keyword-search-and-the-glossary`\n- The agentic search loop — `concepts#the-agentic-search-loop`\n- The knowledge graph — `concepts#the-knowledge-graph`\n- The system prompt is cached — `concepts#the-system-prompt-is-cached`\n- Two ways to build it — `concepts#two-ways-to-build-it`\n- Introduction — `index`\n- How it fits an Astro site — `index#how-it-fits-an-astro-site`\n- Next steps — `index#next-steps`\n- Who this is for — `index#who-this-is-for`\n- Limits — `limits`\n- A server route is required — `limits#a-server-route-is-required`\n- Agentic search adds latency — `limits#agentic-search-adds-latency`\n- Anchors depend on Astro's slugger — `limits#anchors-depend-on-astros-slugger`\n- Frontmatter parsing is a flat-YAML subset — `limits#frontmatter-parsing-is-a-flat-yaml-subset`\n- Recall has a keyword ceiling — `limits#recall-has-a-keyword-ceiling`\n- Secrets live server-side — `limits#secrets-live-server-side`\n- The corpus is your content collection — `limits#the-corpus-is-your-content-collection`\n- The knowledge-graph build is a single model call — `limits#the-knowledge-graph-build-is-a-single-model-call`\n- Quick start — `quickstart`\n- 1. Install — `quickstart#1-install`\n- 2. Register the integration — `quickstart#2-register-the-integration`\n- 3. Add a server adapter — `quickstart#3-add-a-server-adapter`\n- 4. Render the overlay — `quickstart#4-render-the-overlay`\n- 5. Build the knowledge graph — `quickstart#5-build-the-knowledge-graph`\n- Install and wire it up — `quickstart#install-and-wire-it-up`\n- Prerequisites — `quickstart#prerequisites`\n- Turn on agentic search — `quickstart#turn-on-agentic-search`\n- Verify it works — `quickstart#verify-it-works`\n- Tradeoffs — `tradeoffs`\n- A committed knowledge graph — `tradeoffs#a-committed-knowledge-graph`\n- Cost and latency of agentic search — `tradeoffs#cost-and-latency-of-agentic-search`\n- How it compares — `tradeoffs#how-it-compares`\n- Keyword retrieval, not embeddings — `tradeoffs#keyword-retrieval-not-embeddings`\n- One dependency, deliberately — `tradeoffs#one-dependency-deliberately`\n- Two paths instead of one — `tradeoffs#two-paths-instead-of-one`",
+  "overview": "## API\n- CLI: hev-ask-kg — `api/cli`\n- assemble — `api/cli#assemble`\n- build — `api/cli#build`\n- Building with Claude Code (recommended) — `api/cli#building-with-claude-code-recommended`\n- corpus — `api/cli#corpus`\n- Flags — `api/cli#flags`\n- verify — `api/cli#verify`\n- Where it runs — `api/cli#where-it-runs`\n- Configuration — `api/configuration`\n- Options — `api/configuration#options`\n- Tuning notes — `api/configuration#tuning-notes`\n- TypeScript — `api/configuration#typescript`\n- What the integration does — `api/configuration#what-the-integration-does`\n- Search endpoint — `api/endpoint`\n- Agentic response (SSE) — `api/endpoint#agentic-response-sse`\n- Errors — `api/endpoint#errors`\n- Index lifecycle — `api/endpoint#index-lifecycle`\n- Keyword response (JSON) — `api/endpoint#keyword-response-json`\n- Mode selection — `api/endpoint#mode-selection`\n- Request — `api/endpoint#request`\n- Suggested questions (GET) — `api/endpoint#suggested-questions-get`\n- The API key — `api/endpoint#the-api-key`\n- Knowledge graph format — `api/knowledge-graph`\n- Degradation — `api/knowledge-graph#degradation`\n- Fields — `api/knowledge-graph#fields`\n- How each field is used — `api/knowledge-graph#how-each-field-is-used`\n- KnowledgeNode — `api/knowledge-graph#knowledgenode`\n- Regenerating — `api/knowledge-graph#regenerating`\n- Shape — `api/knowledge-graph#shape`\n- SearchOverlay component — `api/search-overlay`\n- Keyboard model — `api/search-overlay#keyboard-model`\n- Keyword results and deep links — `api/search-overlay#keyword-results-and-deep-links`\n- Opening the overlay — `api/search-overlay#opening-the-overlay`\n- Props — `api/search-overlay#props`\n- Suggested questions — `api/search-overlay#suggested-questions`\n- The mode toggle — `api/search-overlay#the-mode-toggle`\n- The streamed answer — `api/search-overlay#the-streamed-answer`\n- Theming — `api/search-overlay#theming`\n## Overview\n- Concepts — `concepts`\n- Asking is the default — `concepts#asking-is-the-default`\n- Chunks and anchors — `concepts#chunks-and-anchors`\n- Degradation, by design — `concepts#degradation-by-design`\n- Keyword search and the glossary — `concepts#keyword-search-and-the-glossary`\n- The agentic search loop — `concepts#the-agentic-search-loop`\n- The knowledge graph — `concepts#the-knowledge-graph`\n- The system prompt is cached — `concepts#the-system-prompt-is-cached`\n- Two ways to build it — `concepts#two-ways-to-build-it`\n- Introduction — `index`\n- How it fits an Astro site — `index#how-it-fits-an-astro-site`\n- Next steps — `index#next-steps`\n- Who this is for — `index#who-this-is-for`\n- Limits — `limits`\n- A server route is required — `limits#a-server-route-is-required`\n- Agentic search adds latency — `limits#agentic-search-adds-latency`\n- Anchors depend on Astro's slugger — `limits#anchors-depend-on-astros-slugger`\n- Frontmatter parsing is a flat-YAML subset — `limits#frontmatter-parsing-is-a-flat-yaml-subset`\n- Recall has a keyword ceiling — `limits#recall-has-a-keyword-ceiling`\n- Secrets live server-side — `limits#secrets-live-server-side`\n- The corpus is your content collection — `limits#the-corpus-is-your-content-collection`\n- The knowledge-graph build is a single model call — `limits#the-knowledge-graph-build-is-a-single-model-call`\n- Quick start — `quickstart`\n- 1. Install — `quickstart#1-install`\n- 2. Register the integration — `quickstart#2-register-the-integration`\n- 3. Add a server adapter — `quickstart#3-add-a-server-adapter`\n- 4. Render the overlay — `quickstart#4-render-the-overlay`\n- 5. Build the knowledge graph — `quickstart#5-build-the-knowledge-graph`\n- Install and wire it up — `quickstart#install-and-wire-it-up`\n- Prerequisites — `quickstart#prerequisites`\n- Turn on agentic search — `quickstart#turn-on-agentic-search`\n- Verify it works — `quickstart#verify-it-works`\n- Tradeoffs — `tradeoffs`\n- A committed knowledge graph — `tradeoffs#a-committed-knowledge-graph`\n- Cost and latency of agentic search — `tradeoffs#cost-and-latency-of-agentic-search`\n- How it compares — `tradeoffs#how-it-compares`\n- Keyword retrieval, not embeddings — `tradeoffs#keyword-retrieval-not-embeddings`\n- One dependency, deliberately — `tradeoffs#one-dependency-deliberately`\n- Two paths instead of one — `tradeoffs#two-paths-instead-of-one`",
   "suggestions": [
     "How does the knowledge graph stay fresh?",
     "How do I build the knowledge graph without an API key?",
     "What does keyword search fall back to without a graph?",
-    "How do I add hev find to my Astro site?",
+    "How do I add hev ask to my Astro site?",
     "When does the overlay switch to AI mode?"
   ],
   "nodes": [
     {
       "id": "api/cli",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": null,
       "group": "API",
       "url": "/docs/api/cli",
-      "summary": "The hev-find-kg command: build the committed knowledge graph offline (hash-gated) and verify every heading anchor resolves in the built HTML, with all flags. @hev/find ships one binary, hev-find-kg, with two commands: bu…",
+      "summary": "The hev-ask-kg command: build the committed knowledge graph offline (hash-gated) and verify every heading anchor resolves in the built HTML, with all flags. @hev/ask ships one binary, hev-ask-kg, with two commands: bu…",
       "facts": [
         {
           "kind": "code",
-          "literal": "pnpm exec hev-find-kg build      # one-shot build (needs ANTHROPIC_API_KEY)\npnpm exec hev-find-kg corpus     # emit the sections to distil (keyless)\npnpm exec hev-find-kg assemble   # assemble kg.json from a distillation (keyless)\npnpm exec hev-find-kg verify     # verify anchors, coverage, fidelity",
+          "literal": "pnpm exec hev-ask-kg build      # one-shot build (needs ANTHROPIC_API_KEY)\npnpm exec hev-ask-kg corpus     # emit the sections to distil (keyless)\npnpm exec hev-ask-kg assemble   # assemble kg.json from a distillation (keyless)\npnpm exec hev-ask-kg verify     # verify anchors, coverage, fidelity",
           "chunkId": "api/cli"
         },
         {
           "kind": "code",
-          "literal": "{\n  \"scripts\": {\n    \"kg:build\": \"hev-find-kg build\",\n    \"kg:verify\": \"hev-find-kg verify\"\n  }\n}",
+          "literal": "{\n  \"scripts\": {\n    \"kg:build\": \"hev-ask-kg build\",\n    \"kg:verify\": \"hev-ask-kg verify\"\n  }\n}",
           "chunkId": "api/cli"
         },
         {
           "kind": "code",
-          "literal": "@hev/find",
+          "literal": "@hev/ask",
           "chunkId": "api/cli"
         },
         {
           "kind": "code",
-          "literal": "hev-find-kg",
+          "literal": "hev-ask-kg",
           "chunkId": "api/cli"
         },
         {
@@ -244,7 +244,6 @@
       ],
       "mode": "source-primary",
       "terms": [
-        "find",
         "command",
         "build",
         "committed",
@@ -283,21 +282,22 @@
         "scripts",
         "package",
         "callout",
-        "astro"
+        "astro",
+        "four"
       ]
     },
     {
       "id": "api/cli#assemble",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": "assemble",
       "group": "API",
       "url": "/docs/api/cli#assemble",
-      "summary": "assemble Reads a distillation JSON from --input (default .hev-find/kg-distill.json) — { context, glossary, summaries, suggestions } — re-chunks your content from disk, and writes kg.json with the deterministic parts (fac…",
+      "summary": "assemble Reads a distillation JSON from --input (default .hev-ask/kg-distill.json) — { context, glossary, summaries, suggestions } — re-chunks your content from disk, and writes kg.json with the deterministic parts (fac…",
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-find-kg corpus --out .hev-find/kg-input.json\n# …Claude writes .hev-find/kg-distill.json…\nhev-find-kg assemble --input .hev-find/kg-distill.json",
+          "literal": "hev-ask-kg corpus --out .hev-ask/kg-input.json\n# …Claude writes .hev-ask/kg-distill.json…\nhev-ask-kg assemble --input .hev-ask/kg-distill.json",
           "chunkId": "api/cli#assemble"
         },
         {
@@ -312,7 +312,7 @@
         },
         {
           "kind": "code",
-          "literal": ".hev-find/kg-distill.json",
+          "literal": ".hev-ask/kg-distill.json",
           "chunkId": "api/cli#assemble"
         },
         {
@@ -341,7 +341,6 @@
         "json",
         "input",
         "default",
-        "find",
         "distill",
         "context",
         "glossary",
@@ -372,15 +371,15 @@
     {
       "id": "api/cli#build",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": "build",
       "group": "API",
       "url": "/docs/api/cli#build",
-      "summary": "build Builds the knowledge graph and writes it to kgPath (default .hev-find/kg.json). It reads your content from disk, chunks it, and hashes the result. If a committed kg.json already matches that hash, it exits without…",
+      "summary": "build Builds the knowledge graph and writes it to kgPath (default .hev-ask/kg.json). It reads your content from disk, chunks it, and hashes the result. If a committed kg.json already matches that hash, it exits without…",
       "facts": [
         {
           "kind": "code",
-          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-find-kg build\n# → [hev-find] kg:written .hev-find/kg.json (42 chunks)\n#   or kg:skipped when the hash already matches",
+          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-ask-kg build\n# → [hev-ask] kg:written .hev-ask/kg.json (42 chunks)\n#   or kg:skipped when the hash already matches",
           "chunkId": "api/cli#build"
         },
         {
@@ -395,7 +394,7 @@
         },
         {
           "kind": "code",
-          "literal": ".hev-find/kg.json",
+          "literal": ".hev-ask/kg.json",
           "chunkId": "api/cli#build"
         },
         {
@@ -450,7 +449,6 @@
         "writes",
         "kgpath",
         "default",
-        "find",
         "json",
         "reads",
         "content",
@@ -482,13 +480,14 @@
         "otherwise",
         "calls",
         "once",
-        "produce"
+        "produce",
+        "distillation"
       ]
     },
     {
       "id": "api/cli#building-with-claude-code-recommended",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": "Building with Claude Code (recommended)",
       "group": "API",
       "url": "/docs/api/cli#building-with-claude-code-recommended",
@@ -496,7 +495,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-find-kg corpus       → .hev-find/kg-input.json   (sections + freshness flag)\n…reads that file, writes the distillation to .hev-find/kg-distill.json…\nhev-find-kg assemble     → .hev-find/kg.json          (deterministic assembly)",
+          "literal": "hev-ask-kg corpus       → .hev-ask/kg-input.json   (sections + freshness flag)\n…reads that file, writes the distillation to .hev-ask/kg-distill.json…\nhev-ask-kg assemble     → .hev-ask/kg.json          (deterministic assembly)",
           "chunkId": "api/cli#building-with-claude-code-recommended"
         },
         {
@@ -536,7 +535,7 @@
         },
         {
           "kind": "code",
-          "literal": "@hev/find",
+          "literal": "@hev/ask",
           "chunkId": "api/cli#building-with-claude-code-recommended"
         },
         {
@@ -579,7 +578,6 @@
         "chunking",
         "fact",
         "extraction",
-        "find",
         "corpus",
         "input",
         "json",
@@ -598,17 +596,18 @@
         "true",
         "overview",
         "content",
-        "hash"
+        "hash",
+        "commands"
       ]
     },
     {
       "id": "api/cli#corpus",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": "corpus",
       "group": "API",
       "url": "/docs/api/cli#corpus",
-      "summary": "corpus Chunks your content and writes the model input to --out (default .hev-find/kg-input.json): the content hash, an upToDate flag (true when the committed kg.json already matches), and one entry per section (id, url,…",
+      "summary": "corpus Chunks your content and writes the model input to --out (default .hev-ask/kg-input.json): the content hash, an upToDate flag (true when the committed kg.json already matches), and one entry per section (id, url,…",
       "facts": [
         {
           "kind": "code",
@@ -622,7 +621,7 @@
         },
         {
           "kind": "code",
-          "literal": ".hev-find/kg-input.json",
+          "literal": ".hev-ask/kg-input.json",
           "chunkId": "api/cli#corpus"
         },
         {
@@ -672,7 +671,6 @@
         "model",
         "input",
         "default",
-        "find",
         "json",
         "hash",
         "uptodate",
@@ -693,7 +691,7 @@
     {
       "id": "api/cli#flags",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": "Flags",
       "group": "API",
       "url": "/docs/api/cli#flags",
@@ -701,7 +699,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-find-kg build --collection docs --collection guides --chunk-heading-depth 2\nhev-find-kg verify --skip-build",
+          "literal": "hev-ask-kg build --collection docs --collection guides --chunk-heading-depth 2\nhev-ask-kg verify --skip-build",
           "chunkId": "api/cli#flags"
         },
         {
@@ -731,7 +729,7 @@
         },
         {
           "kind": "code",
-          "literal": ".hev-find/kg.json",
+          "literal": ".hev-ask/kg.json",
           "chunkId": "api/cli#flags"
         },
         {
@@ -781,7 +779,7 @@
         },
         {
           "kind": "code",
-          "literal": ".hev-find/kg-input.json",
+          "literal": ".hev-ask/kg-input.json",
           "chunkId": "api/cli#flags"
         },
         {
@@ -791,7 +789,7 @@
         },
         {
           "kind": "code",
-          "literal": ".hev-find/kg-distill.json",
+          "literal": ".hev-ask/kg-distill.json",
           "chunkId": "api/cli#flags"
         },
         {
@@ -849,7 +847,6 @@
         "read",
         "repeat",
         "multiple",
-        "find",
         "build",
         "guides",
         "chunk",
@@ -868,13 +865,14 @@
         "opus",
         "corpus",
         "input",
-        "distill"
+        "distill",
+        "command"
       ]
     },
     {
       "id": "api/cli#verify",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": "verify",
       "group": "API",
       "url": "/docs/api/cli#verify",
@@ -882,12 +880,12 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "pnpm exec hev-find-kg verify\n# → [hev-find] verified 128 anchors",
+          "literal": "pnpm exec hev-ask-kg verify\n# → [hev-ask] verified 128 anchors",
           "chunkId": "api/cli#verify"
         },
         {
           "kind": "code",
-          "literal": "[hev-find] missing anchor old-name for /docs/concepts#old-name in dist/docs/concepts/index.html",
+          "literal": "[hev-ask] missing anchor old-name for /docs/concepts#old-name in dist/docs/concepts/index.html",
           "chunkId": "api/cli#verify"
         },
         {
@@ -955,7 +953,6 @@
         "anchor",
         "pnpm",
         "exec",
-        "find",
         "verified",
         "missing",
         "name",
@@ -969,17 +966,18 @@
         "source",
         "primary",
         "must",
-        "exist"
+        "exist",
+        "rendered"
       ]
     },
     {
       "id": "api/cli#where-it-runs",
       "kind": "section",
-      "title": "CLI: hev-find-kg",
+      "title": "CLI: hev-ask-kg",
       "heading": "Where it runs",
       "group": "API",
       "url": "/docs/api/cli#where-it-runs",
-      "summary": "Where it runs build and verify run in Node with filesystem access — locally or in CI, not on the edge. The committed kg.json they produce is what the running site reads through the virtual:hev-find/kg module. See the kno…",
+      "summary": "Where it runs build and verify run in Node with filesystem access — locally or in CI, not on the edge. The committed kg.json they produce is what the running site reads through the virtual:hev-ask/kg module. See the kno…",
       "facts": [
         {
           "kind": "code",
@@ -998,7 +996,7 @@
         },
         {
           "kind": "code",
-          "literal": "virtual:hev-find/kg",
+          "literal": "virtual:hev-ask/kg",
           "chunkId": "api/cli#where-it-runs"
         }
       ],
@@ -1027,7 +1025,6 @@
         "reads",
         "through",
         "virtual",
-        "find",
         "module",
         "knowledge",
         "graph",
@@ -1041,21 +1038,21 @@
       "heading": null,
       "group": "API",
       "url": "/docs/api/configuration",
-      "summary": "Every option for the hevFind() Astro integration: collections, models, endpoint and basePath, chunking depth, retrieval caps, and knowledge-graph paths, with defaults. The hevFind() integration is the default export of @…",
+      "summary": "Every option for the hevAsk() Astro integration: collections, models, endpoint and basePath, chunking depth, retrieval caps, and knowledge-graph paths, with defaults. The hevAsk() integration is the default export of @…",
       "facts": [
         {
           "kind": "code",
-          "literal": "// astro.config.mjs\nimport hevFind from \"@hev/find\";\n\nexport default defineConfig({\n  integrations: [\n    hevFind({\n      collections: [\"docs\"],\n      basePath: \"/docs/\",\n      model: \"claude-haiku-4-5\",\n      maxResults: 6,\n    }),\n  ],\n});",
+          "literal": "// astro.config.mjs\nimport hevAsk from \"@hev/ask\";\n\nexport default defineConfig({\n  integrations: [\n    hevAsk({\n      collections: [\"docs\"],\n      basePath: \"/docs/\",\n      model: \"claude-haiku-4-5\",\n      maxResults: 6,\n    }),\n  ],\n});",
           "chunkId": "api/configuration"
         },
         {
           "kind": "code",
-          "literal": "hevFind()",
+          "literal": "hevAsk()",
           "chunkId": "api/configuration"
         },
         {
           "kind": "code",
-          "literal": "@hev/find",
+          "literal": "@hev/ask",
           "chunkId": "api/configuration"
         },
         {
@@ -1080,7 +1077,7 @@
       "terms": [
         "every",
         "option",
-        "hevfind",
+        "hevask",
         "astro",
         "integration",
         "collections",
@@ -1099,7 +1096,6 @@
         "export",
         "config",
         "import",
-        "find",
         "defineconfig",
         "integrations",
         "docs",
@@ -1169,7 +1165,7 @@
         },
         {
           "kind": "code",
-          "literal": "'/api/find'",
+          "literal": "'/api/ask'",
           "chunkId": "api/configuration#options"
         },
         {
@@ -1280,7 +1276,6 @@
         "slug",
         "prefix",
         "anchor",
-        "find",
         "model",
         "claude",
         "haiku",
@@ -1296,7 +1291,8 @@
         "perdoccap",
         "plus",
         "section",
-        "route"
+        "route",
+        "injected"
       ]
     },
     {
@@ -1396,7 +1392,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "import type { HevFindOptions } from \"@hev/find\";",
+          "literal": "import type { HevAskOptions } from \"@hev/ask\";",
           "chunkId": "api/configuration#typescript"
         }
       ],
@@ -1418,8 +1414,7 @@
         "config",
         "typing",
         "import",
-        "hevfindoptions",
-        "find"
+        "hevaskoptions"
       ]
     },
     {
@@ -1429,7 +1424,7 @@
       "heading": "What the integration does",
       "group": "API",
       "url": "/docs/api/configuration#what-the-integration-does",
-      "summary": "What the integration does When Astro starts up (astro:config:setup) the integration: injects the endpoint route, pointing at @hev/find/endpoint, with prerender: false so it renders on demand; registers two virtual module…",
+      "summary": "What the integration does When Astro starts up (astro:config:setup) the integration: injects the endpoint route, pointing at @hev/ask/endpoint, with prerender: false so it renders on demand; registers two virtual module…",
       "facts": [
         {
           "kind": "code",
@@ -1443,7 +1438,7 @@
         },
         {
           "kind": "code",
-          "literal": "@hev/find/endpoint",
+          "literal": "@hev/ask/endpoint",
           "chunkId": "api/configuration#what-the-integration-does"
         },
         {
@@ -1453,12 +1448,12 @@
         },
         {
           "kind": "code",
-          "literal": "virtual:hev-find/config",
+          "literal": "virtual:hev-ask/config",
           "chunkId": "api/configuration#what-the-integration-does"
         },
         {
           "kind": "code",
-          "literal": "virtual:hev-find/kg",
+          "literal": "virtual:hev-ask/kg",
           "chunkId": "api/configuration#what-the-integration-does"
         },
         {
@@ -1501,7 +1496,6 @@
         "endpoint",
         "route",
         "pointing",
-        "find",
         "prerender",
         "false",
         "renders",
@@ -1530,7 +1524,8 @@
         "empty",
         "runs",
         "anthropicapikey",
-        "present"
+        "present",
+        "hash"
       ]
     },
     {
@@ -1540,11 +1535,11 @@
       "heading": null,
       "group": "API",
       "url": "/docs/api/endpoint",
-      "summary": "The /api/find route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses. The integration injects one on-demand route (default /api/find). The over…",
+      "summary": "The /api/ask route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses. The integration injects one on-demand route (default /api/ask). The over…",
       "facts": [
         {
           "kind": "code",
-          "literal": "/api/find",
+          "literal": "/api/ask",
           "chunkId": "api/endpoint"
         },
         {
@@ -1572,7 +1567,6 @@
       ],
       "mode": "source-primary",
       "terms": [
-        "find",
         "route",
         "contract",
         "post",
@@ -1861,7 +1855,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-find-kg build",
+          "literal": "hev-ask-kg build",
           "chunkId": "api/endpoint#index-lifecycle"
         }
       ],
@@ -1895,7 +1889,6 @@
         "against",
         "knowledge",
         "grap",
-        "find",
         "build",
         "graph",
         "logs",
@@ -2228,7 +2221,7 @@
       "heading": "Suggested questions (GET)",
       "group": "API",
       "url": "/docs/api/endpoint#suggested-questions-get",
-      "summary": "Suggested questions (GET) GET /api/find returns the knowledge graph's baked-in suggestions and the loop model — no query, no model call: { \"suggestions\": [\"How does the knowledge graph stay fresh?\"], \"model\": \"claude-hai…",
+      "summary": "Suggested questions (GET) GET /api/ask returns the knowledge graph's baked-in suggestions and the loop model — no query, no model call: { \"suggestions\": [\"How does the knowledge graph stay fresh?\"], \"model\": \"claude-hai…",
       "facts": [
         {
           "kind": "code",
@@ -2237,7 +2230,7 @@
         },
         {
           "kind": "code",
-          "literal": "GET /api/find",
+          "literal": "GET /api/ask",
           "chunkId": "api/endpoint#suggested-questions-get"
         },
         {
@@ -2257,7 +2250,6 @@
       "terms": [
         "suggested",
         "questions",
-        "find",
         "returns",
         "knowledge",
         "graph",
@@ -2360,21 +2352,21 @@
       "heading": null,
       "group": "API",
       "url": "/docs/api/knowledge-graph",
-      "summary": "The committed .hev-find/kg.json artifact: distilled section nodes with verbatim facts and source links, the glossary and overview, how each field is used, and how it degrades when absent. The knowledge graph is a single…",
+      "summary": "The committed .hev-ask/kg.json artifact: distilled section nodes with verbatim facts and source links, the glossary and overview, how each field is used, and how it degrades when absent. The knowledge graph is a single…",
       "facts": [
         {
           "kind": "code",
-          "literal": ".hev-find/kg.json",
+          "literal": ".hev-ask/kg.json",
           "chunkId": "api/knowledge-graph"
         },
         {
           "kind": "code",
-          "literal": "hev-find-kg build",
+          "literal": "hev-ask-kg build",
           "chunkId": "api/knowledge-graph"
         },
         {
           "kind": "code",
-          "literal": "virtual:hev-find/kg",
+          "literal": "virtual:hev-ask/kg",
           "chunkId": "api/knowledge-graph"
         },
         {
@@ -2398,7 +2390,6 @@
       "mode": "source-primary",
       "terms": [
         "committed",
-        "find",
         "json",
         "artifact",
         "distilled",
@@ -2436,7 +2427,8 @@
         "integration",
         "inlines",
         "through",
-        "module"
+        "module",
+        "running"
       ]
     },
     {
@@ -2915,11 +2907,11 @@
       "heading": "Regenerating",
       "group": "API",
       "url": "/docs/api/knowledge-graph#regenerating",
-      "summary": "Regenerating Run hev-find-kg build after content changes and commit the result. The hash gate makes this safe to run on every build — it only spends a model call when the content actually changed. The integration also ru…",
+      "summary": "Regenerating Run hev-ask-kg build after content changes and commit the result. The hash gate makes this safe to run on every build — it only spends a model call when the content actually changed. The integration also ru…",
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-find-kg build",
+          "literal": "hev-ask-kg build",
           "chunkId": "api/knowledge-graph#regenerating"
         },
         {
@@ -2934,7 +2926,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-find-kg verify",
+          "literal": "hev-ask-kg verify",
           "chunkId": "api/knowledge-graph#regenerating"
         }
       ],
@@ -2948,7 +2940,6 @@
       "mode": "source-primary",
       "terms": [
         "regenerating",
-        "find",
         "build",
         "after",
         "content",
@@ -2992,7 +2983,7 @@
       "heading": "Shape",
       "group": "API",
       "url": "/docs/api/knowledge-graph#shape",
-      "summary": "Shape { \"version\": 2, \"generatedAt\": \"2026-05-30T12:00:00.000Z\", \"contentHash\": \"a1b2c3…\", \"context\": \"## hev find\\n\\nA search overlay for Astro docs…\", \"glossary\": [ { \"term\": \"knowledge graph\", \"aliases\": [\"kg\"], \"defi…",
+      "summary": "Shape { \"version\": 2, \"generatedAt\": \"2026-05-30T12:00:00.000Z\", \"contentHash\": \"a1b2c3…\", \"context\": \"## hev ask\\n\\nA search overlay for Astro docs…\", \"glossary\": [ { \"term\": \"knowledge graph\", \"aliases\": [\"kg\"], \"defi…",
       "facts": [],
       "sources": [
         {
@@ -3012,7 +3003,6 @@
         "contenthash",
         "a1b2c3",
         "context",
-        "find",
         "search",
         "overlay",
         "astro",
@@ -3042,7 +3032,8 @@
         "nodes",
         "kind",
         "section",
-        "title"
+        "title",
+        "core"
       ]
     },
     {
@@ -3052,11 +3043,11 @@
       "heading": null,
       "group": "API",
       "url": "/docs/api/search-overlay",
-      "summary": "The SearchOverlay.astro command palette: props, the data-hev-find-open opener attribute, keyboard model, the mode toggle, and theming through CSS variables. SearchOverlay.astro renders the ⌘K command palette. Add it once…",
+      "summary": "The SearchOverlay.astro command palette: props, the data-hev-ask-open opener attribute, keyboard model, the mode toggle, and theming through CSS variables. SearchOverlay.astro renders the ⌘K command palette. Add it once…",
       "facts": [
         {
           "kind": "code",
-          "literal": "---\nimport SearchOverlay from \"@hev/find/components/SearchOverlay.astro\";\n---\n<SearchOverlay />",
+          "literal": "---\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n<SearchOverlay />",
           "chunkId": "api/search-overlay"
         },
         {
@@ -3095,7 +3086,6 @@
         "palette",
         "props",
         "data",
-        "find",
         "open",
         "opener",
         "attribute",
@@ -3129,7 +3119,7 @@
       "heading": "Keyboard model",
       "group": "API",
       "url": "/docs/api/search-overlay#keyboard-model",
-      "summary": "Keyboard model The interaction is the core of hev find's two-path design: Type → debounced keyword search runs; the first result is auto-active. Enter → if you haven't moved the selection, runs the agentic loop (\"ask AI\"…",
+      "summary": "Keyboard model The interaction is the core of hev ask's two-path design: Type → debounced keyword search runs; the first result is auto-active. Enter → if you haven't moved the selection, runs the agentic loop (\"ask AI\"…",
       "facts": [
         {
           "kind": "code",
@@ -3150,7 +3140,6 @@
         "model",
         "interaction",
         "core",
-        "find",
         "path",
         "design",
         "type",
@@ -3185,7 +3174,8 @@
         "instant",
         "keyless",
         "lookup",
-        "space"
+        "space",
+        "second"
       ]
     },
     {
@@ -3255,11 +3245,11 @@
       "heading": "Opening the overlay",
       "group": "API",
       "url": "/docs/api/search-overlay#opening-the-overlay",
-      "summary": "Opening the overlay Two ways, both built in: ⌘K / Ctrl-K is bound automatically once the component is on the page. Any element with data-hev-find-open opens it on click — wire up as many triggers as you like (header butt…",
+      "summary": "Opening the overlay Two ways, both built in: ⌘K / Ctrl-K is bound automatically once the component is on the page. Any element with data-hev-ask-open opens it on click — wire up as many triggers as you like (header butt…",
       "facts": [
         {
           "kind": "code",
-          "literal": "<button type=\"button\" data-hev-find-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<a href=\"#\" data-hev-find-open>Search the docs</a>",
+          "literal": "<button type=\"button\" data-hev-ask-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<a href=\"#\" data-hev-ask-open>Search the docs</a>",
           "chunkId": "api/search-overlay#opening-the-overlay"
         },
         {
@@ -3274,7 +3264,7 @@
         },
         {
           "kind": "code",
-          "literal": "data-hev-find-open",
+          "literal": "data-hev-ask-open",
           "chunkId": "api/search-overlay#opening-the-overlay"
         }
       ],
@@ -3300,7 +3290,6 @@
         "page",
         "element",
         "data",
-        "find",
         "open",
         "opens",
         "click",
@@ -3327,11 +3316,11 @@
       "heading": "Props",
       "group": "API",
       "url": "/docs/api/search-overlay#props",
-      "summary": "Props Prop Type Default Description endpoint string '/api/find' Endpoint the overlay posts queries to. Must match the integration's endpoint option. placeholder string 'Search the docs…' Placeholder text for the input. d…",
+      "summary": "Props Prop Type Default Description endpoint string '/api/ask' Endpoint the overlay posts queries to. Must match the integration's endpoint option. placeholder string 'Search the docs…' Placeholder text for the input. d…",
       "facts": [
         {
           "kind": "code",
-          "literal": "<SearchOverlay\n  endpoint=\"/api/find\"\n  placeholder=\"Search hev find…\"\n  debounce={400}\n/>",
+          "literal": "<SearchOverlay\n  endpoint=\"/api/ask\"\n  placeholder=\"Search hev ask…\"\n  debounce={400}\n/>",
           "chunkId": "api/search-overlay#props"
         },
         {
@@ -3346,7 +3335,7 @@
         },
         {
           "kind": "code",
-          "literal": "'/api/find'",
+          "literal": "'/api/ask'",
           "chunkId": "api/search-overlay#props"
         },
         {
@@ -3391,7 +3380,6 @@
         "description",
         "endpoint",
         "string",
-        "find",
         "overlay",
         "posts",
         "queries",
@@ -3424,11 +3412,11 @@
       "heading": "Suggested questions",
       "group": "API",
       "url": "/docs/api/search-overlay#suggested-questions",
-      "summary": "Suggested questions When AI is on, the overlay fetches a short list of suggested questions from the endpoint (GET /api/find) the first time it opens and shows them in the empty state. They come from the knowledge graph's…",
+      "summary": "Suggested questions When AI is on, the overlay fetches a short list of suggested questions from the endpoint (GET /api/ask) the first time it opens and shows them in the empty state. They come from the knowledge graph's…",
       "facts": [
         {
           "kind": "code",
-          "literal": "GET /api/find",
+          "literal": "GET /api/ask",
           "chunkId": "api/search-overlay#suggested-questions"
         },
         {
@@ -3453,7 +3441,6 @@
         "short",
         "list",
         "endpoint",
-        "find",
         "first",
         "time",
         "opens",
@@ -3489,7 +3476,7 @@
       "heading": "The mode toggle",
       "group": "API",
       "url": "/docs/api/search-overlay#the-mode-toggle",
-      "summary": "The mode toggle The overlay persists an \"AI on Enter\" preference in localStorage under the key hev-find:mode (agentic or keyword). Readers who never want the model call can flip it off; the choice survives reloads.",
+      "summary": "The mode toggle The overlay persists an \"AI on Enter\" preference in localStorage under the key hev-ask:mode (agentic or keyword). Readers who never want the model call can flip it off; the choice survives reloads.",
       "facts": [
         {
           "kind": "code",
@@ -3498,7 +3485,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-find:mode",
+          "literal": "hev-ask:mode",
           "chunkId": "api/search-overlay#the-mode-toggle"
         },
         {
@@ -3529,7 +3516,6 @@
         "preference",
         "localstorage",
         "under",
-        "find",
         "agentic",
         "keyword",
         "readers",
@@ -3706,7 +3692,7 @@
       "heading": null,
       "group": "Overview",
       "url": "/docs/concepts",
-      "summary": "How hev find works: heading-chunk indexing with real anchors, keyword prefiltering widened by a glossary, the bounded agentic search loop, and the offline knowledge graph. hev find is three parts: a heading-chunk index w…",
+      "summary": "How hev ask works: heading-chunk indexing with real anchors, keyword prefiltering widened by a glossary, the bounded agentic search loop, and the offline knowledge graph. hev ask is three parts: a heading-chunk index w…",
       "facts": [
         {
           "kind": "value",
@@ -3728,7 +3714,6 @@
       ],
       "mode": "agent-primary",
       "terms": [
-        "find",
         "works",
         "heading",
         "chunk",
@@ -3762,12 +3747,13 @@
         "page",
         "explains",
         "together",
-        "findmapdiagram",
+        "askmapdiagram",
         "split",
         "matters",
         "built",
         "strong",
-        "model"
+        "model",
+        "committed"
       ]
     },
     {
@@ -3843,7 +3829,7 @@
       "heading": "Chunks and anchors",
       "group": "Overview",
       "url": "/docs/concepts#chunks-and-anchors",
-      "summary": "Chunks and anchors hev find does not index pages — it indexes sections. Each document is split on its headings (up to a configurable depth, default ## and ###). Content before the first heading becomes the intro chunk wh…",
+      "summary": "Chunks and anchors hev ask does not index pages — it indexes sections. Each document is split on its headings (up to a configurable depth, default ## and ###). Content before the first heading becomes the intro chunk wh…",
       "facts": [
         {
           "kind": "code",
@@ -3887,7 +3873,6 @@
       "terms": [
         "chunks",
         "anchors",
-        "find",
         "does",
         "index",
         "pages",
@@ -3924,7 +3909,8 @@
         "same",
         "astro",
         "renderer",
-        "uses"
+        "uses",
+        "link"
       ]
     },
     {
@@ -3934,7 +3920,7 @@
       "heading": "Degradation, by design",
       "group": "Overview",
       "url": "/docs/concepts#degradation-by-design",
-      "summary": "Degradation, by design hev find is built to keep working as pieces drop away: No key at runtime → keyword mode only. The overlay still searches. No key at build → the committed kg.json is kept; the build warns but never…",
+      "summary": "Degradation, by design hev ask is built to keep working as pieces drop away: No key at runtime → keyword mode only. The overlay still searches. No key at build → the committed kg.json is kept; the build warns but never…",
       "facts": [
         {
           "kind": "code",
@@ -3953,7 +3939,6 @@
       "terms": [
         "degradation",
         "design",
-        "find",
         "built",
         "keep",
         "working",
@@ -3990,7 +3975,8 @@
         "simply",
         "shows",
         "suggested",
-        "questions"
+        "questions",
+        "everything"
       ]
     },
     {
@@ -4361,7 +4347,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-find-kg build",
+          "literal": "hev-ask-kg build",
           "chunkId": "concepts#two-ways-to-build-it"
         },
         {
@@ -4400,7 +4386,6 @@
         "distillation",
         "json",
         "anthropic",
-        "find",
         "assembles",
         "locally",
         "runs",
@@ -4418,7 +4403,8 @@
         "already",
         "fallback",
         "call",
-        "opus"
+        "opus",
+        "default"
       ]
     },
     {
@@ -4428,7 +4414,7 @@
       "heading": null,
       "group": "Overview",
       "url": "/docs",
-      "summary": "hev find is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter. hev find is a search overlay for Astro doc…",
+      "summary": "hev ask is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter. hev ask is a search overlay for Astro doc…",
       "facts": [
         {
           "kind": "code",
@@ -4465,7 +4451,6 @@
       ],
       "mode": "agent-primary",
       "terms": [
-        "find",
         "astro",
         "integration",
         "adds",
@@ -4504,7 +4489,8 @@
         "answering",
         "question",
         "actually",
-        "type"
+        "type",
+        "more"
       ]
     },
     {
@@ -4514,16 +4500,16 @@
       "heading": "How it fits an Astro site",
       "group": "Overview",
       "url": "/docs#how-it-fits-an-astro-site",
-      "summary": "How it fits an Astro site hev find ships as a single package, @hev/find, exposing an Astro integration as its default export: The integration injects an on-demand /api/find route, exposes resolved config and the knowledg…",
+      "summary": "How it fits an Astro site hev ask ships as a single package, @hev/ask, exposing an Astro integration as its default export: The integration injects an on-demand /api/ask route, exposes resolved config and the knowledg…",
       "facts": [
         {
           "kind": "code",
-          "literal": "@hev/find",
+          "literal": "@hev/ask",
           "chunkId": "index#how-it-fits-an-astro-site"
         },
         {
           "kind": "code",
-          "literal": "/api/find",
+          "literal": "/api/ask",
           "chunkId": "index#how-it-fits-an-astro-site"
         },
         {
@@ -4538,7 +4524,7 @@
         },
         {
           "kind": "code",
-          "literal": "data-hev-find-open",
+          "literal": "data-hev-ask-open",
           "chunkId": "index#how-it-fits-an-astro-site"
         },
         {
@@ -4553,7 +4539,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-find-kg",
+          "literal": "hev-ask-kg",
           "chunkId": "index#how-it-fits-an-astro-site"
         }
       ],
@@ -4569,7 +4555,6 @@
         "fits",
         "astro",
         "site",
-        "find",
         "ships",
         "single",
         "package",
@@ -4605,7 +4590,8 @@
         "wired",
         "automatically",
         "endpoint",
-        "answers"
+        "answers",
+        "queries"
       ]
     },
     {
@@ -4615,7 +4601,7 @@
       "heading": "Next steps",
       "group": "Overview",
       "url": "/docs#next-steps",
-      "summary": "Next steps Quick start — add search to your site in five minutes. Concepts — chunks, anchors, the agentic loop, and the knowledge graph. Tradeoffs and Limits — what you're choosing, and what hev find deliberately doesn't…",
+      "summary": "Next steps Quick start — add search to your site in five minutes. Concepts — chunks, anchors, the agentic loop, and the knowledge graph. Tradeoffs and Limits — what you're choosing, and what hev ask deliberately doesn't…",
       "facts": [],
       "sources": [
         {
@@ -4644,7 +4630,6 @@
         "tradeoffs",
         "limits",
         "choosing",
-        "find",
         "deliberately",
         "doesn",
         "reference",
@@ -4734,7 +4719,7 @@
       "heading": null,
       "group": "Overview",
       "url": "/docs/limits",
-      "summary": "The hard boundaries of hev find: corpus scope, recall ceiling, single-call knowledge-graph build, frontmatter parsing, latency, and adapter requirements — what it deliberately does not do. These are the boundaries you sh…",
+      "summary": "The hard boundaries of hev ask: corpus scope, recall ceiling, single-call knowledge-graph build, frontmatter parsing, latency, and adapter requirements — what it deliberately does not do. These are the boundaries you sh…",
       "facts": [
         {
           "kind": "value",
@@ -4753,7 +4738,6 @@
       "terms": [
         "hard",
         "boundaries",
-        "find",
         "corpus",
         "scope",
         "recall",
@@ -4792,11 +4776,11 @@
       "heading": "A server route is required",
       "group": "Overview",
       "url": "/docs/limits#a-server-route-is-required",
-      "summary": "A server route is required The /api/find endpoint renders on demand, so a fully static build cannot serve search. You need a server or hybrid adapter (Node, Cloudflare, Vercel, etc.). Static-only sites should use a stati…",
+      "summary": "A server route is required The /api/ask endpoint renders on demand, so a fully static build cannot serve search. You need a server or hybrid adapter (Node, Cloudflare, Vercel, etc.). Static-only sites should use a stati…",
       "facts": [
         {
           "kind": "code",
-          "literal": "/api/find",
+          "literal": "/api/ask",
           "chunkId": "limits#a-server-route-is-required"
         }
       ],
@@ -4812,7 +4796,6 @@
         "server",
         "route",
         "required",
-        "find",
         "endpoint",
         "renders",
         "demand",
@@ -4896,7 +4879,7 @@
       "heading": "Anchors depend on Astro's slugger",
       "group": "Overview",
       "url": "/docs/limits#anchors-depend-on-astros-slugger",
-      "summary": "Anchors depend on Astro's slugger Deep links are only correct as long as the heading slugs hev find generates match Astro's rendered id attributes. hev find uses the same github-slugger to stay aligned, and ships a hev-f…",
+      "summary": "Anchors depend on Astro's slugger Deep links are only correct as long as the heading slugs hev ask generates match Astro's rendered id attributes. hev ask uses the same github-slugger to stay aligned, and ships a hev-f…",
       "facts": [
         {
           "kind": "code",
@@ -4910,7 +4893,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-find-kg verify",
+          "literal": "hev-ask-kg verify",
           "chunkId": "limits#anchors-depend-on-astros-slugger"
         },
         {
@@ -4939,7 +4922,6 @@
         "long",
         "heading",
         "slugs",
-        "find",
         "generates",
         "match",
         "rendered",
@@ -5111,7 +5093,7 @@
       "heading": "Secrets live server-side",
       "group": "Overview",
       "url": "/docs/limits#secrets-live-server-side",
-      "summary": "Secrets live server-side The agentic path needs ANTHROPICAPIKEY in the server environment that runs /api/find. The key is never exposed to the browser. If the key isn't present at runtime, the endpoint serves keyword res…",
+      "summary": "Secrets live server-side The agentic path needs ANTHROPICAPIKEY in the server environment that runs /api/ask. The key is never exposed to the browser. If the key isn't present at runtime, the endpoint serves keyword res…",
       "facts": [
         {
           "kind": "code",
@@ -5120,7 +5102,7 @@
         },
         {
           "kind": "code",
-          "literal": "/api/find",
+          "literal": "/api/ask",
           "chunkId": "limits#secrets-live-server-side"
         }
       ],
@@ -5143,7 +5125,6 @@
         "anthropicapikey",
         "environment",
         "runs",
-        "find",
         "never",
         "exposed",
         "browser",
@@ -5167,7 +5148,7 @@
       "heading": "The corpus is your content collection",
       "group": "Overview",
       "url": "/docs/limits#the-corpus-is-your-content-collection",
-      "summary": "The corpus is your content collection hev find searches the Astro content collection(s) you configure, and nothing else. There is no crawler, no external sitemap ingestion, and no way to index pages that aren't collectio…",
+      "summary": "The corpus is your content collection hev ask searches the Astro content collection(s) you configure, and nothing else. There is no crawler, no external sitemap ingestion, and no way to index pages that aren't collectio…",
       "facts": [
         {
           "kind": "code",
@@ -5187,7 +5168,6 @@
         "corpus",
         "content",
         "collection",
-        "find",
         "searches",
         "astro",
         "configure",
@@ -5274,7 +5254,7 @@
       "heading": null,
       "group": "Overview",
       "url": "/docs/quickstart",
-      "summary": "Add hev find to an Astro docs site: install the package, register the integration, drop the SearchOverlay component in your layout, and build the knowledge graph. This walks through adding search to an existing Astro 5 d…",
+      "summary": "Add hev ask to an Astro docs site: install the package, register the integration, drop the SearchOverlay component in your layout, and build the knowledge graph. This walks through adding search to an existing Astro 5 d…",
       "facts": [
         {
           "kind": "code",
@@ -5301,7 +5281,6 @@
       ],
       "mode": "agent-primary",
       "terms": [
-        "find",
         "astro",
         "docs",
         "site",
@@ -5348,16 +5327,16 @@
       "heading": "1. Install",
       "group": "Overview",
       "url": "/docs/quickstart#1-install",
-      "summary": "1. Install Once published, install from npm: pnpm add @hev/find Until then, consume the latest version straight from the package subdirectory on GitHub: pnpm add \"git+ssh://git@github.com/hev/find.git#main&path:/packages…",
+      "summary": "1. Install Once published, install from npm: pnpm add @hev/ask Until then, consume the latest version straight from the package subdirectory on GitHub: pnpm add \"git+ssh://git@github.com/hev/ask.git#main&path:/packages…",
       "facts": [
         {
           "kind": "code",
-          "literal": "pnpm add @hev/find",
+          "literal": "pnpm add @hev/ask",
           "chunkId": "quickstart#1-install"
         },
         {
           "kind": "code",
-          "literal": "pnpm add \"git+ssh://git@github.com/hev/find.git#main&path:/packages/ui\"",
+          "literal": "pnpm add \"git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui\"",
           "chunkId": "quickstart#1-install"
         }
       ],
@@ -5374,7 +5353,6 @@
         "once",
         "published",
         "pnpm",
-        "find",
         "until",
         "consume",
         "latest",
@@ -5395,11 +5373,11 @@
       "heading": "2. Register the integration",
       "group": "Overview",
       "url": "/docs/quickstart#2-register-the-integration",
-      "summary": "2. Register the integration // astro.config.mjs integrations: [ hevFind({ collections: [\"docs\"], // your content collection name(s) basePath: \"/docs/\", // slug → URL prefix: basePath + slug }), ], }); collections is the…",
+      "summary": "2. Register the integration // astro.config.mjs integrations: [ hevAsk({ collections: [\"docs\"], // your content collection name(s) basePath: \"/docs/\", // slug → URL prefix: basePath + slug }), ], }); collections is the…",
       "facts": [
         {
           "kind": "code",
-          "literal": "// astro.config.mjs\nimport { defineConfig } from \"astro/config\";\nimport hevFind from \"@hev/find\";\n\nexport default defineConfig({\n  integrations: [\n    hevFind({\n      collections: [\"docs\"],   // your content collection name(s)\n      basePath: \"/docs/\",      // slug → URL prefix: basePath + slug\n    }),\n  ],\n});",
+          "literal": "// astro.config.mjs\nimport { defineConfig } from \"astro/config\";\nimport hevAsk from \"@hev/ask\";\n\nexport default defineConfig({\n  integrations: [\n    hevAsk({\n      collections: [\"docs\"],   // your content collection name(s)\n      basePath: \"/docs/\",      // slug → URL prefix: basePath + slug\n    }),\n  ],\n});",
           "chunkId": "quickstart#2-register-the-integration"
         },
         {
@@ -5422,7 +5400,7 @@
         "astro",
         "config",
         "integrations",
-        "hevfind",
+        "hevask",
         "collections",
         "docs",
         "content",
@@ -5433,7 +5411,6 @@
         "prefix",
         "import",
         "defineconfig",
-        "find",
         "export",
         "default",
         "option",
@@ -5451,7 +5428,7 @@
       "heading": "3. Add a server adapter",
       "group": "Overview",
       "url": "/docs/quickstart#3-add-a-server-adapter",
-      "summary": "3. Add a server adapter The /api/find route is rendered on demand. Add whichever adapter matches your host; this site uses Cloudflare: // astro.config.mjs adapter: cloudflare({ platformProxy: { enabled: true } }), // ...…",
+      "summary": "3. Add a server adapter The /api/ask route is rendered on demand. Add whichever adapter matches your host; this site uses Cloudflare: // astro.config.mjs adapter: cloudflare({ platformProxy: { enabled: true } }), // ...…",
       "facts": [
         {
           "kind": "code",
@@ -5460,7 +5437,7 @@
         },
         {
           "kind": "code",
-          "literal": "/api/find",
+          "literal": "/api/ask",
           "chunkId": "quickstart#3-add-a-server-adapter"
         }
       ],
@@ -5475,7 +5452,6 @@
       "terms": [
         "server",
         "adapter",
-        "find",
         "route",
         "rendered",
         "demand",
@@ -5513,16 +5489,16 @@
       "heading": "4. Render the overlay",
       "group": "Overview",
       "url": "/docs/quickstart#4-render-the-overlay",
-      "summary": "4. Render the overlay Add the component once, somewhere global like your base layout, and give readers a way to open it. Any element with data-hev-find-open opens the palette, and ⌘K is bound automatically. // src/layout…",
+      "summary": "4. Render the overlay Add the component once, somewhere global like your base layout, and give readers a way to open it. Any element with data-hev-ask-open opens the palette, and ⌘K is bound automatically. // src/layout…",
       "facts": [
         {
           "kind": "code",
-          "literal": "---\n// src/layouts/Base.astro\nimport SearchOverlay from \"@hev/find/components/SearchOverlay.astro\";\n---\n<button type=\"button\" data-hev-find-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<slot />\n\n<SearchOverlay />",
+          "literal": "---\n// src/layouts/Base.astro\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n<button type=\"button\" data-hev-ask-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<slot />\n\n<SearchOverlay />",
           "chunkId": "quickstart#4-render-the-overlay"
         },
         {
           "kind": "code",
-          "literal": "data-hev-find-open",
+          "literal": "data-hev-ask-open",
           "chunkId": "quickstart#4-render-the-overlay"
         },
         {
@@ -5559,7 +5535,6 @@
         "open",
         "element",
         "data",
-        "find",
         "opens",
         "palette",
         "bound",
@@ -5590,17 +5565,17 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "You: build the hev find knowledge graph\n\nClaude runs:\n  hev-find-kg corpus            # emits the sections to distil\n  …writes context/glossary/summaries/suggestions…\n  hev-find-kg assemble          # writes .hev-find/kg.json (deterministically)",
+          "literal": "You: build the hev ask knowledge graph\n\nClaude runs:\n  hev-ask-kg corpus            # emits the sections to distil\n  …writes context/glossary/summaries/suggestions…\n  hev-ask-kg assemble          # writes .hev-ask/kg.json (deterministically)",
           "chunkId": "quickstart#5-build-the-knowledge-graph"
         },
         {
           "kind": "code",
-          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-find-kg build      # writes .hev-find/kg.json",
+          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-ask-kg build      # writes .hev-ask/kg.json",
           "chunkId": "quickstart#5-build-the-knowledge-graph"
         },
         {
           "kind": "code",
-          "literal": "pnpm exec hev-find-kg verify     # builds the site, checks every anchor resolves\ngit add .hev-find/kg.json",
+          "literal": "pnpm exec hev-ask-kg verify     # builds the site, checks every anchor resolves\ngit add .hev-ask/kg.json",
           "chunkId": "quickstart#5-build-the-knowledge-graph"
         },
         {
@@ -5658,7 +5633,6 @@
         "once",
         "whenever",
         "conte",
-        "find",
         "claude",
         "runs",
         "corpus",
@@ -5677,7 +5651,8 @@
         "verify",
         "builds",
         "site",
-        "checks"
+        "checks",
+        "every"
       ]
     },
     {
@@ -5780,7 +5755,7 @@
       "heading": "Turn on agentic search",
       "group": "Overview",
       "url": "/docs/quickstart#turn-on-agentic-search",
-      "summary": "Turn on agentic search Set ANTHROPICAPIKEY in the server environment where /api/find runs (your host's secrets, or .env in local dev). With a key present, pressing Enter in the overlay runs the agentic loop; without one,…",
+      "summary": "Turn on agentic search Set ANTHROPICAPIKEY in the server environment where /api/ask runs (your host's secrets, or .env in local dev). With a key present, pressing Enter in the overlay runs the agentic loop; without one,…",
       "facts": [
         {
           "kind": "code",
@@ -5789,7 +5764,7 @@
         },
         {
           "kind": "code",
-          "literal": "/api/find",
+          "literal": "/api/ask",
           "chunkId": "quickstart#turn-on-agentic-search"
         },
         {
@@ -5813,7 +5788,6 @@
         "anthropicapikey",
         "server",
         "environment",
-        "find",
         "runs",
         "host",
         "secrets",
@@ -5846,7 +5820,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-find-kg verify",
+          "literal": "hev-ask-kg verify",
           "chunkId": "quickstart#verify-it-works"
         }
       ],
@@ -5881,7 +5855,6 @@
         "queries",
         "model",
         "grounde",
-        "find",
         "single",
         "multi",
         "click",
@@ -5898,7 +5871,8 @@
         "anchor",
         "doesn",
         "exist",
-        "built"
+        "built",
+        "html"
       ]
     },
     {
@@ -5908,7 +5882,7 @@
       "heading": null,
       "group": "Overview",
       "url": "/docs/tradeoffs",
-      "summary": "What you're choosing by adopting hev find: the dependency posture, the committed knowledge graph, the cost and latency of agentic search, and how it compares to Pagefind, Algolia, and Orama. Every search tool makes choic…",
+      "summary": "What you're choosing by adopting hev ask: the dependency posture, the committed knowledge graph, the cost and latency of agentic search, and how it compares to Pagefind, Algolia, and Orama. Every search tool makes choic…",
       "facts": [
         {
           "kind": "value",
@@ -5927,7 +5901,6 @@
       "terms": [
         "choosing",
         "adopting",
-        "find",
         "dependency",
         "posture",
         "committed",
@@ -6015,10 +5988,10 @@
         "changes",
         "build",
         "runs",
-        "find",
         "logs",
         "warning",
-        "live"
+        "live",
+        "hash"
       ]
     },
     {
@@ -6094,7 +6067,7 @@
       "heading": "How it compares",
       "group": "Overview",
       "url": "/docs/tradeoffs#how-it-compares",
-      "summary": "How it compares Tool Retrieval AI ranking Deep links Hosting hev find keyword + glossary yes, on Enter heading anchors your adapter + optional API key Pagefind keyword (static index) no page / anchor static, none Algolia…",
+      "summary": "How it compares Tool Retrieval AI ranking Deep links Hosting hev ask keyword + glossary yes, on Enter heading anchors your adapter + optional API key Pagefind keyword (static index) no page / anchor static, none Algolia…",
       "facts": [],
       "sources": [
         {
@@ -6112,7 +6085,6 @@
         "deep",
         "links",
         "hosting",
-        "find",
         "keyword",
         "glossary",
         "enter",
@@ -6144,7 +6116,8 @@
         "want",
         "excellent",
         "site",
-        "zero"
+        "zero",
+        "services"
       ]
     },
     {
@@ -6214,7 +6187,7 @@
       "heading": "One dependency, deliberately",
       "group": "Overview",
       "url": "/docs/tradeoffs#one-dependency-deliberately",
-      "summary": "One dependency, deliberately hev find aims to be close to zero-dependency, with one exception: github-slugger (3 KB, pure JS, edge-safe). Generating heading anchors by hand risks drifting from Astro's renderer and shippi…",
+      "summary": "One dependency, deliberately hev ask aims to be close to zero-dependency, with one exception: github-slugger (3 KB, pure JS, edge-safe). Generating heading anchors by hand risks drifting from Astro's renderer and shippi…",
       "facts": [
         {
           "kind": "code",
@@ -6238,7 +6211,6 @@
       "terms": [
         "dependency",
         "deliberately",
-        "find",
         "aims",
         "close",
         "zero",
@@ -6277,7 +6249,7 @@
       "heading": "Two paths instead of one",
       "group": "Overview",
       "url": "/docs/tradeoffs#two-paths-instead-of-one",
-      "summary": "Two paths instead of one hev find runs an instant keyword path and an agentic path, and asks the reader to choose between them by pressing Enter. The upside is that the common case (a word or two) stays instant and keyle…",
+      "summary": "Two paths instead of one hev ask runs an instant keyword path and an agentic path, and asks the reader to choose between them by pressing Enter. The upside is that the common case (a word or two) stays instant and keyle…",
       "facts": [],
       "sources": [
         {
@@ -6290,7 +6262,6 @@
       "terms": [
         "paths",
         "instead",
-        "find",
         "runs",
         "instant",
         "keyword",
@@ -6327,7 +6298,8 @@
         "means",
         "think",
         "right",
-        "trade"
+        "trade",
+        "docs"
       ]
     }
   ],

@@ -9,7 +9,7 @@ const facts = [
 ---
 
 <Base
-	title="hev find - search for Astro docs sites"
+	title="hev ask - search for Astro docs sites"
 	description="A ⌘K search overlay for Astro docs sites: instant keyword search anchored to headings, plus a Claude-powered search loop on Enter. One integration, one component."
 	current="product"
 >
@@ -24,7 +24,7 @@ const facts = [
 			</p>
 			<div class="cta-row">
 				<a href="/docs/quickstart" class="btn">Quick start</a>
-				<button type="button" class="ghost" data-hev-find-open>
+				<button type="button" class="ghost" data-hev-ask-open>
 					press <kbd>⌘K</kbd> to search this site
 				</button>
 			</div>
@@ -44,12 +44,12 @@ const facts = [
 			<ol class="steps">
 				<li>
 					<span class="step-label">install</span>
-					<pre><code>pnpm add @hev/find</code></pre>
+					<pre><code>pnpm add @hev/ask</code></pre>
 				</li>
 				<li>
 					<span class="step-label">register the integration</span>
 					<pre><code><span class="cmt">// astro.config.mjs</span>
-integrations: [hevFind(&#123; collections: ["docs"] &#125;)]</code></pre>
+integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
 				</li>
 				<li>
 					<span class="step-label">drop in the overlay</span>
@@ -88,7 +88,7 @@ integrations: [hevFind(&#123; collections: ["docs"] &#125;)]</code></pre>
 				<a href="/docs/concepts">how it works</a>
 				<a href="/docs/tradeoffs">tradeoffs</a>
 				<a href="/docs/limits">limits</a>
-				<a href="https://github.com/hev/find">source</a>
+				<a href="https://github.com/hev/ask">source</a>
 			</p>
 		</section>
 	</main>

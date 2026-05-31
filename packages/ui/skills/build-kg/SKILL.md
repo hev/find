@@ -1,43 +1,43 @@
 ---
 name: build-kg
 description: >-
-  Build the @hev/find knowledge graph (.hev-find/kg.json) for an Astro docs site
+  Build the @hev/ask knowledge graph (.hev-ask/kg.json) for an Astro docs site
   using your Claude Code subscription instead of an ANTHROPIC_API_KEY. Use when
-  the user asks to build, rebuild, or refresh the hev find knowledge graph, KG,
-  or search index, or after docs content changes. Runs `hev-find-kg corpus`,
-  writes the distillation, and runs `hev-find-kg assemble`.
+  the user asks to build, rebuild, or refresh the hev ask knowledge graph, KG,
+  or search index, or after docs content changes. Runs `hev-ask-kg corpus`,
+  writes the distillation, and runs `hev-ask-kg assemble`.
 ---
 
-# Build the hev find knowledge graph
+# Build the hev ask knowledge graph
 
-`@hev/find` searches an Astro docs site. Its agentic loop, keyword ranking, and
+`@hev/ask` searches an Astro docs site. Its agentic loop, keyword ranking, and
 suggested questions are powered by a committed knowledge graph at
-`.hev-find/kg.json`. Only the **distillation** of that graph needs a model — the
+`.hev-ask/kg.json`. Only the **distillation** of that graph needs a model — the
 node structure, verbatim facts, overview map, and content hash are computed
 deterministically by the CLI. This skill performs that distillation here, in the
 user's subscription, so it costs **no API tokens on their own key**.
 
 Run every command from the **site root** (the directory whose `astro.config.*`
-registers `hevFind()` — usually where `src/content/` lives). Prefer
-`pnpm exec hev-find-kg …`; fall back to `npx hev-find-kg …` if pnpm isn't used.
+registers `hevAsk()` — usually where `src/content/` lives). Prefer
+`pnpm exec hev-ask-kg …`; fall back to `npx hev-ask-kg …` if pnpm isn't used.
 
 ## Steps
 
 1. **Emit the corpus.**
 
    ```sh
-   pnpm exec hev-find-kg corpus --out .hev-find/kg-input.json
+   pnpm exec hev-ask-kg corpus --out .hev-ask/kg-input.json
    ```
 
-   This is deterministic and keyless. It writes `.hev-find/kg-input.json`.
+   This is deterministic and keyless. It writes `.hev-ask/kg-input.json`.
 
-2. **Check freshness.** Read `.hev-find/kg-input.json`. If `"upToDate": true`,
+2. **Check freshness.** Read `.hev-ask/kg-input.json`. If `"upToDate": true`,
    the committed graph already matches the content — **stop here** and tell the
    user nothing needs rebuilding. Otherwise continue.
 
 3. **Distil.** The file has a `sections` array; each entry is
    `{ id, url, title, text }`. Write a distillation to
-   `.hev-find/kg-distill.json` with exactly this shape:
+   `.hev-ask/kg-distill.json` with exactly this shape:
 
    ```json
    {
@@ -69,16 +69,16 @@ registers `hevFind()` — usually where `src/content/` lives). Prefer
 4. **Assemble.**
 
    ```sh
-   pnpm exec hev-find-kg assemble --input .hev-find/kg-distill.json
+   pnpm exec hev-ask-kg assemble --input .hev-ask/kg-distill.json
    ```
 
    This re-chunks the content, extracts facts, builds the overview and nodes
-   deterministically, and writes `.hev-find/kg.json`.
+   deterministically, and writes `.hev-ask/kg.json`.
 
 5. **Verify (optional but recommended).**
 
    ```sh
-   pnpm exec hev-find-kg verify
+   pnpm exec hev-ask-kg verify
    ```
 
    Anchor drift is fatal; coverage/fidelity warnings are informational.
@@ -86,11 +86,11 @@ registers `hevFind()` — usually where `src/content/` lives). Prefer
 6. **Clean up and commit.** Delete the intermediates and commit the graph:
 
    ```sh
-   rm -f .hev-find/kg-input.json .hev-find/kg-distill.json
-   git add .hev-find/kg.json
+   rm -f .hev-ask/kg-input.json .hev-ask/kg-distill.json
+   git add .hev-ask/kg.json
    ```
 
-   Only `.hev-find/kg.json` is committed; the input/distill files are scratch.
+   Only `.hev-ask/kg.json` is committed; the input/distill files are scratch.
 
 ## Notes
 

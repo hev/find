@@ -1,4 +1,4 @@
-import kgRaw from "../../.hev-find/kg.json?raw";
+import kgRaw from "../../.hev-ask/kg.json?raw";
 
 export interface GlossaryTerm {
 	term: string;

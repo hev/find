@@ -1,19 +1,19 @@
 ---
 title: "Tradeoffs"
-description: "What you're choosing by adopting hev find: the dependency posture, the committed knowledge graph, the cost and latency of agentic search, and how it compares to Pagefind, Algolia, and Orama."
+description: "What you're choosing by adopting hev ask: the dependency posture, the committed knowledge graph, the cost and latency of agentic search, and how it compares to Pagefind, Algolia, and Orama."
 group: "Overview"
 order: 3
 ---
 
 import Callout from "../../components/docs/Callout.astro";
 
-Every search tool makes choices. This page is the honest version: what hev find
+Every search tool makes choices. This page is the honest version: what hev ask
 trades away to get what it gives, so you can decide whether the trade fits your
 docs.
 
 ## Two paths instead of one
 
-hev find runs an instant keyword path **and** an agentic path, and asks the
+hev ask runs an instant keyword path **and** an agentic path, and asks the
 reader to choose between them by pressing Enter. The upside is that the common
 case (a word or two) stays instant and keyless, while hard questions get a
 smarter ranker. The cost is a slightly more complex interaction model than a
@@ -31,7 +31,7 @@ rather than computed at runtime or hidden in a service.
   to read (no model call on the request path), and bundled into the edge worker
   with no runtime filesystem access.
 - **Cost:** it can go stale. It only regenerates when content changes *and* a
-  build runs. hev find logs a warning when the live content hash differs from
+  build runs. hev ask logs a warning when the live content hash differs from
   the graph's, but a forgotten rebuild means a slightly outdated glossary.
 
 The hash gate makes regeneration cheap and idempotent, so "rebuild on every
@@ -51,7 +51,7 @@ embeddings, no vector store**.
 
 ## One dependency, deliberately
 
-hev find aims to be close to zero-dependency, with **one exception**:
+hev ask aims to be close to zero-dependency, with **one exception**:
 [`github-slugger`](https://github.com/Flet/github-slugger) (~3 KB, pure JS,
 edge-safe).
 
@@ -80,7 +80,7 @@ it's a first-class mode, not a fallback afterthought.
 
 | Tool | Retrieval | AI ranking | Deep links | Hosting |
 |---|---|---|---|---|
-| **hev find** | keyword + glossary | yes, on Enter | heading anchors | your adapter + optional API key |
+| **hev ask** | keyword + glossary | yes, on Enter | heading anchors | your adapter + optional API key |
 | **Pagefind** | keyword (static index) | no | page / anchor | static, none |
 | **Algolia DocSearch** | keyword (hosted) | no (classic) | page / anchor | hosted service + crawler |
 | **Orama** | keyword + vector | no (search only) | configurable | client or hosted index |
@@ -93,7 +93,7 @@ The short version:
   are happy running a crawler and a dashboard.
 - Choose **Orama** if you specifically want client-side vector search and will
   manage embeddings.
-- Choose **hev find** if your docs are Astro content collections, you want deep
+- Choose **hev ask** if your docs are Astro content collections, you want deep
   links to sections, and you want a reader's *question* — not just their
   keywords — to find the right section.
 

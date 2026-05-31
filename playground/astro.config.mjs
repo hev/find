@@ -1,5 +1,5 @@
 import { defineConfig } from 'astro/config';
-import hevFind from '@hev/find';
+import hevAsk from '@hev/ask';
 import node from '@astrojs/node';
 
 // https://astro.build/config
@@ -7,7 +7,7 @@ export default defineConfig({
   output: 'server',
   adapter: node({ mode: 'standalone' }),
   integrations: [
-    hevFind({
+    hevAsk({
       collections: ['docs'],
       basePath: '/docs/',
       // model: 'claude-haiku-4-5',

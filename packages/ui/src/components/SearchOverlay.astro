@@ -9,7 +9,7 @@ interface Props {
 }
 
 const {
-  endpoint = '/api/find',
+  endpoint = '/api/ask',
   placeholder = 'Search the docs…',
   debounce = 500,
 } = Astro.props;
@@ -62,9 +62,9 @@ const {
         </span>
         <span class="as-brand"><a
             class="as-brandlink"
-            href="https://github.com/hev/find"
+            href="https://github.com/hev/ask"
             target="_blank"
-            rel="noopener noreferrer">hev/find</a></span>
+            rel="noopener noreferrer">hev/ask</a></span>
       </span>
     </div>
   </div>
@@ -583,7 +583,7 @@ const {
     error?: string;
   }
 
-  class HevFindOverlay {
+  class HevAskOverlay {
     private dialog: HTMLDialogElement;
     private input: HTMLInputElement;
     private results: HTMLDivElement;
@@ -617,7 +617,7 @@ const {
 
     constructor(dialog: HTMLDialogElement) {
       this.dialog = dialog;
-      this.endpoint = dialog.dataset.endpoint || '/api/find';
+      this.endpoint = dialog.dataset.endpoint || '/api/ask';
       this.debounceMs = Number(dialog.dataset.debounce) || 300;
       this.input = dialog.querySelector('.as-input') as HTMLInputElement;
       this.defaultPlaceholder = this.input.getAttribute('placeholder') || 'Search the docs…';
@@ -1101,7 +1101,7 @@ const {
 
     private readPref(): boolean {
       try {
-        return localStorage.getItem('hev-find:mode') !== 'keyword';
+        return localStorage.getItem('hev-ask:mode') !== 'keyword';
       } catch {
         return true;
       }
@@ -1109,7 +1109,7 @@ const {
 
     private writePref() {
       try {
-        localStorage.setItem('hev-find:mode', this.agentic ? 'agentic' : 'keyword');
+        localStorage.setItem('hev-ask:mode', this.agentic ? 'agentic' : 'keyword');
       } catch {
         /* storage unavailable — preference is session-only */
       }
@@ -1273,7 +1273,7 @@ const {
   function init() {
     const dialog = document.querySelector('.as-overlay') as HTMLDialogElement | null;
     if (!dialog) return;
-    const overlay = new HevFindOverlay(dialog);
+    const overlay = new HevAskOverlay(dialog);
 
     // Global hotkeys: ⌘K / Ctrl+K anywhere, or "/" when not typing in a field.
     document.addEventListener('keydown', (e) => {
@@ -1290,8 +1290,8 @@ const {
       }
     });
 
-    // Any element with [data-hev-find-open] opens the overlay.
-    document.querySelectorAll('[data-hev-find-open]').forEach((el) => {
+    // Any element with [data-hev-ask-open] opens the overlay.
+    document.querySelectorAll('[data-hev-ask-open]').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.preventDefault();
         overlay.open();

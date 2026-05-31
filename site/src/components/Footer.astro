@@ -1,8 +1,8 @@
 ---
 const properties = [
-	{ slug: "find", href: "/", label: "find" },
-	{ slug: "github", href: "https://github.com/hev/find", label: "github" },
-	{ slug: "npm", href: "https://www.npmjs.com/package/@hev/find", label: "npm" },
+	{ slug: "ask", href: "/", label: "ask" },
+	{ slug: "github", href: "https://github.com/hev/ask", label: "github" },
+	{ slug: "npm", href: "https://www.npmjs.com/package/@hev/ask", label: "npm" },
 ];
 ---
 
@@ -14,7 +14,7 @@ const properties = [
 				properties.map((p, i) => (
 					<>
 						{i > 0 && <span class="dot" aria-hidden="true">.</span>}
-						{p.slug === "find" ? (
+						{p.slug === "ask" ? (
 							<span class="here" aria-current="page">{p.label}</span>
 						) : (
 							<a href={p.href}>{p.label}</a>

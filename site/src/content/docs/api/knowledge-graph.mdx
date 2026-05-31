@@ -1,6 +1,6 @@
 ---
 title: "Knowledge graph format"
-description: "The committed .hev-find/kg.json artifact: distilled section nodes with verbatim facts and source links, the glossary and overview, how each field is used, and how it degrades when absent."
+description: "The committed .hev-ask/kg.json artifact: distilled section nodes with verbatim facts and source links, the glossary and overview, how each field is used, and how it degrades when absent."
 group: "API"
 order: 4
 ---
@@ -12,9 +12,9 @@ This site renders its own knowledge graph at [**/kg** — what the agent sees](/
 the distilled summaries, verbatim facts, and glossary the loop reasons over.
 </Callout>
 
-The knowledge graph is a single JSON file, by default `.hev-find/kg.json`, built
-offline by [`hev-find-kg build`](/docs/api/cli) and committed to your repo. The
-integration inlines it into the build through the `virtual:hev-find/kg` module,
+The knowledge graph is a single JSON file, by default `.hev-ask/kg.json`, built
+offline by [`hev-ask-kg build`](/docs/api/cli) and committed to your repo. The
+integration inlines it into the build through the `virtual:hev-ask/kg` module,
 so the running site reads it with no filesystem access.
 
 It is the **agent's view of your docs** — a distilled, source-grounded "shadow
@@ -28,7 +28,7 @@ back to the real pages. Every node carries a `url#anchor` to its source.
   "version": 2,
   "generatedAt": "2026-05-30T12:00:00.000Z",
   "contentHash": "a1b2c3…",
-  "context": "## hev find\n\nA search overlay for Astro docs…",
+  "context": "## hev ask\n\nA search overlay for Astro docs…",
   "glossary": [
     { "term": "knowledge graph", "aliases": ["kg"], "definition": "An offline-built artifact of the docs." }
   ],
@@ -119,6 +119,6 @@ computation — and the reason the model step can move into a
 Rebuild after content changes and commit the result. The hash gate makes this
 safe to run on every build — it only spends model work when the content actually
 changed. Build it with the bundled **Claude Code skill** (no API key) or
-`hev-find-kg build` (one API call); the integration also runs `build` during
-`astro build` when a key is present. Run [`hev-find-kg verify`](/docs/api/cli) to
+`hev-ask-kg build` (one API call); the integration also runs `build` during
+`astro build` when a key is present. Run [`hev-ask-kg verify`](/docs/api/cli) to
 gate anchors, coverage, and literal fidelity.

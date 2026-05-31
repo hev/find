@@ -4,13 +4,13 @@ interface Props {
 }
 
 const { current = "product" } = Astro.props;
-const REPO = "hev/find";
+const REPO = "hev/ask";
 ---
 
 <header>
 	<nav class="nav" aria-label="Primary navigation">
-		<a href="/" class="wordmark" aria-label="hev find — home">
-			hev<span class="cursor" aria-hidden="true"></span><span class="suffix">find</span>
+		<a href="/" class="wordmark" aria-label="hev ask — home">
+			hev<span class="cursor" aria-hidden="true"></span><span class="suffix">ask</span>
 		</a>
 		<div class="nav-right">
 			<a href="/docs" aria-current={current === "docs" ? "page" : undefined}>docs</a>
@@ -18,7 +18,7 @@ const REPO = "hev/find";
 			<a
 				class="gh"
 				href={`https://github.com/${REPO}`}
-				aria-label="hev find on GitHub"
+				aria-label="hev ask on GitHub"
 				data-gh-repo={REPO}
 			>
 				<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
@@ -29,7 +29,7 @@ const REPO = "hev/find";
 				</svg>
 				<span class="gh-stars" data-gh-stars hidden></span>
 			</a>
-			<button type="button" class="search-trigger" data-hev-find-open aria-label="Search (⌘K)" title="Search (⌘K)">
+			<button type="button" class="search-trigger" data-hev-ask-open aria-label="Search (⌘K)" title="Search (⌘K)">
 				<kbd>⌘K</kbd>
 			</button>
 		</div>

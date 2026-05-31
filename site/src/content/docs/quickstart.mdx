@@ -1,6 +1,6 @@
 ---
 title: "Quick start"
-description: "Add hev find to an Astro docs site: install the package, register the integration, drop the SearchOverlay component in your layout, and build the knowledge graph."
+description: "Add hev ask to an Astro docs site: install the package, register the integration, drop the SearchOverlay component in your layout, and build the knowledge graph."
 group: "Overview"
 order: 1
 ---
@@ -23,11 +23,11 @@ add an API key.
 ## Install and wire it up
 
 <Steps items={[
-  { title: "Install the package", body: "Add @hev/find with your package manager." },
-  { title: "Register the integration", body: "Add hevFind() to astro.config.mjs and point it at your collection." },
-  { title: "Add an adapter", body: "Install a server/hybrid adapter so the /api/find route can render on demand." },
+  { title: "Install the package", body: "Add @hev/ask with your package manager." },
+  { title: "Register the integration", body: "Add hevAsk() to astro.config.mjs and point it at your collection." },
+  { title: "Add an adapter", body: "Install a server/hybrid adapter so the /api/ask route can render on demand." },
   { title: "Drop in the overlay", body: "Render SearchOverlay.astro once in your layout and add an opener button." },
-  { title: "Build the knowledge graph", body: "Use the Claude Code skill (or hev-find-kg build) and commit the JSON artifact." },
+  { title: "Build the knowledge graph", body: "Use the Claude Code skill (or hev-ask-kg build) and commit the JSON artifact." },
 ]} />
 
 ### 1. Install
@@ -35,14 +35,14 @@ add an API key.
 Once published, install from npm:
 
 ```sh
-pnpm add @hev/find
+pnpm add @hev/ask
 ```
 
 Until then, consume the latest version straight from the package subdirectory
 on GitHub:
 
 ```sh
-pnpm add "git+ssh://git@github.com/hev/find.git#main&path:/packages/ui"
+pnpm add "git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui"
 ```
 
 ### 2. Register the integration
@@ -50,11 +50,11 @@ pnpm add "git+ssh://git@github.com/hev/find.git#main&path:/packages/ui"
 ```js
 // astro.config.mjs
 import { defineConfig } from "astro/config";
-import hevFind from "@hev/find";
+import hevAsk from "@hev/ask";
 
 export default defineConfig({
   integrations: [
-    hevFind({
+    hevAsk({
       collections: ["docs"],   // your content collection name(s)
       basePath: "/docs/",      // slug → URL prefix: basePath + slug
     }),
@@ -67,7 +67,7 @@ see the [configuration reference](/docs/api/configuration).
 
 ### 3. Add a server adapter
 
-The `/api/find` route is rendered on demand. Add whichever adapter matches your
+The `/api/ask` route is rendered on demand. Add whichever adapter matches your
 host; this site uses Cloudflare:
 
 ```js
@@ -80,20 +80,20 @@ export default defineConfig({
 });
 ```
 
-Existing pages stay prerendered. Only `/api/find` runs as a function.
+Existing pages stay prerendered. Only `/api/ask` runs as a function.
 
 ### 4. Render the overlay
 
 Add the component once, somewhere global like your base layout, and give
-readers a way to open it. **Any element with `data-hev-find-open` opens the
+readers a way to open it. **Any element with `data-hev-ask-open` opens the
 palette**, and `⌘K` is bound automatically.
 
 ```astro
 ---
 // src/layouts/Base.astro
-import SearchOverlay from "@hev/find/components/SearchOverlay.astro";
+import SearchOverlay from "@hev/ask/components/SearchOverlay.astro";
 ---
-<button type="button" data-hev-find-open>
+<button type="button" data-hev-ask-open>
   Search <kbd>⌘K</kbd>
 </button>
 
@@ -118,12 +118,12 @@ for it. It builds the graph inside your subscription — **no API key, no token
 spend on your own key**:
 
 ```text
-You: build the hev find knowledge graph
+You: build the hev ask knowledge graph
 
 Claude runs:
-  hev-find-kg corpus            # emits the sections to distil
+  hev-ask-kg corpus            # emits the sections to distil
   …writes context/glossary/summaries/suggestions…
-  hev-find-kg assemble          # writes .hev-find/kg.json (deterministically)
+  hev-ask-kg assemble          # writes .hev-ask/kg.json (deterministically)
 ```
 
 **Fallback — the CLI.** For CI or outside Claude Code, one API call does the same
@@ -131,14 +131,14 @@ distillation:
 
 ```sh
 export ANTHROPIC_API_KEY=sk-ant-...
-pnpm exec hev-find-kg build      # writes .hev-find/kg.json
+pnpm exec hev-ask-kg build      # writes .hev-ask/kg.json
 ```
 
 Then verify and commit, however you built it:
 
 ```sh
-pnpm exec hev-find-kg verify     # builds the site, checks every anchor resolves
-git add .hev-find/kg.json
+pnpm exec hev-ask-kg verify     # builds the site, checks every anchor resolves
+git add .hev-ask/kg.json
 ```
 
 Both paths are **hash-gated** — they do no model work when content is unchanged,
@@ -147,7 +147,7 @@ during `astro build` when a key is present. See the
 [CLI reference](/docs/api/cli) for every command.
 
 <Callout label="no key, no problem">
-Skip step 5 entirely and hev find still works in keyword mode. Without a graph
+Skip step 5 entirely and hev ask still works in keyword mode. Without a graph
 the agentic path falls back to keyword results, keyword ranking falls back to
 raw token overlap, and the overlay simply shows no suggestions. You can build
 the graph later.
@@ -155,7 +155,7 @@ the graph later.
 
 ## Turn on agentic search
 
-Set `ANTHROPIC_API_KEY` in the **server environment** where `/api/find` runs
+Set `ANTHROPIC_API_KEY` in the **server environment** where `/api/ask` runs
 (your host's secrets, or `.env` in local dev). With a key present, pressing
 Enter in the overlay runs the [agentic loop](/docs/concepts#the-agentic-search-loop);
 without one, Enter returns keyword results.
@@ -167,7 +167,7 @@ without one, Enter returns keyword results.
 - **Agentic:** type a multi-word question (or click a suggested one) and press
   Enter; the footer shows the sub-queries the model ran, and a grounded answer
   streams in with inline deep links.
-- **Anchors:** `hev-find-kg verify` exits non-zero if any chunk anchor doesn't
+- **Anchors:** `hev-ask-kg verify` exits non-zero if any chunk anchor doesn't
   exist in the built HTML — wire it into CI.
 
 From here, see the full [configuration options](/docs/api/configuration) or read

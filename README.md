@@ -1,6 +1,6 @@
-# hev find
+# hev ask
 
-hev find is a ⌘K search overlay for Astro docs sites. It combines instant
+hev ask is a ⌘K search overlay for Astro docs sites. It combines instant
 keyword search over heading anchors with an optional Claude-powered search loop
 that runs when the reader presses `Enter`.
 
@@ -11,21 +11,32 @@ that runs when the reader presses `Enter`.
 - **Agentic Enter** — Claude decides focused sub-queries, uses the keyword
   search tool, then streams a grounded answer (SSE) with inline deep links to
   the sections it drew from.
-- **Knowledge graph** — an optional committed `.hev-find/kg.json` adds domain
+- **Knowledge graph** — an optional committed `.hev-ask/kg.json` adds domain
   context and glossary aliases for better retrieval.
+
+## Status
+
+The package source is ready under `packages/ui` as `@hev/ask`. It is not yet
+published to npm, so consumers should use the GitHub package path until the
+first npm release is cut.
+
+The docs site is configured for `ask.hev.dev` on Cloudflare Pages project
+`hev-ask`. A live deploy and custom-domain move still require Cloudflare
+credentials with access to the configured account.
 
 ## Repo layout
 
 ```
 .
-├─ packages/ui      # the published package: @hev/find
-├─ playground       # a minimal Astro docs site for fast local dev
-└─ site             # the docs + showcase site (find.hev.dev), which dogfoods @hev/find
+├─ packages/ui                    # the publishable package: @hev/ask
+├─ playground                     # a minimal Astro docs site for fast local dev
+├─ site                           # docs + showcase site (ask.hev.dev)
+└─ tpuff-docs-local/turbopuffer   # larger local docs corpus for scale checks
 ```
 
 The `site/` directory is the public documentation site. It is written
 docs-first for **Astro authors evaluating search**, and it *searches itself*
-with `@hev/find` — the docs are the product's own test corpus. Press `⌘K` on the
+with `@hev/ask` — the docs are the product's own test corpus. Press `⌘K` on the
 running site to see it work on real content.
 
 ## Develop
@@ -41,9 +52,9 @@ Open the playground and press `⌘K`.
 To work on the documentation/showcase site instead:
 
 ```sh
-pnpm --filter hev-find-site dev      # runs on :4334
-pnpm --filter hev-find-site build    # static pages + the /api/find function
-pnpm --filter hev-find-site check    # astro check (types)
+pnpm --filter hev-ask-site dev      # runs on :4334
+pnpm --filter hev-ask-site build    # static pages + the /api/ask function
+pnpm --filter hev-ask-site check    # astro check (types)
 ```
 
 Useful checks:
@@ -61,25 +72,25 @@ pnpm kg:verify
 Install the package from npm when published:
 
 ```sh
-pnpm add @hev/find
+pnpm add @hev/ask
 ```
 
 Until then, consume the latest GitHub version from the package subdirectory:
 
 ```sh
-pnpm add "git+ssh://git@github.com/hev/find.git#main&path:/packages/ui"
+pnpm add "git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui"
 ```
 
 ```js
 // astro.config.mjs
-import hevFind from '@hev/find';
+import hevAsk from '@hev/ask';
 
 export default defineConfig({
   integrations: [
-    hevFind({
+    hevAsk({
       collections: ['docs'],
       basePath: '/docs/',
-      // endpoint: '/api/find',
+      // endpoint: '/api/ask',
       // model: 'claude-haiku-4-5',
       // kgModel: 'claude-opus-4-8',
     }),
@@ -89,9 +100,9 @@ export default defineConfig({
 
 ```astro
 ---
-import SearchOverlay from '@hev/find/components/SearchOverlay.astro';
+import SearchOverlay from '@hev/ask/components/SearchOverlay.astro';
 ---
-<button data-hev-find-open>Search <kbd>⌘K</kbd></button>
+<button data-hev-ask-open>Search <kbd>⌘K</kbd></button>
 <SearchOverlay />
 ```
 
@@ -104,28 +115,28 @@ The optional knowledge graph is generated offline and committed into the
 consumer site:
 
 ```sh
-pnpm exec hev-find-kg build
-pnpm exec hev-find-kg verify
+pnpm exec hev-ask-kg build
+pnpm exec hev-ask-kg verify
 ```
 
-`build` writes `.hev-find/kg.json` and skips the model call when the current
+`build` writes `.hev-ask/kg.json` and skips the model call when the current
 content hash already matches. `verify` builds the site and checks that every
 heading chunk URL points at a real rendered anchor.
 
-## Publishing Plan
+## Publishing
 
-The package is structured for npm distribution as `@hev/find`, with `src`
-exports for Astro/Vite consumers and a plain JavaScript `hev-find-kg` bin for
+The package is structured for npm distribution as `@hev/ask`, with `src`
+exports for Astro/Vite consumers and a plain JavaScript `hev-ask-kg` bin for
 CLI use from `node_modules`.
 
-Current consumers can pin the GitHub package while the API settles, but npm is
-the intended distribution channel. Once `@hev/find` is published, downstream
-sites should depend on a normal semver range instead of a Git SHA.
+Current consumers can pin the GitHub package while the API settles. Once
+`@hev/ask` is published, downstream sites should depend on a normal semver
+range instead of a Git SHA.
 
 Before publishing:
 
 1. Set the intended semver in `packages/ui/package.json`.
 2. Run `pnpm test`, `pnpm typecheck`, `pnpm build`, and `pnpm kg:verify`.
-3. Dry-run the package with `pnpm --filter @hev/find pack --dry-run`.
+3. Dry-run the package with `pnpm --filter @hev/ask pack --dry-run`.
 4. Publish from `packages/ui` with `pnpm publish --access public`.
-5. Move consumers from the Git dependency to `@hev/find@<version>`.
+5. Move consumers from the Git dependency to `@hev/ask@<version>`.

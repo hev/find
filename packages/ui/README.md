@@ -1,19 +1,19 @@
-# @hev/find
+# @hev/ask
 
-hev find is a heading-anchored search overlay for Astro docs sites. Typing runs
+hev ask is a heading-anchored search overlay for Astro docs sites. Typing runs
 instant keyword search; pressing `Enter` runs an optional Claude search loop that
 chooses sub-queries and ranks section results.
 
 ## Install
 
 ```sh
-pnpm add @hev/find
+pnpm add @hev/ask
 ```
 
 For the current GitHub-hosted monorepo package before npm publication:
 
 ```sh
-pnpm add "git+ssh://git@github.com/hev/find.git#main&path:/packages/ui"
+pnpm add "git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui"
 ```
 
 ## Configure
@@ -21,11 +21,11 @@ pnpm add "git+ssh://git@github.com/hev/find.git#main&path:/packages/ui"
 ```js
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
-import hevFind from '@hev/find';
+import hevAsk from '@hev/ask';
 
 export default defineConfig({
   integrations: [
-    hevFind({
+    hevAsk({
       collections: ['docs'],
       basePath: '/docs/',
     }),
@@ -37,7 +37,7 @@ export default defineConfig({
 | --- | --- | --- |
 | `collections` | - | Content collections to index. |
 | `model` | `claude-haiku-4-5` | Runtime search-loop model. |
-| `endpoint` | `/api/find` | Injected on-demand route. |
+| `endpoint` | `/api/ask` | Injected on-demand route. |
 | `basePath` | `/docs/` | Turns a doc slug into its page URL. |
 | `maxResults` | `6` | Max results returned. |
 | `maxIterations` | `4` | Max search-loop rounds. |
@@ -45,37 +45,37 @@ export default defineConfig({
 | `candidatePerSearch` | `8` | Chunks returned by each search tool call. |
 | `perDocCap` | `2` | Max chunks per document in one prefilter call. |
 | `kgModel` | `claude-opus-4-8` | Offline KG build model. |
-| `kgPath` | `.hev-find/kg.json` | Committed KG artifact path. |
+| `kgPath` | `.hev-ask/kg.json` | Committed KG artifact path. |
 | `kgContentGlobs` | derived from `collections` | Build-time Markdown/MDX corpus globs. |
 
 ## Add the overlay
 
 ```astro
 ---
-import SearchOverlay from '@hev/find/components/SearchOverlay.astro';
+import SearchOverlay from '@hev/ask/components/SearchOverlay.astro';
 ---
-<button data-hev-find-open>Search <kbd>⌘K</kbd></button>
+<button data-hev-ask-open>Search <kbd>⌘K</kbd></button>
 
 <!-- once per page, e.g. at the end of your layout -->
 <SearchOverlay />
 ```
 
-Open with `⌘K` / `Ctrl+K`, or `/`. Any element with `data-hev-find-open` also
+Open with `⌘K` / `Ctrl+K`, or `/`. Any element with `data-hev-ask-open` also
 opens it. Typing returns keyword results immediately. Press `Enter` to ask AI,
 or move the selection with arrows/hover and press `Enter` to open a keyword hit.
 
 ## Knowledge Graph
 
 ```sh
-hev-find-kg build
-hev-find-kg verify
+hev-ask-kg build
+hev-ask-kg verify
 ```
 
-The builder writes `.hev-find/kg.json`, which should be committed. Builds are
+The builder writes `.hev-ask/kg.json`, which should be committed. Builds are
 hash-gated, so unchanged content does not spend another Opus call. `verify`
 builds the site and checks that every chunk anchor exists in `dist`.
 
-hev find uses `github-slugger` to match Astro heading anchors exactly.
+hev ask uses `github-slugger` to match Astro heading anchors exactly.
 
 Recommended CI gates:
 
@@ -88,8 +88,8 @@ pnpm kg:verify
 
 ## Publishing
 
-This package is intended to publish as `@hev/find`. Before publishing, bump the
-version, run the verification gates, inspect `pnpm --filter @hev/find pack
+This package is intended to publish as `@hev/ask`. Before publishing, bump the
+version, run the verification gates, inspect `pnpm --filter @hev/ask pack
 --dry-run`, then publish from this package directory with:
 
 ```sh
@@ -105,7 +105,7 @@ yet published, but they are not the long-term distribution path.
 ## Server Requirements
 
 - Set `ANTHROPIC_API_KEY` for AI search and fresh KG generation.
-- Without a runtime key, `/api/find` still serves keyword results.
+- Without a runtime key, `/api/ask` still serves keyword results.
 - The search route is rendered on demand, so the site needs a server adapter in
   production.
 

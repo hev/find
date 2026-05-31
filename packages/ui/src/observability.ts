@@ -184,7 +184,7 @@ export function makeTelemetry(options: TelemetryOptions = {}): Telemetry {
     },
     trace({ name, latencyMs, ok }) {
       emit('$ai_trace', {
-        $ai_span_name: name ?? 'hev find agent',
+        $ai_span_name: name ?? 'hev ask agent',
         $ai_latency: latencyMs / 1000,
         $ai_is_error: !ok,
       });

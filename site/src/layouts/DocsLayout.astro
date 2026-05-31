@@ -24,7 +24,7 @@ const { previous, next } = await getDocSiblings(entry.id);
 const tocHeadings = headings.filter((heading) => heading.depth === 2);
 ---
 
-<Base title={`hev find docs - ${entry.data.title}`} description={entry.data.description} current="docs">
+<Base title={`hev ask docs - ${entry.data.title}`} description={entry.data.description} current="docs">
 	<div class="docs-announcement">
 		<a href="/docs/quickstart">Add search in five minutes</a>
 		<span>or press ⌘K to watch it search these docs.</span>
@@ -32,7 +32,7 @@ const tocHeadings = headings.filter((heading) => heading.depth === 2);
 
 	<main class="docs-shell">
 		<aside class="docs-sidebar" aria-label="Docs navigation">
-			<button type="button" class="sidebar-search" data-hev-find-open>
+			<button type="button" class="sidebar-search" data-hev-ask-open>
 				<span>Search docs</span>
 				<kbd>⌘K</kbd>
 			</button>

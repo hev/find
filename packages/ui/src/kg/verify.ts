@@ -65,7 +65,7 @@ async function verifyFidelity(
   options: VerifyAnchorsOptions,
   chunks: Awaited<ReturnType<typeof buildCorpus>>['chunks'],
 ): Promise<{ dropped: VerifyAnchorsResult['dropped']; uncovered: string[] }> {
-  const kgPath = path.resolve(options.siteRoot, options.kgPath ?? '.hev-find/kg.json');
+  const kgPath = path.resolve(options.siteRoot, options.kgPath ?? '.hev-ask/kg.json');
   const kg = normalizeKnowledgeGraph(await readJson(kgPath));
   if (!kg.nodes.length) return { dropped: [], uncovered: [] }; // v1 / degraded graph — nothing to check
 

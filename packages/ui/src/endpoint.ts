@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import config from 'virtual:hev-find/config';
-import kg from 'virtual:hev-find/kg';
+import config from 'virtual:hev-ask/config';
+import kg from 'virtual:hev-ask/kg';
 import { hashableChunkText } from './search/chunk';
 import { buildIndex, prefilter, type Candidate, type Chunk } from './search/index';
 import { runAgenticAnswerLoop, type AgenticEvent } from './search/loop';
@@ -162,7 +162,7 @@ async function warnIfStale(chunks: Chunk[]) {
   staleWarningIssued = true;
   const hash = await sha256Hex(hashableChunkText(chunks)).catch(() => '');
   if (hash && hash !== kg.contentHash) {
-    console.warn('[hev-find] Knowledge graph content hash is stale; run `hev-find-kg build` to refresh it.');
+    console.warn('[hev-ask] Knowledge graph content hash is stale; run `hev-ask-kg build` to refresh it.');
   }
 }
 

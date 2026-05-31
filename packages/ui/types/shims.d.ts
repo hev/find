@@ -7,7 +7,7 @@ declare module 'astro:content' {
   export function getCollection(name: string): Promise<any[]>;
 }
 
-declare module 'virtual:hev-find/config' {
+declare module 'virtual:hev-ask/config' {
   const config: {
     collections: string[] | null;
     model: string;
@@ -26,7 +26,7 @@ declare module 'virtual:hev-find/config' {
   export default config;
 }
 
-declare module 'virtual:hev-find/kg' {
+declare module 'virtual:hev-ask/kg' {
   const kg: import('../src/kg/schema').KnowledgeGraph;
   export default kg;
 }

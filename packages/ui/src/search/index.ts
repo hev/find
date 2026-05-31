@@ -14,7 +14,7 @@ export async function buildIndex(
   chunkHeadingDepth: number,
 ): Promise<Chunk[]> {
   if (!collections?.length) {
-    throw new Error('[hev-find] No collections configured. Pass `collections: ["docs"]` to the integration.');
+    throw new Error('[hev-ask] No collections configured. Pass `collections: ["docs"]` to the integration.');
   }
 
   const chunks: Chunk[] = [];
