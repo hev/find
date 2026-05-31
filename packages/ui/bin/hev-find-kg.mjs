@@ -10,6 +10,7 @@ const execFileAsync = promisify(execFile);
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 
+async function main() {
 const [command = 'build', ...args] = process.argv.slice(2);
 const flags = parseFlags(args);
 
@@ -30,33 +31,54 @@ try {
       siteRoot: process.cwd(),
       collections: flags.collections.length ? flags.collections : ['docs'],
       basePath: flags.basePath ?? '/docs/',
+      kgPath: flags.kgPath ?? '.hev-find/kg.json',
       kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
       buildCommand: flags.buildCommand,
       skipBuild: flags.skipBuild,
     });
+
+    let failed = false;
+
     if (result.missing.length) {
       for (const miss of result.missing) {
         console.error(`[hev-find] missing anchor ${miss.anchorId} for ${miss.url} in ${miss.file}`);
       }
+      failed = true;
+    }
+    if (result.uncovered.length) {
+      const sample = result.uncovered.slice(0, 5).join(', ');
+      const more = result.uncovered.length > 5 ? `, …(+${result.uncovered.length - 5})` : '';
+      console.warn(`[hev-find] ${result.uncovered.length} section(s) missing from the graph: ${sample}${more} — run \`hev-find-kg build\`.`);
+      if (flags.strict) failed = true;
+    }
+    if (result.dropped.length) {
+      console.warn(`[hev-find] ${result.dropped.length} source literal(s) dropped from agent-primary nodes — run \`hev-find-kg build\`:`);
+      for (const drop of result.dropped.slice(0, 8)) console.warn(`  - ${drop.id}: ${drop.literal}`);
+      if (flags.strict) failed = true;
+    }
+
+    if (failed) {
       process.exitCode = 1;
     } else {
-      console.log(`[hev-find] verified ${result.checked} anchors`);
+      const warnings = result.dropped.length || result.uncovered.length ? ' (with warnings)' : '';
+      console.log(`[hev-find] verified ${result.checked} anchors${warnings}`);
     }
   } else {
-    console.error('Usage: hev-find-kg build|verify [--collection docs] [--base-path /docs/]');
+    console.error('Usage: hev-find-kg build|verify [--collection docs] [--base-path /docs/] [--strict]');
     process.exitCode = 1;
   }
 } catch (err) {
   console.error(`[hev-find] ${err.message}`);
   process.exitCode = 1;
 }
+}
 
 async function buildKnowledgeGraph(options) {
   const corpus = await buildCorpus(options);
   const outPath = path.resolve(options.siteRoot, options.kgPath);
   const existing = await readExistingKg(outPath);
-  if (existing?.contentHash === corpus.contentHash) {
+  if (existing && existing.version === 2 && existing.contentHash === corpus.contentHash && existing.nodes.length > 0) {
     return { status: 'skipped', path: outPath, contentHash: corpus.contentHash, chunks: corpus.chunks.length };
   }
 
@@ -73,12 +95,12 @@ async function buildKnowledgeGraph(options) {
   const response = await callClaude({
     apiKey,
     model: options.kgModel,
-    maxTokens: 4096,
+    maxTokens: 8192,
     system: [
       {
         type: 'text',
         text:
-          'You build compact knowledge graphs for documentation search. Return only the forced tool call. Prefer concise context and aliases that real users would type.',
+          'You build documentation knowledge graphs for an AI search agent. Return only the forced tool call. Write a compact orientation, a glossary with aliases real users would type, and one tight summary for every section id in the corpus. Summaries are what the agent reasons from, so make them faithful and self-contained; paraphrase prose but never restate code, flags, or exact identifiers.',
       },
       {
         type: 'text',
@@ -89,8 +111,7 @@ async function buildKnowledgeGraph(options) {
     messages: [
       {
         role: 'user',
-        content:
-          'Create a domain context table and glossary for this corpus. Keep context compact enough to reuse in a search system prompt.',
+        content: 'Emit the context, glossary, and one summary per section id. Every id in the corpus must get a summary.',
       },
     ],
     tools: [knowledgeGraphTool()],
@@ -98,13 +119,18 @@ async function buildKnowledgeGraph(options) {
   });
 
   const toolUse = response.content.find((block) => block.type === 'tool_use' && block.name === 'emit_knowledge_graph');
-  const generated = normalizeKg(toolUse?.input);
+  const emitted = normalizeEmit(toolUse?.input);
+  const summaryById = new Map(emitted.summaries.map((entry) => [entry.id, entry.summary]));
+
   const graph = {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     contentHash: corpus.contentHash,
-    context: generated.context,
-    glossary: generated.glossary,
+    context: emitted.context,
+    glossary: emitted.glossary,
+    overview: buildOverview(corpus.chunks),
+    nodes: buildNodes(corpus.chunks, summaryById),
+    edges: [],
   };
 
   await mkdir(path.dirname(outPath), { recursive: true });
@@ -131,7 +157,33 @@ async function verifyAnchors(options) {
     if (!found) missing.push({ url: chunk.url, file: files[0], anchorId: chunk.anchorId });
   }
 
-  return { checked: anchored.length, missing };
+  const { dropped, uncovered } = await verifyFidelity(options, corpus.chunks);
+  return { checked: anchored.length, missing, dropped, uncovered };
+}
+
+async function verifyFidelity(options, chunks) {
+  const kgPath = path.resolve(options.siteRoot, options.kgPath ?? '.hev-find/kg.json');
+  const kg = await readExistingKg(kgPath);
+  if (!kg || !kg.nodes.length) return { dropped: [], uncovered: [] };
+
+  const nodeById = new Map(kg.nodes.map((node) => [node.id, node]));
+  const dropped = [];
+  const uncovered = [];
+
+  for (const chunk of chunks) {
+    const node = nodeById.get(chunk.id);
+    if (!node) {
+      uncovered.push(chunk.id);
+      continue;
+    }
+    if (node.mode === 'source-primary') continue;
+    const carried = new Set(node.facts.map((fact) => fact.literal));
+    for (const fact of extractFacts(chunk.id, chunk.raw)) {
+      if (!carried.has(fact.literal)) dropped.push({ id: chunk.id, literal: fact.literal });
+    }
+  }
+
+  return { dropped, uncovered };
 }
 
 async function buildCorpus(options) {
@@ -185,7 +237,8 @@ function chunkDocument(doc, basePath, chunkHeadingDepth = 3) {
 
   return sections
     .map((section, index) => {
-      const cleanedBody = cleanMarkdown(section.lines.join('\n'));
+      const rawBody = section.lines.join('\n');
+      const cleanedBody = cleanMarkdown(rawBody);
       const text = (index === 0 ? [doc.description, cleanedBody] : [cleanedBody]).filter(Boolean).join('\n').trim();
       if (!text && !section.heading) return null;
       const url = docSlugToUrl(doc.slug, basePath) + (section.anchorId ? `#${section.anchorId}` : '');
@@ -198,9 +251,114 @@ function chunkDocument(doc, basePath, chunkHeadingDepth = 3) {
         anchorId: section.anchorId,
         url,
         text,
+        raw: rawBody,
       };
     })
     .filter(Boolean);
+}
+
+// --- Deterministic node + fact construction (mirrors src/kg/facts.ts, build.ts) ---
+
+const FENCE_RE = /```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
+const INLINE_CODE_RE = /`([^`\n]+)`/g;
+const FLAG_RE = /(?<![\w-])(--?[a-zA-Z][\w-]*)/g;
+const VERSION_RE = /\bv?\d+(?:\.\d+)+\b/g;
+const MODEL_ID_RE = /\b[a-z][a-z0-9]*(?:-[a-z0-9]+)*-\d[a-z0-9-]*\b/gi;
+const DOTTED_RE = /\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\b/gi;
+const MAX_FACTS = 24;
+const MAX_LITERAL = 400;
+
+function extractFacts(chunkId, raw) {
+  const seen = new Set();
+  const facts = [];
+  const push = (kind, literal) => {
+    const value = literal.trim();
+    if (value.length < 2 || value.length > MAX_LITERAL || seen.has(value)) return;
+    seen.add(value);
+    facts.push({ kind, literal: value, chunkId });
+  };
+
+  for (const match of raw.matchAll(FENCE_RE)) push('code', match[1]);
+  const rest = raw.replace(FENCE_RE, ' ');
+  for (const match of rest.matchAll(INLINE_CODE_RE)) push('code', match[1]);
+  const bare = rest.replace(INLINE_CODE_RE, ' ');
+  for (const match of bare.matchAll(FLAG_RE)) push('flag', match[1]);
+  for (const match of bare.matchAll(MODEL_ID_RE)) push('value', match[0]);
+  for (const match of bare.matchAll(DOTTED_RE)) push('value', match[0]);
+  for (const match of bare.matchAll(VERSION_RE)) push('value', match[0]);
+
+  return facts.slice(0, MAX_FACTS);
+}
+
+function classifyMode(group) {
+  return group && /reference|api/i.test(group) ? 'source-primary' : 'agent-primary';
+}
+
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'are', 'was', 'has', 'have', 'its',
+  'use', 'used', 'using', 'can', 'will', 'when', 'where', 'how', 'what', 'which', 'each', 'all',
+  'one', 'two', 'per', 'via', 'not', 'but', 'you', 'your', 'they', 'them', 'then', 'than', 'over',
+]);
+
+function tokenize(text) {
+  return text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+}
+
+function distinctiveTokens(text, cap = 40) {
+  const out = [];
+  const seen = new Set();
+  for (const token of tokenize(text)) {
+    if (token.length < 4 || STOPWORDS.has(token) || seen.has(token)) continue;
+    seen.add(token);
+    out.push(token);
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+
+function buildNodes(chunks, summaryById) {
+  return chunks
+    .map((chunk) => {
+      const facts = extractFacts(chunk.id, chunk.raw);
+      const summary = (summaryById.get(chunk.id) ?? '').trim() || excerpt(chunk.text);
+      const terms = distinctiveTokens(
+        [chunk.heading ?? '', summary, facts.map((fact) => fact.literal).join(' '), chunk.text].join(' '),
+      );
+      return {
+        id: chunk.id,
+        kind: 'section',
+        title: chunk.docTitle,
+        heading: chunk.heading ?? null,
+        group: chunk.group ?? null,
+        url: chunk.url,
+        summary,
+        facts,
+        sources: [{ chunkId: chunk.id, url: chunk.url, anchor: chunk.anchorId ?? null }],
+        mode: classifyMode(chunk.group),
+        terms,
+      };
+    })
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function buildOverview(chunks) {
+  const byGroup = new Map();
+  for (const chunk of chunks) {
+    const group = chunk.group ?? 'Docs';
+    if (!byGroup.has(group)) byGroup.set(group, []);
+    byGroup.get(group).push(chunk);
+  }
+  const lines = [];
+  for (const [group, items] of [...byGroup.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    lines.push(`## ${group}`);
+    for (const chunk of items) lines.push(`- ${chunk.heading ?? chunk.docTitle} — \`${chunk.id}\``);
+  }
+  return lines.join('\n');
+}
+
+function excerpt(text, max = 220) {
+  const trimmed = text.replace(/\s+/g, ' ').trim();
+  return trimmed.length > max ? trimmed.slice(0, max).trimEnd() + '…' : trimmed;
 }
 
 function cleanMarkdown(src) {
@@ -356,10 +514,13 @@ async function readExistingKg(file) {
 }
 
 function normalizeKg(value) {
-  if (!value || typeof value !== 'object') return { context: '', glossary: [], contentHash: '' };
+  if (!value || typeof value !== 'object') {
+    return { version: 2, contentHash: '', context: '', glossary: [], nodes: [] };
+  }
   return {
-    context: typeof value.context === 'string' ? value.context : '',
+    version: 2,
     contentHash: typeof value.contentHash === 'string' ? value.contentHash : '',
+    context: typeof value.context === 'string' ? value.context : '',
     glossary: Array.isArray(value.glossary)
       ? value.glossary
           .map((entry) => {
@@ -372,7 +533,35 @@ function normalizeKg(value) {
           })
           .filter(Boolean)
       : [],
+    nodes: Array.isArray(value.nodes)
+      ? value.nodes
+          .map((node) => {
+            if (!node || typeof node !== 'object' || typeof node.id !== 'string') return null;
+            return {
+              id: node.id,
+              mode: node.mode === 'source-primary' ? 'source-primary' : 'agent-primary',
+              facts: Array.isArray(node.facts)
+                ? node.facts.filter((fact) => fact && typeof fact.literal === 'string')
+                : [],
+            };
+          })
+          .filter(Boolean)
+      : [],
   };
+}
+
+function normalizeEmit(value) {
+  const base = normalizeKg(value);
+  const summaries = Array.isArray(value?.summaries)
+    ? value.summaries
+        .map((entry) => {
+          if (!entry || typeof entry !== 'object') return null;
+          if (typeof entry.id !== 'string' || typeof entry.summary !== 'string') return null;
+          return { id: entry.id, summary: entry.summary.trim() };
+        })
+        .filter(Boolean)
+    : [];
+  return { context: base.context, glossary: base.glossary, summaries };
 }
 
 function htmlFilesForUrl(distDir, url) {
@@ -421,7 +610,8 @@ async function callClaude(opts) {
 function knowledgeGraphTool() {
   return {
     name: 'emit_knowledge_graph',
-    description: 'Emit a compact documentation knowledge graph for search retrieval and ranking.',
+    description:
+      'Emit a documentation knowledge graph: a compact orientation, a glossary, and one distilled summary per section.',
     input_schema: {
       type: 'object',
       properties: {
@@ -438,8 +628,19 @@ function knowledgeGraphTool() {
             required: ['term', 'aliases', 'definition'],
           },
         },
+        summaries: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              summary: { type: 'string' },
+            },
+            required: ['id', 'summary'],
+          },
+        },
       },
-      required: ['context', 'glossary'],
+      required: ['context', 'glossary', 'summaries'],
     },
   };
 }
@@ -472,7 +673,14 @@ function parseFlags(args) {
       i += 1;
     } else if (arg === '--skip-build') {
       flags.skipBuild = true;
+    } else if (arg === '--strict') {
+      flags.strict = true;
     }
   }
   return flags;
 }
+
+// Run last, after every const/function above is initialized. The entry uses
+// top-level await, which suspends module evaluation — so calling it from the
+// top would invoke fact-extraction (FENCE_RE et al.) before those consts exist.
+await main();

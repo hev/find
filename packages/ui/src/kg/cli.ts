@@ -11,6 +11,7 @@ interface Flags {
   kgModel?: string;
   buildCommand?: string;
   skipBuild?: boolean;
+  strict?: boolean;
 }
 
 const [command = 'build', ...args] = process.argv.slice(2);
@@ -33,21 +34,44 @@ try {
       siteRoot: process.cwd(),
       collections: flags.collections.length ? flags.collections : ['docs'],
       basePath: flags.basePath ?? '/docs/',
+      kgPath: flags.kgPath ?? '.hev-find/kg.json',
       kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
       buildCommand: flags.buildCommand,
       skipBuild: flags.skipBuild,
     });
+
+    let failed = false;
+
+    // Anchor drift is always fatal — it is fully deterministic and keyless.
     if (result.missing.length) {
       for (const miss of result.missing) {
         console.error(`[hev-find] missing anchor ${miss.anchorId} for ${miss.url} in ${miss.file}`);
       }
+      failed = true;
+    }
+
+    // Coverage + literal-fidelity warn by default; --strict makes them fatal.
+    if (result.uncovered.length) {
+      const sample = result.uncovered.slice(0, 5).join(', ');
+      const more = result.uncovered.length > 5 ? `, …(+${result.uncovered.length - 5})` : '';
+      console.warn(`[hev-find] ${result.uncovered.length} section(s) missing from the graph: ${sample}${more} — run \`hev-find-kg build\`.`);
+      if (flags.strict) failed = true;
+    }
+    if (result.dropped.length) {
+      console.warn(`[hev-find] ${result.dropped.length} source literal(s) dropped from agent-primary nodes — run \`hev-find-kg build\`:`);
+      for (const drop of result.dropped.slice(0, 8)) console.warn(`  - ${drop.id}: ${drop.literal}`);
+      if (flags.strict) failed = true;
+    }
+
+    if (failed) {
       process.exitCode = 1;
     } else {
-      console.log(`[hev-find] verified ${result.checked} anchors`);
+      const warnings = result.dropped.length || result.uncovered.length ? ' (with warnings)' : '';
+      console.log(`[hev-find] verified ${result.checked} anchors${warnings}`);
     }
   } else {
-    console.error('Usage: hev-find-kg build|verify [--collection docs] [--base-path /docs/]');
+    console.error('Usage: hev-find-kg build|verify [--collection docs] [--base-path /docs/] [--strict]');
     process.exitCode = 1;
   }
 } catch (err) {
@@ -83,6 +107,8 @@ function parseFlags(args: string[]): Flags {
       i += 1;
     } else if (arg === '--skip-build') {
       flags.skipBuild = true;
+    } else if (arg === '--strict') {
+      flags.strict = true;
     }
   }
   return flags;

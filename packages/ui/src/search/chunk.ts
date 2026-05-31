@@ -17,6 +17,8 @@ export interface Chunk {
   anchorId?: string;
   url: string;
   text: string;
+  /** Raw section markdown (pre-clean). Used for verbatim fact extraction; not hashed. */
+  raw: string;
   tokens: Set<string>;
 }
 
@@ -103,7 +105,8 @@ export function chunkDocument(
 
   return sections
     .map((section, index): Chunk | null => {
-      const cleanedBody = cleanMarkdown(section.lines.join('\n'));
+      const rawBody = section.lines.join('\n');
+      const cleanedBody = cleanMarkdown(rawBody);
       const introPrefix = index === 0 ? [doc.description, cleanedBody] : [cleanedBody];
       const text = introPrefix.filter(Boolean).join('\n').trim();
       if (!text && !section.heading) return null;
@@ -119,6 +122,7 @@ export function chunkDocument(
         anchorId: section.anchorId,
         url,
         text,
+        raw: rawBody,
         tokens: new Set(tokenize(`${doc.title} ${doc.group ?? ''} ${section.heading ?? ''} ${text}`)),
       };
     })
