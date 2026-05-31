@@ -72,10 +72,63 @@ const KG_TOOL: AnthropicTool = {
           required: ['id', 'summary'],
         },
       },
+      suggestions: {
+        type: 'array',
+        description:
+          '3-5 natural questions a real reader might ask that these docs genuinely answer. Phrase them the way a user would type them, not as headings.',
+        items: { type: 'string' },
+      },
     },
-    required: ['context', 'glossary', 'summaries'],
+    required: ['context', 'glossary', 'summaries', 'suggestions'],
   },
 };
+
+export interface EmittedDistillation {
+  context: string;
+  glossary: KnowledgeGraph['glossary'];
+  summaries: Array<{ id: string; summary: string }>;
+  suggestions: string[];
+}
+
+/** The exact model-input payload the skill (or `build`) distils from. */
+export interface KnowledgeGraphInput {
+  contentHash: string;
+  kgPath: string;
+  /** True when the committed kg.json already matches this corpus — no rebuild needed. */
+  upToDate: boolean;
+  sections: Array<{ id: string; url: string; title: string; text: string }>;
+}
+
+/** Sections handed to the model: one entry per heading chunk. */
+export function corpusSections(corpus: CorpusBuild): KnowledgeGraphInput['sections'] {
+  return corpus.chunks.map((chunk) => ({
+    id: chunk.id,
+    url: chunk.url,
+    title: chunk.heading ? `${chunk.docTitle} > ${chunk.heading}` : chunk.docTitle,
+    text: chunk.text,
+  }));
+}
+
+/**
+ * Assembles the committed graph from a model distillation. Everything but the
+ * distilled fields (`summary`, `glossary`, `context`, `suggestions`) is derived
+ * here deterministically, so it is identical whether the distillation came from
+ * the API or a Claude Code skill.
+ */
+export function assembleGraph(emitted: EmittedDistillation, corpus: CorpusBuild): KnowledgeGraph {
+  const summaryById = new Map(emitted.summaries.map((entry) => [entry.id, entry.summary]));
+  return {
+    version: 2,
+    generatedAt: new Date().toISOString(),
+    contentHash: corpus.contentHash,
+    context: emitted.context,
+    glossary: emitted.glossary,
+    overview: buildOverview(corpus.chunks),
+    suggestions: emitted.suggestions,
+    nodes: buildNodes(corpus.chunks, summaryById),
+    edges: [],
+  };
+}
 
 export async function buildKnowledgeGraph(options: KnowledgeGraphBuildOptions): Promise<KnowledgeGraphBuildResult> {
   const corpus = await buildCorpus(options);
@@ -90,11 +143,8 @@ export async function buildKnowledgeGraph(options: KnowledgeGraphBuildOptions): 
   const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is required to build a fresh knowledge graph.');
 
-  const corpusText = corpus.chunks
-    .map((chunk) => {
-      const title = chunk.heading ? `${chunk.docTitle} > ${chunk.heading}` : chunk.docTitle;
-      return `id: ${chunk.id}\nurl: ${chunk.url}\ntitle: ${title}\n\n${chunk.text}`;
-    })
+  const corpusText = corpusSections(corpus)
+    .map((section) => `id: ${section.id}\nurl: ${section.url}\ntitle: ${section.title}\n\n${section.text}`)
     .join('\n\n---\n\n');
 
   const response = await callClaude({
@@ -104,8 +154,7 @@ export async function buildKnowledgeGraph(options: KnowledgeGraphBuildOptions): 
     system: [
       {
         type: 'text',
-        text:
-          'You build documentation knowledge graphs for an AI search agent. Return only the forced tool call. Write a compact orientation, a glossary with aliases real users would type, and one tight summary for every section id in the corpus. Summaries are what the agent reasons from, so make them faithful and self-contained; paraphrase prose but never restate code, flags, or exact identifiers.',
+        text: KG_SYSTEM_PROMPT,
       },
       {
         type: 'text',
@@ -117,7 +166,7 @@ export async function buildKnowledgeGraph(options: KnowledgeGraphBuildOptions): 
       {
         role: 'user',
         content:
-          'Emit the context, glossary, and one summary per section id. Every id in the corpus must get a summary.',
+          'Emit the context, glossary, one summary per section id, and 3-5 suggested questions. Every id in the corpus must get a summary.',
       },
     ],
     tools: [KG_TOOL],
@@ -126,32 +175,18 @@ export async function buildKnowledgeGraph(options: KnowledgeGraphBuildOptions): 
 
   const toolUse = response.content.find((block) => block.type === 'tool_use' && block.name === 'emit_knowledge_graph');
   const emitted = parseEmittedGraph(toolUse?.type === 'tool_use' ? toolUse.input : null);
-  const summaryById = new Map(emitted.summaries.map((entry) => [entry.id, entry.summary]));
+  const graph = assembleGraph(emitted, corpus);
 
-  const graph: KnowledgeGraph = {
-    version: 2,
-    generatedAt: new Date().toISOString(),
-    contentHash: corpus.contentHash,
-    context: emitted.context,
-    glossary: emitted.glossary,
-    overview: buildOverview(corpus.chunks),
-    nodes: buildNodes(corpus.chunks, summaryById),
-    edges: [],
-  };
-
-  await mkdir(path.dirname(outPath), { recursive: true });
-  await writeFile(outPath, JSON.stringify(graph, null, 2) + '\n', 'utf8');
+  await writeGraph(outPath, graph);
   return { status: 'built', path: outPath, contentHash: corpus.contentHash, chunks: corpus.chunks.length };
 }
 
-interface EmittedGraph {
-  context: string;
-  glossary: KnowledgeGraph['glossary'];
-  summaries: Array<{ id: string; summary: string }>;
-}
+/** Shared instruction for the model step, whether it runs via API or a skill. */
+export const KG_SYSTEM_PROMPT =
+  'You build documentation knowledge graphs for an AI search agent. Return only the forced tool call. Write a compact orientation, a glossary with aliases real users would type, one tight summary for every section id in the corpus, and 3-5 natural questions a reader might ask that these docs answer. Summaries are what the agent reasons from, so make them faithful and self-contained; paraphrase prose but never restate code, flags, or exact identifiers.';
 
-/** Reads the forced tool call. `summaries` is new in v2 and validated here. */
-function parseEmittedGraph(input: unknown): EmittedGraph {
+/** Reads the forced tool call (or a skill's distillation file) into the emit shape. */
+export function parseEmittedGraph(input: unknown): EmittedDistillation {
   const base = normalizeKnowledgeGraph(input);
   const raw = (input ?? {}) as { summaries?: unknown };
   const summaries = Array.isArray(raw.summaries)
@@ -164,7 +199,70 @@ function parseEmittedGraph(input: unknown): EmittedGraph {
         })
         .filter((entry): entry is { id: string; summary: string } => entry !== null)
     : [];
-  return { context: base.context, glossary: base.glossary, summaries };
+  return { context: base.context, glossary: base.glossary, summaries, suggestions: base.suggestions };
+}
+
+async function writeGraph(outPath: string, graph: KnowledgeGraph): Promise<void> {
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, JSON.stringify(graph, null, 2) + '\n', 'utf8');
+}
+
+/**
+ * `corpus` command: chunk the content and write the model-input payload (plus a
+ * freshness flag) for a Claude Code skill to distil. Fully deterministic, keyless.
+ */
+export async function writeCorpusInput(options: {
+  siteRoot: string;
+  collections: string[] | null;
+  basePath: string;
+  kgPath: string;
+  outPath: string;
+  kgContentGlobs?: string[];
+  chunkHeadingDepth: number;
+}): Promise<{ path: string; upToDate: boolean; sections: number }> {
+  const corpus = await buildCorpus(options);
+  const committed = await readExistingKg(path.resolve(options.siteRoot, options.kgPath));
+  const upToDate = Boolean(
+    committed && committed.version === 2 && committed.contentHash === corpus.contentHash && committed.nodes.length > 0,
+  );
+  const payload: KnowledgeGraphInput = {
+    contentHash: corpus.contentHash,
+    kgPath: options.kgPath,
+    upToDate,
+    sections: corpusSections(corpus),
+  };
+  const outPath = path.resolve(options.siteRoot, options.outPath);
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+  return { path: outPath, upToDate, sections: payload.sections.length };
+}
+
+/**
+ * `assemble` command: read a skill-produced distillation, re-chunk the content
+ * from disk, and write the committed graph with the deterministic parts computed
+ * in code. Keyless — the model never runs here.
+ */
+export async function assembleFromDistillation(options: {
+  siteRoot: string;
+  collections: string[] | null;
+  basePath: string;
+  kgPath: string;
+  inputPath: string;
+  kgContentGlobs?: string[];
+  chunkHeadingDepth: number;
+}): Promise<KnowledgeGraphBuildResult> {
+  const inputPath = path.resolve(options.siteRoot, options.inputPath);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(await readFile(inputPath, 'utf8'));
+  } catch {
+    throw new Error(`Could not read distillation JSON at ${options.inputPath}. Run \`hev-find-kg corpus\` first.`);
+  }
+  const corpus = await buildCorpus(options);
+  const graph = assembleGraph(parseEmittedGraph(raw), corpus);
+  const outPath = path.resolve(options.siteRoot, options.kgPath);
+  await writeGraph(outPath, graph);
+  return { status: 'built', path: outPath, contentHash: corpus.contentHash, chunks: corpus.chunks.length };
 }
 
 /** Assembles section nodes. Everything but `summary` is derived deterministically. */

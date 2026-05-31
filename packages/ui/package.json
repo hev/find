@@ -20,7 +20,8 @@
   "sideEffects": false,
   "files": [
     "bin",
-    "src"
+    "src",
+    "skills"
   ],
   "bin": {
     "hev-find-kg": "./bin/hev-find-kg.mjs"

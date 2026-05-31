@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { buildKnowledgeGraph } from './build.ts';
+import { assembleFromDistillation, buildKnowledgeGraph, writeCorpusInput } from './build.ts';
 import { verifyAnchors } from './verify.ts';
 
 interface Flags {
@@ -12,6 +12,8 @@ interface Flags {
   buildCommand?: string;
   skipBuild?: boolean;
   strict?: boolean;
+  out?: string;
+  input?: string;
 }
 
 const [command = 'build', ...args] = process.argv.slice(2);
@@ -27,6 +29,29 @@ try {
       kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
       kgModel: flags.kgModel ?? 'claude-opus-4-8',
+    });
+    console.log(`[hev-find] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
+  } else if (command === 'corpus') {
+    const result = await writeCorpusInput({
+      siteRoot: process.cwd(),
+      collections: flags.collections.length ? flags.collections : ['docs'],
+      basePath: flags.basePath ?? '/docs/',
+      kgPath: flags.kgPath ?? '.hev-find/kg.json',
+      outPath: flags.out ?? '.hev-find/kg-input.json',
+      kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
+      chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
+    });
+    const state = result.upToDate ? 'up-to-date' : 'needs-rebuild';
+    console.log(`[hev-find] kg:corpus ${result.path} (${result.sections} sections, ${state})`);
+  } else if (command === 'assemble') {
+    const result = await assembleFromDistillation({
+      siteRoot: process.cwd(),
+      collections: flags.collections.length ? flags.collections : ['docs'],
+      basePath: flags.basePath ?? '/docs/',
+      kgPath: flags.kgPath ?? '.hev-find/kg.json',
+      inputPath: flags.input ?? '.hev-find/kg-distill.json',
+      kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
+      chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
     });
     console.log(`[hev-find] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
   } else if (command === 'verify') {
@@ -71,7 +96,9 @@ try {
       console.log(`[hev-find] verified ${result.checked} anchors${warnings}`);
     }
   } else {
-    console.error('Usage: hev-find-kg build|verify [--collection docs] [--base-path /docs/] [--strict]');
+    console.error(
+      'Usage: hev-find-kg build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--out path] [--input path] [--strict]',
+    );
     process.exitCode = 1;
   }
 } catch (err) {
@@ -104,6 +131,12 @@ function parseFlags(args: string[]): Flags {
       i += 1;
     } else if (arg === '--build-command' && next) {
       flags.buildCommand = next;
+      i += 1;
+    } else if (arg === '--out' && next) {
+      flags.out = next;
+      i += 1;
+    } else if (arg === '--input' && next) {
+      flags.input = next;
       i += 1;
     } else if (arg === '--skip-build') {
       flags.skipBuild = true;

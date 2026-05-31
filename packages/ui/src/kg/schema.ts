@@ -65,6 +65,8 @@ export interface KnowledgeGraph {
   glossary: GlossaryEntry[];
   /** Deterministic high-level map injected into the agent's system prompt. */
   overview: string;
+  /** Model-authored example questions the overlay offers on open. */
+  suggestions: string[];
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
 }
@@ -76,6 +78,7 @@ export const EMPTY_KG: KnowledgeGraph = {
   context: '',
   glossary: [],
   overview: '',
+  suggestions: [],
   nodes: [],
   edges: [],
 };
@@ -110,6 +113,9 @@ export function normalizeKnowledgeGraph(value: unknown): KnowledgeGraph {
     context: typeof maybe.context === 'string' ? maybe.context : '',
     glossary,
     overview: typeof maybe.overview === 'string' ? maybe.overview : '',
+    suggestions: Array.isArray(maybe.suggestions)
+      ? maybe.suggestions.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+      : [],
     nodes,
     edges,
   };

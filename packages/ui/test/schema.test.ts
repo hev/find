@@ -21,6 +21,15 @@ test('a v1 artifact degrades to a node-less v2 graph (keeps context + glossary)'
   assert.equal(kg.glossary.length, 1);
   assert.deepEqual(kg.nodes, []);
   assert.equal(kg.overview, '');
+  assert.deepEqual(kg.suggestions, [], 'a graph without suggestions normalizes to none');
+});
+
+test('suggestions normalize to non-empty strings only', () => {
+  const kg = normalizeKnowledgeGraph({
+    version: 2,
+    suggestions: ['How does it work?', '', '  ', 42, null, 'What are the limits?'],
+  });
+  assert.deepEqual(kg.suggestions, ['How does it work?', 'What are the limits?']);
 });
 
 test('v2 nodes round-trip and bad fields are coerced', () => {

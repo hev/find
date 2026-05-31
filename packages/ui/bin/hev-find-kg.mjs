@@ -26,6 +26,29 @@ try {
       kgModel: flags.kgModel ?? 'claude-opus-4-8',
     });
     console.log(`[hev-find] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
+  } else if (command === 'corpus') {
+    const result = await writeCorpusInput({
+      siteRoot: process.cwd(),
+      collections: flags.collections.length ? flags.collections : ['docs'],
+      basePath: flags.basePath ?? '/docs/',
+      kgPath: flags.kgPath ?? '.hev-find/kg.json',
+      outPath: flags.out ?? '.hev-find/kg-input.json',
+      kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
+      chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
+    });
+    const state = result.upToDate ? 'up-to-date' : 'needs-rebuild';
+    console.log(`[hev-find] kg:corpus ${result.path} (${result.sections} sections, ${state})`);
+  } else if (command === 'assemble') {
+    const result = await assembleFromDistillation({
+      siteRoot: process.cwd(),
+      collections: flags.collections.length ? flags.collections : ['docs'],
+      basePath: flags.basePath ?? '/docs/',
+      kgPath: flags.kgPath ?? '.hev-find/kg.json',
+      inputPath: flags.input ?? '.hev-find/kg-distill.json',
+      kgContentGlobs: flags.kgContentGlobs.length ? flags.kgContentGlobs : undefined,
+      chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
+    });
+    console.log(`[hev-find] kg:${result.status} ${result.path} (${result.chunks} chunks)`);
   } else if (command === 'verify') {
     const result = await verifyAnchors({
       siteRoot: process.cwd(),
@@ -65,7 +88,9 @@ try {
       console.log(`[hev-find] verified ${result.checked} anchors${warnings}`);
     }
   } else {
-    console.error('Usage: hev-find-kg build|verify [--collection docs] [--base-path /docs/] [--strict]');
+    console.error(
+      'Usage: hev-find-kg build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--out path] [--input path] [--strict]',
+    );
     process.exitCode = 1;
   }
 } catch (err) {
@@ -85,11 +110,8 @@ async function buildKnowledgeGraph(options) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is required to build a fresh knowledge graph.');
 
-  const corpusText = corpus.chunks
-    .map((chunk) => {
-      const title = chunk.heading ? `${chunk.docTitle} > ${chunk.heading}` : chunk.docTitle;
-      return `id: ${chunk.id}\nurl: ${chunk.url}\ntitle: ${title}\n\n${chunk.text}`;
-    })
+  const corpusText = corpusSections(corpus)
+    .map((section) => `id: ${section.id}\nurl: ${section.url}\ntitle: ${section.title}\n\n${section.text}`)
     .join('\n\n---\n\n');
 
   const response = await callClaude({
@@ -99,8 +121,7 @@ async function buildKnowledgeGraph(options) {
     system: [
       {
         type: 'text',
-        text:
-          'You build documentation knowledge graphs for an AI search agent. Return only the forced tool call. Write a compact orientation, a glossary with aliases real users would type, and one tight summary for every section id in the corpus. Summaries are what the agent reasons from, so make them faithful and self-contained; paraphrase prose but never restate code, flags, or exact identifiers.',
+        text: KG_SYSTEM_PROMPT,
       },
       {
         type: 'text',
@@ -111,7 +132,8 @@ async function buildKnowledgeGraph(options) {
     messages: [
       {
         role: 'user',
-        content: 'Emit the context, glossary, and one summary per section id. Every id in the corpus must get a summary.',
+        content:
+          'Emit the context, glossary, one summary per section id, and 3-5 suggested questions. Every id in the corpus must get a summary.',
       },
     ],
     tools: [knowledgeGraphTool()],
@@ -119,22 +141,74 @@ async function buildKnowledgeGraph(options) {
   });
 
   const toolUse = response.content.find((block) => block.type === 'tool_use' && block.name === 'emit_knowledge_graph');
-  const emitted = normalizeEmit(toolUse?.input);
-  const summaryById = new Map(emitted.summaries.map((entry) => [entry.id, entry.summary]));
+  const graph = assembleGraph(normalizeEmit(toolUse?.input), corpus);
 
-  const graph = {
+  await writeGraph(outPath, graph);
+  return { status: 'built', path: outPath, contentHash: corpus.contentHash, chunks: corpus.chunks.length };
+}
+
+const KG_SYSTEM_PROMPT =
+  'You build documentation knowledge graphs for an AI search agent. Return only the forced tool call. Write a compact orientation, a glossary with aliases real users would type, one tight summary for every section id in the corpus, and 3-5 natural questions a reader might ask that these docs answer. Summaries are what the agent reasons from, so make them faithful and self-contained; paraphrase prose but never restate code, flags, or exact identifiers.';
+
+function corpusSections(corpus) {
+  return corpus.chunks.map((chunk) => ({
+    id: chunk.id,
+    url: chunk.url,
+    title: chunk.heading ? `${chunk.docTitle} > ${chunk.heading}` : chunk.docTitle,
+    text: chunk.text,
+  }));
+}
+
+function assembleGraph(emitted, corpus) {
+  const summaryById = new Map(emitted.summaries.map((entry) => [entry.id, entry.summary]));
+  return {
     version: 2,
     generatedAt: new Date().toISOString(),
     contentHash: corpus.contentHash,
     context: emitted.context,
     glossary: emitted.glossary,
     overview: buildOverview(corpus.chunks),
+    suggestions: emitted.suggestions,
     nodes: buildNodes(corpus.chunks, summaryById),
     edges: [],
   };
+}
 
+async function writeGraph(outPath, graph) {
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, JSON.stringify(graph, null, 2) + '\n', 'utf8');
+}
+
+async function writeCorpusInput(options) {
+  const corpus = await buildCorpus(options);
+  const committed = await readExistingKg(path.resolve(options.siteRoot, options.kgPath));
+  const upToDate = Boolean(
+    committed && committed.version === 2 && committed.contentHash === corpus.contentHash && committed.nodes.length > 0,
+  );
+  const payload = {
+    contentHash: corpus.contentHash,
+    kgPath: options.kgPath,
+    upToDate,
+    sections: corpusSections(corpus),
+  };
+  const outPath = path.resolve(options.siteRoot, options.outPath);
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+  return { path: outPath, upToDate, sections: payload.sections.length };
+}
+
+async function assembleFromDistillation(options) {
+  const inputPath = path.resolve(options.siteRoot, options.inputPath);
+  let raw;
+  try {
+    raw = JSON.parse(await readFile(inputPath, 'utf8'));
+  } catch {
+    throw new Error(`Could not read distillation JSON at ${options.inputPath}. Run \`hev-find-kg corpus\` first.`);
+  }
+  const corpus = await buildCorpus(options);
+  const graph = assembleGraph(normalizeEmit(raw), corpus);
+  const outPath = path.resolve(options.siteRoot, options.kgPath);
+  await writeGraph(outPath, graph);
   return { status: 'built', path: outPath, contentHash: corpus.contentHash, chunks: corpus.chunks.length };
 }
 
@@ -561,7 +635,10 @@ function normalizeEmit(value) {
         })
         .filter(Boolean)
     : [];
-  return { context: base.context, glossary: base.glossary, summaries };
+  const suggestions = Array.isArray(value?.suggestions)
+    ? value.suggestions.filter((s) => typeof s === 'string' && s.trim().length > 0)
+    : [];
+  return { context: base.context, glossary: base.glossary, summaries, suggestions };
 }
 
 function htmlFilesForUrl(distDir, url) {
@@ -639,8 +716,12 @@ function knowledgeGraphTool() {
             required: ['id', 'summary'],
           },
         },
+        suggestions: {
+          type: 'array',
+          items: { type: 'string' },
+        },
       },
-      required: ['context', 'glossary', 'summaries'],
+      required: ['context', 'glossary', 'summaries', 'suggestions'],
     },
   };
 }
@@ -670,6 +751,12 @@ function parseFlags(args) {
       i += 1;
     } else if (arg === '--build-command' && next) {
       flags.buildCommand = next;
+      i += 1;
+    } else if (arg === '--out' && next) {
+      flags.out = next;
+      i += 1;
+    } else if (arg === '--input' && next) {
+      flags.input = next;
       i += 1;
     } else if (arg === '--skip-build') {
       flags.skipBuild = true;
