@@ -1,0 +1,204 @@
+---
+interface Props {
+	current?: "product" | "docs";
+}
+
+const { current = "product" } = Astro.props;
+const REPO = "hev/find";
+---
+
+<header>
+	<nav class="nav" aria-label="Primary navigation">
+		<a href="/" class="wordmark" aria-label="hev find — home">
+			hev<span class="cursor" aria-hidden="true"></span><span class="suffix">find</span>
+		</a>
+		<div class="nav-right">
+			<a href="/docs" aria-current={current === "docs" ? "page" : undefined}>docs</a>
+			<a href="/kg" title="what the agent sees">kg</a>
+			<a
+				class="gh"
+				href={`https://github.com/${REPO}`}
+				aria-label="hev find on GitHub"
+				data-gh-repo={REPO}
+			>
+				<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+					<path
+						fill="currentColor"
+						d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"
+					></path>
+				</svg>
+				<span class="gh-stars" data-gh-stars hidden></span>
+			</a>
+			<button type="button" class="search-trigger" data-hev-find-open aria-label="Search (⌘K)" title="Search (⌘K)">
+				<kbd>⌘K</kbd>
+			</button>
+		</div>
+	</nav>
+</header>
+
+<script is:inline>
+	(async () => {
+		const link = document.querySelector("[data-gh-repo]");
+		const el = link?.querySelector("[data-gh-stars]");
+		if (!link || !el) return;
+		try {
+			const res = await fetch(`https://api.github.com/repos/${link.dataset.ghRepo}`);
+			if (!res.ok) return;
+			const { stargazers_count: n } = await res.json();
+			if (typeof n !== "number") return;
+			el.textContent = n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n);
+			el.hidden = false;
+		} catch {
+			/* offline / rate-limited: leave the mark, drop the count */
+		}
+	})();
+</script>
+
+<style>
+	header {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		background: rgba(250, 250, 245, 0.85);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		border-bottom: 1px solid var(--rule);
+		padding: 1rem 2rem;
+	}
+
+	.nav {
+		max-width: 1080px;
+		margin: 0 auto;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1.5rem;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 0.875rem;
+	}
+
+	.wordmark {
+		font-weight: 700;
+		font-size: 1.0625rem;
+		letter-spacing: -0.02em;
+		display: inline-flex;
+		align-items: center;
+		color: var(--ink);
+		text-decoration: none;
+		flex: 0 0 auto;
+	}
+
+	.cursor {
+		display: inline-block;
+		width: 0.5em;
+		height: 1em;
+		background: var(--signal);
+		margin-left: 0.04em;
+		vertical-align: text-bottom;
+		animation: blink 1.2s steps(2) infinite;
+	}
+
+	.suffix {
+		color: var(--muted);
+		font-weight: 500;
+		margin-left: 0.4em;
+	}
+
+	.nav-right {
+		display: flex;
+		gap: 1.25rem;
+		align-items: center;
+	}
+
+	.nav-right > a:not(.gh) {
+		color: var(--ink-soft);
+		text-decoration: none;
+		position: relative;
+		transition: color 0.15s ease;
+	}
+
+	.nav-right > a:not(.gh)::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		bottom: -4px;
+		width: 0;
+		height: 1px;
+		background: var(--signal);
+		transition: width 0.2s ease;
+	}
+
+	.nav-right > a:not(.gh):hover,
+	.nav-right > a[aria-current="page"] {
+		color: var(--signal);
+	}
+
+	.nav-right > a:not(.gh):hover::after,
+	.nav-right > a[aria-current="page"]::after {
+		width: 100%;
+	}
+
+	.gh {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.3rem 0.6rem;
+		border: 1px solid var(--rule-strong);
+		border-radius: 3px;
+		color: var(--ink-soft);
+		text-decoration: none;
+		transition: border-color 0.15s ease, color 0.15s ease;
+	}
+
+	.gh:hover {
+		color: var(--signal);
+		border-color: var(--signal);
+	}
+
+	.gh-stars {
+		font-size: 0.8125rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.gh-stars::before {
+		content: "★ ";
+		color: var(--signal);
+	}
+
+	.search-trigger {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.3rem 0.5rem;
+		border: 1px solid var(--rule-strong);
+		border-radius: 3px;
+		background: var(--paper-warm);
+		color: var(--muted);
+		cursor: pointer;
+		transition: border-color 0.15s ease, color 0.15s ease;
+		flex: 0 0 auto;
+	}
+
+	.search-trigger:hover {
+		color: var(--signal);
+		border-color: var(--signal);
+	}
+
+	.search-trigger kbd {
+		font-family: inherit;
+		font-size: 0.75rem;
+	}
+
+	@media (max-width: 640px) {
+		header {
+			padding: 0.875rem 1.25rem;
+		}
+
+		.nav {
+			gap: 0.75rem;
+		}
+
+		.nav-right {
+			gap: 0.75rem;
+		}
+	}
+</style>

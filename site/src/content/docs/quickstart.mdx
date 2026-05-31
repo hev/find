@@ -1,0 +1,147 @@
+---
+title: "Quick start"
+description: "Add hev find to an Astro docs site: install the package, register the integration, drop the SearchOverlay component in your layout, and build the knowledge graph."
+group: "Overview"
+order: 1
+---
+
+import Steps from "../../components/docs/Steps.astro";
+import Callout from "../../components/docs/Callout.astro";
+
+This walks through adding search to an existing Astro 5 docs site whose content
+lives in a collection (for example `src/content/docs`). It takes about five
+minutes. The keyword path works immediately; the agentic path turns on once you
+add an API key.
+
+## Prerequisites
+
+- **Astro 5** with at least one [content collection](https://docs.astro.build/en/guides/content-collections/).
+- A **server or hybrid adapter** (Node, Cloudflare, Vercel, …). The search
+  endpoint renders on demand, so a fully static build can't serve it.
+- Optional: an **`ANTHROPIC_API_KEY`** for the agentic search loop.
+
+## Install and wire it up
+
+<Steps items={[
+  { title: "Install the package", body: "Add @hev/find with your package manager." },
+  { title: "Register the integration", body: "Add hevFind() to astro.config.mjs and point it at your collection." },
+  { title: "Add an adapter", body: "Install a server/hybrid adapter so the /api/find route can render on demand." },
+  { title: "Drop in the overlay", body: "Render SearchOverlay.astro once in your layout and add an opener button." },
+  { title: "Build the knowledge graph", body: "Run hev-find-kg build and commit the JSON artifact." },
+]} />
+
+### 1. Install
+
+Once published, install from npm:
+
+```sh
+pnpm add @hev/find
+```
+
+Until then, consume the latest version straight from the package subdirectory
+on GitHub:
+
+```sh
+pnpm add "git+ssh://git@github.com/hev/find.git#main&path:/packages/ui"
+```
+
+### 2. Register the integration
+
+```js
+// astro.config.mjs
+import { defineConfig } from "astro/config";
+import hevFind from "@hev/find";
+
+export default defineConfig({
+  integrations: [
+    hevFind({
+      collections: ["docs"],   // your content collection name(s)
+      basePath: "/docs/",      // slug → URL prefix: basePath + slug
+    }),
+  ],
+});
+```
+
+`collections` is the one option you must set. Everything else has a default —
+see the [configuration reference](/docs/api/configuration).
+
+### 3. Add a server adapter
+
+The `/api/find` route is rendered on demand. Add whichever adapter matches your
+host; this site uses Cloudflare:
+
+```js
+// astro.config.mjs
+import cloudflare from "@astrojs/cloudflare";
+
+export default defineConfig({
+  adapter: cloudflare({ platformProxy: { enabled: true } }),
+  // ...integrations as above
+});
+```
+
+Existing pages stay prerendered. Only `/api/find` runs as a function.
+
+### 4. Render the overlay
+
+Add the component once, somewhere global like your base layout, and give
+readers a way to open it. **Any element with `data-hev-find-open` opens the
+palette**, and `⌘K` is bound automatically.
+
+```astro
+---
+// src/layouts/Base.astro
+import SearchOverlay from "@hev/find/components/SearchOverlay.astro";
+---
+<button type="button" data-hev-find-open>
+  Search <kbd>⌘K</kbd>
+</button>
+
+<slot />
+
+<SearchOverlay />
+```
+
+At this point keyword search works. Run `astro dev`, press `⌘K`, and type.
+
+### 5. Build the knowledge graph
+
+The knowledge graph is an offline-built JSON file committed to your repo. It
+gives the agentic loop domain context and a glossary (so `k8s` finds
+`kubernetes`). Build it once, then whenever content changes:
+
+```sh
+export ANTHROPIC_API_KEY=sk-ant-...
+pnpm exec hev-find-kg build      # writes .hev-find/kg.json
+pnpm exec hev-find-kg verify     # builds the site, checks every anchor resolves
+git add .hev-find/kg.json
+```
+
+`build` hashes your content and **skips the model call when nothing changed**,
+so it's cheap to run in CI. The integration also runs it automatically during
+`astro build` when a key is present.
+
+<Callout label="no key, no problem">
+Skip step 5 entirely and hev find still works in keyword mode. Without a key the
+agentic path gracefully falls back to keyword results, and the build uses an
+empty knowledge graph. You can add the key later.
+</Callout>
+
+## Turn on agentic search
+
+Set `ANTHROPIC_API_KEY` in the **server environment** where `/api/find` runs
+(your host's secrets, or `.env` in local dev). With a key present, pressing
+Enter in the overlay runs the [agentic loop](/docs/concepts#the-agentic-search-loop);
+without one, Enter returns keyword results.
+
+## Verify it works
+
+- **Keyword:** type a word from a heading; the top result should deep-link to
+  that section (`/docs/page#heading`).
+- **Agentic:** press Enter on a question; the footer shows the sub-queries the
+  model ran, and a grounded answer streams in with inline deep links.
+- **Anchors:** `hev-find-kg verify` exits non-zero if any chunk anchor doesn't
+  exist in the built HTML — wire it into CI.
+
+From here, see the full [configuration options](/docs/api/configuration) or read
+[Concepts](/docs/concepts) to understand what's happening under the overlay.

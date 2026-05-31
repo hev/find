@@ -1,0 +1,19 @@
+---
+interface Link {
+	href: string;
+	label: string;
+	description: string;
+}
+interface Props {
+	links: Link[];
+}
+const { links } = Astro.props;
+---
+<div class="link-grid">
+	{links.map((link) => (
+		<a href={link.href} class="doc-card">
+			<strong>{link.label}</strong>
+			<span>{link.description}</span>
+		</a>
+	))}
+</div>

@@ -1,0 +1,135 @@
+---
+title: "Concepts"
+description: "How hev find works: heading-chunk indexing with real anchors, keyword prefiltering widened by a glossary, the bounded agentic search loop, and the offline knowledge graph."
+group: "Overview"
+order: 2
+---
+
+import Diagram from "../../components/docs/Diagram.astro";
+import Callout from "../../components/docs/Callout.astro";
+import { findMapDiagram } from "../../lib/diagrams";
+
+hev find is three parts: a **heading-chunk index** with real anchors, a
+**bounded agentic loop** that navigates a knowledge graph, and that offline
+**knowledge graph** — a distilled, source-grounded "shadow site" the loop reads
+from. This page explains each and how they fit together.
+
+<Diagram label="build time versus runtime">{findMapDiagram}</Diagram>
+
+The split that matters: the knowledge graph is built **offline** with a strong
+model and committed to git; the index and search loop run **on demand** at the
+edge. No durable state lives in the running site.
+
+## Chunks and anchors
+
+hev find does not index pages — it indexes **sections**. Each document is split
+on its headings (up to a configurable depth, default `##` and `###`). Content
+before the first heading becomes the *intro chunk* whose URL is the page itself.
+
+Each chunk carries the section's heading, its cleaned prose, and a URL of the
+form `basePath + slug + #anchor`. The anchor is generated with
+[`github-slugger`](https://github.com/Flet/github-slugger) — the same slugger
+Astro's renderer uses — so the link lands on a heading that actually exists in
+the rendered HTML.
+
+<Callout label="why a result is an anchor">
+A page-level link drops the reader at the top of a long doc to scroll and hunt.
+A section-level link lands them on the exact heading that answers the query.
+Chunking by heading is what makes that possible.
+</Callout>
+
+Both code paths chunk through the **same function**: the runtime index feeds it
+`getCollection` entries, and the offline build feeds it disk-parsed files. One
+source of truth for slugs means the anchors agree.
+
+## Keyword search and the glossary
+
+As the reader types, the server runs a dependency-free **prefilter** over the
+chunks:
+
+1. **Expand the query.** Each term picks up its glossary aliases (`k8s` →
+   `kubernetes`) and the tokens of any matched glossary term. The expansion is
+   additive and capped.
+2. **Score by token overlap** between the expanded query and each chunk.
+3. **Cap per document** (default 2 chunks per doc) so one long page can't
+   monopolize the results, then take the top pool.
+4. **Excerpt** around the first matched term for the snippet.
+
+This is the instant path. It needs no API key and no embeddings — just the
+chunk index and the committed glossary.
+
+## The agentic search loop
+
+When the reader presses Enter (and an API key is present), the query goes to a
+**bounded tool-use loop** that ends by **streaming a grounded answer**. It runs
+in two phases.
+
+**Phase 1 — gather.** The model is given a **map** of every section (id +
+summary) up front, plus one tool:
+
+- **`open_section({ id })`** — opens a section to read its distilled summary, its
+  verbatim `facts` (flags, code, identifiers), and — for reference sections — its
+  source text. The model opens the sections it needs; each open is streamed to
+  the overlay as a faint activity line. It may only cite sections it opened.
+
+The model decides when it has enough context. It opens up to `maxIterations`
+rounds (default 4); when it stops opening, it's ready to answer.
+
+**Phase 2 — answer.** The accumulated sources are sent to the overlay (so it can
+validate links), then the model is called **once more with no tools** — so it
+can only write prose — and its answer is **streamed token-by-token**. The system
+prompt instructs it to ground every claim in the retrieved sections, link to
+them inline using their exact `url`, and say plainly when the docs don't cover
+the question. Dropping the tools on the final turn is what guarantees the model
+answers instead of searching again.
+
+<Callout label="grounded, not free-form">
+The answer is constrained to the sections retrieval surfaced: the model links
+only to provided URLs (the overlay downgrades any other link to plain text), and
+it cannot ground in what retrieval never found. That ceiling is discussed in
+[Limits](/docs/limits).
+</Callout>
+
+### The system prompt is cached
+
+The knowledge graph's map and section summaries are injected into the system
+prompt with a `cache_control` marker, so across the rounds it's a prompt-cache
+hit rather than re-sent tokens. The answer turn changes the tool set (it has none),
+so it can't reuse the search rounds' cache — but it's the last call anyway. The
+loop model defaults to **Claude Haiku 4.5** and is configurable.
+
+## The knowledge graph
+
+The knowledge graph (`kg.json`) is built **offline** by a strong model
+(**Claude Opus 4.8** by default) and committed to your repo as a reviewable
+artifact — the agent's view of your docs. It holds:
+
+- **`nodes`** — one distilled section per heading: a `summary` the agent reasons
+  from, the verbatim `facts` (flags, code, identifiers) it quotes exactly, and a
+  `source` link back to the real page. Reference sections are marked
+  `source-primary` so the agent reads their source text rather than a paraphrase.
+- **`overview`** — a deterministic map of every section, injected up front.
+- **`context`** and **`glossary`** — a compact orientation and the terms (with
+  aliases) that widen keyword queries before retrieval.
+
+The build is **hash-gated**: it hashes the concatenated chunk text and, if a
+committed `kg.json` with nodes already matches that hash, exits without spending a
+model call. Only the summaries are model-authored; the node structure and facts
+are deterministic, so the JSON is reviewed in pull requests like any other
+change. See the [knowledge graph reference](/docs/api/knowledge-graph) for the
+file format.
+
+## Degradation, by design
+
+hev find is built to keep working as pieces drop away:
+
+- **No key at runtime** → keyword mode only. The overlay still searches.
+- **No key at build** → the committed `kg.json` is kept; the build warns but
+  never fails for lack of a key.
+- **No `kg.json`, or an older node-less one** → the agentic loop falls back to
+  keyword-style retrieval; it still answers, just without the distilled map.
+- **Stale `kg.json`** → the runtime logs a one-line warning when the live index
+  hash differs from the graph's hash, but still serves.
+
+For the boundaries of what it can do, read [Limits](/docs/limits); for what
+you're choosing by adopting it, read [Tradeoffs](/docs/tradeoffs).

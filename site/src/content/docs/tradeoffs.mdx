@@ -1,0 +1,100 @@
+---
+title: "Tradeoffs"
+description: "What you're choosing by adopting hev find: the dependency posture, the committed knowledge graph, the cost and latency of agentic search, and how it compares to Pagefind, Algolia, and Orama."
+group: "Overview"
+order: 3
+---
+
+import Callout from "../../components/docs/Callout.astro";
+
+Every search tool makes choices. This page is the honest version: what hev find
+trades away to get what it gives, so you can decide whether the trade fits your
+docs.
+
+## Two paths instead of one
+
+hev find runs an instant keyword path **and** an agentic path, and asks the
+reader to choose between them by pressing Enter. The upside is that the common
+case (a word or two) stays instant and keyless, while hard questions get a
+smarter ranker. The cost is a slightly more complex interaction model than a
+single search box — readers have to learn that Enter means "ask AI".
+
+We think that's the right trade for docs, where queries split cleanly into
+"jump to the thing I know exists" and "help me find the thing I can't name."
+
+## A committed knowledge graph
+
+The knowledge graph is generated offline and **committed to git** as JSON,
+rather than computed at runtime or hidden in a service.
+
+- **Upside:** it's reviewable in pull requests, deterministic at runtime, free
+  to read (no model call on the request path), and bundled into the edge worker
+  with no runtime filesystem access.
+- **Cost:** it can go stale. It only regenerates when content changes *and* a
+  build runs. hev find logs a warning when the live content hash differs from
+  the graph's, but a forgotten rebuild means a slightly outdated glossary.
+
+The hash gate makes regeneration cheap and idempotent, so "rebuild on every
+content change in CI" is the intended workflow.
+
+## Keyword retrieval, not embeddings
+
+Retrieval is dependency-free token overlap widened by the glossary — **no
+embeddings, no vector store**.
+
+- **Upside:** nothing to host, nothing to keep in sync, edge-safe, and instant.
+  The glossary recovers a lot of the synonym recall embeddings would give.
+- **Cost:** paraphrase recall has a ceiling. The agent answers well but can only
+  ground in what keyword retrieval surfaced. If your readers routinely search in
+  words that share no tokens with your docs and aren't in the glossary,
+  embeddings would do better. That upgrade is deferred, not designed out.
+
+## One dependency, deliberately
+
+hev find aims to be close to zero-dependency, with **one exception**:
+[`github-slugger`](https://github.com/Flet/github-slugger) (~3 KB, pure JS,
+edge-safe).
+
+<Callout label="anchor correctness outranks zero-dep purity">
+Generating heading anchors by hand risks drifting from Astro's renderer and
+shipping a link that 404s to the top of the page. Using the same slugger Astro
+uses guarantees byte-identical anchors. We took the dependency on purpose.
+</Callout>
+
+## Cost and latency of agentic search
+
+The agentic path calls Claude. That means real, if small, money and latency:
+
+- **Latency:** worst case is roughly `maxIterations` Haiku round-trips (a few
+  seconds). The keyword path stays instant as the fast lane, and
+  `maxIterations` is the knob if you want to bound it tighter.
+- **Cost:** one bounded loop per submitted query, on the default Haiku model,
+  with the domain context prompt-cached across rounds. The offline knowledge
+  graph build uses Opus, but the hash gate means you pay for it only when
+  content changes.
+
+If you can't or don't want an API key in the loop at all, run keyword-only —
+it's a first-class mode, not a fallback afterthought.
+
+## How it compares
+
+| Tool | Retrieval | AI ranking | Deep links | Hosting |
+|---|---|---|---|---|
+| **hev find** | keyword + glossary | yes, on Enter | heading anchors | your adapter + optional API key |
+| **Pagefind** | keyword (static index) | no | page / anchor | static, none |
+| **Algolia DocSearch** | keyword (hosted) | no (classic) | page / anchor | hosted service + crawler |
+| **Orama** | keyword + vector | no (search only) | configurable | client or hosted index |
+
+The short version:
+
+- Choose **Pagefind** if you want excellent keyword search over a static site
+  with zero services and no key. It's simpler, and that simplicity is a feature.
+- Choose **Algolia** if you want a managed, battle-tested keyword service and
+  are happy running a crawler and a dashboard.
+- Choose **Orama** if you specifically want client-side vector search and will
+  manage embeddings.
+- Choose **hev find** if your docs are Astro content collections, you want deep
+  links to sections, and you want a reader's *question* — not just their
+  keywords — to find the right section.
+
+For the hard boundaries, continue to [Limits](/docs/limits).

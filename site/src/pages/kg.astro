@@ -1,0 +1,426 @@
+---
+import Base from "../layouts/Base.astro";
+import {
+	knowledgeGraph,
+	nodesByGroup,
+	getKnowledgeGraphRawJson,
+	formatGeneratedAt,
+} from "../lib/knowledge-graph";
+
+const groups = nodesByGroup();
+const nodeCount = knowledgeGraph.nodes?.length ?? 0;
+const shortHash = (knowledgeGraph.contentHash ?? "").slice(0, 12) || "—";
+const rawJson = getKnowledgeGraphRawJson();
+---
+
+<Base
+	title="hev find - what the agent sees"
+	description="The rendered knowledge graph for this site — the distilled summaries, verbatim facts, and glossary the agentic search loop reasons over. This is what the agent sees."
+	current="docs"
+>
+	<main class="kg">
+		<header class="kg-head">
+			<p class="kicker">// what the agent sees</p>
+			<h1>Knowledge graph</h1>
+			<p class="lede">
+				When you press <kbd>⌘K</kbd> and ask a question, the agent doesn't read
+				these pages — it reads this. An offline build distills every section into
+				a summary it reasons from and a set of verbatim facts it must quote
+				exactly, committed as <code>.hev-find/kg.json</code>. This is that file,
+				rendered.
+			</p>
+			<dl class="kg-meta">
+				<div><dt>version</dt><dd>{knowledgeGraph.version}</dd></div>
+				<div><dt>sections</dt><dd>{nodeCount}</dd></div>
+				<div><dt>glossary</dt><dd>{knowledgeGraph.glossary?.length ?? 0}</dd></div>
+				<div><dt>generated</dt><dd title={formatGeneratedAt()}>{formatGeneratedAt().slice(0, 10) || "—"}</dd></div>
+				<div><dt>content hash</dt><dd title={knowledgeGraph.contentHash}>{shortHash}</dd></div>
+			</dl>
+		</header>
+
+		<section class="kg-block">
+			<h2>Orientation</h2>
+			<p class="prose">{knowledgeGraph.context}</p>
+		</section>
+
+		<section class="kg-block">
+			<h2>Glossary <span class="count">{knowledgeGraph.glossary?.length ?? 0}</span></h2>
+			<p class="block-note">Terms and aliases that widen a reader's query before retrieval — so <code>k8s</code> finds <code>kubernetes</code>.</p>
+			<ul class="glossary">
+				{
+					(knowledgeGraph.glossary ?? []).map((g) => (
+						<li>
+							<div class="g-term">
+								<strong>{g.term}</strong>
+								{g.aliases && g.aliases.length > 0 && (
+									<span class="g-aliases">{g.aliases.join(" · ")}</span>
+								)}
+							</div>
+							<span class="g-def">{g.definition}</span>
+						</li>
+					))
+				}
+			</ul>
+		</section>
+
+		<section class="kg-block">
+			<h2>Sections <span class="count">{nodeCount}</span></h2>
+			<p class="block-note">One distilled node per heading. The <em>summary</em> is what the agent reasons from; <em>facts</em> are byte-verbatim strings it quotes exactly.</p>
+			{
+				groups.map((grp) => (
+					<div class="kg-group">
+						<h3>{grp.group}</h3>
+						<ul class="nodes">
+							{grp.nodes.map((node) => (
+								<li class="node">
+									<div class="node-head">
+										<a href={node.url} class="node-title">
+											{node.heading ?? node.title}
+										</a>
+										<span class={`mode mode-${node.mode}`}>{node.mode}</span>
+									</div>
+									<p class="node-summary">{node.summary}</p>
+									{node.facts.length > 0 && (
+										<div class="facts">
+											{node.facts.slice(0, 12).map((f) => (
+												<code class={`fact fact-${f.kind}`}>{f.literal}</code>
+											))}
+											{node.facts.length > 12 && (
+												<span class="fact-more">+{node.facts.length - 12} more</span>
+											)}
+										</div>
+									)}
+								</li>
+							))}
+						</ul>
+					</div>
+				))
+			}
+		</section>
+
+		<details class="kg-raw">
+			<summary>Raw <code>kg.json</code> artifact</summary>
+			<pre><code>{rawJson}</code></pre>
+		</details>
+	</main>
+</Base>
+
+<style>
+	.kg {
+		width: var(--page);
+		max-width: 880px;
+		margin: 0 auto;
+		padding: 3rem 0 6rem;
+	}
+
+	.kicker {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.75rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--signal);
+		margin-bottom: 1rem;
+	}
+
+	h1 {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 2.75rem;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+		margin-bottom: 1rem;
+	}
+
+	.lede {
+		color: var(--ink-soft);
+		font-size: 1.0625rem;
+		line-height: 1.6;
+		max-width: 42em;
+	}
+
+	.lede kbd {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.8em;
+		padding: 0.1em 0.4em;
+		border: 1px solid var(--rule-strong);
+		border-radius: 3px;
+	}
+
+	.kg-meta {
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		border: 1px solid var(--rule-strong);
+		background: var(--paper-warm);
+		margin-top: 2rem;
+	}
+
+	.kg-meta div {
+		min-width: 0;
+		padding: 0.85rem 1rem;
+		border-right: 1px solid var(--rule);
+	}
+
+	.kg-meta div:last-child {
+		border-right: 0;
+	}
+
+	.kg-meta dt {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.65rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin-bottom: 0.25rem;
+	}
+
+	.kg-meta dd {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.95rem;
+		color: var(--ink);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.kg-block {
+		margin-top: 3.5rem;
+	}
+
+	.kg-block h2 {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 1.25rem;
+		letter-spacing: -0.01em;
+		margin-bottom: 0.5rem;
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+	}
+
+	.kg-block h2::before {
+		content: "#";
+		color: var(--signal);
+	}
+
+	.count {
+		font-size: 0.8rem;
+		color: var(--muted);
+		font-weight: 400;
+	}
+
+	.block-note {
+		color: var(--muted);
+		font-size: 0.9375rem;
+		margin-bottom: 1.5rem;
+		max-width: 46em;
+	}
+
+	.prose {
+		color: var(--ink-soft);
+		font-size: 1.0625rem;
+		line-height: 1.7;
+		white-space: pre-wrap;
+	}
+
+	.glossary {
+		list-style: none;
+		display: grid;
+		gap: 0;
+		border: 1px solid var(--rule);
+	}
+
+	.glossary li {
+		display: grid;
+		grid-template-columns: minmax(150px, 0.4fr) 1fr;
+		gap: 1.5rem;
+		padding: 0.9rem 1.1rem;
+		border-bottom: 1px solid var(--rule);
+		background: var(--paper-warm);
+		align-items: baseline;
+	}
+
+	.glossary li:last-child {
+		border-bottom: 0;
+	}
+
+	.g-term strong {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		color: var(--ink);
+		font-size: 0.9375rem;
+	}
+
+	.g-aliases {
+		display: block;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.75rem;
+		color: var(--signal);
+		margin-top: 0.2rem;
+	}
+
+	.g-def {
+		color: var(--ink-soft);
+		font-size: 0.9375rem;
+		line-height: 1.5;
+	}
+
+	.kg-group {
+		margin-top: 2rem;
+	}
+
+	.kg-group h3 {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.75rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin-bottom: 0.75rem;
+	}
+
+	.nodes {
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+		border: 1px solid var(--rule);
+	}
+
+	.node {
+		padding: 1.1rem 1.25rem;
+		border-bottom: 1px solid var(--rule);
+	}
+
+	.node:last-child {
+		border-bottom: 0;
+	}
+
+	.node-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 0.4rem;
+	}
+
+	.node-title {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.node-title:hover {
+		color: var(--signal);
+	}
+
+	.mode {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.65rem;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		padding: 0.1rem 0.4rem;
+		border-radius: 2px;
+		white-space: nowrap;
+		flex: 0 0 auto;
+	}
+
+	.mode-agent-primary {
+		color: var(--muted);
+		border: 1px solid var(--rule-strong);
+	}
+
+	.mode-source-primary {
+		color: var(--signal);
+		border: 1px solid var(--signal);
+	}
+
+	.node-summary {
+		color: var(--ink-soft);
+		font-size: 0.9375rem;
+		line-height: 1.55;
+	}
+
+	.facts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-top: 0.7rem;
+	}
+
+	.fact {
+		font-size: 0.75rem;
+		padding: 0.15rem 0.4rem;
+		background: var(--paper);
+		border: 1px solid var(--rule-strong);
+		border-radius: 2px;
+		color: var(--ink-soft);
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.fact-flag {
+		color: var(--signal-dark);
+		border-color: color-mix(in srgb, var(--signal) 35%, var(--rule-strong));
+	}
+
+	.fact-more {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.75rem;
+		color: var(--muted);
+		align-self: center;
+	}
+
+	.kg-raw {
+		margin-top: 3.5rem;
+		border: 1px solid var(--rule-strong);
+		border-radius: 2px;
+		background: var(--paper-warm);
+	}
+
+	.kg-raw summary {
+		cursor: pointer;
+		padding: 0.85rem 1.1rem;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.875rem;
+		color: var(--ink-soft);
+	}
+
+	.kg-raw summary:hover {
+		color: var(--signal);
+	}
+
+	.kg-raw pre {
+		margin: 0;
+		border: 0;
+		border-top: 1px solid var(--rule);
+		background: var(--ink);
+		color: #e8e5dc;
+		padding: 1.25rem;
+		overflow-x: auto;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.75rem;
+		line-height: 1.6;
+		max-height: 480px;
+	}
+
+	.kg-raw pre code {
+		background: transparent;
+		padding: 0;
+		color: inherit;
+	}
+
+	@media (max-width: 760px) {
+		.kg-meta {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.glossary li {
+			grid-template-columns: 1fr;
+			gap: 0.3rem;
+		}
+
+		h1 {
+			font-size: 2.1rem;
+		}
+	}
+</style>

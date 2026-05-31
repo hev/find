@@ -1,0 +1,7 @@
+---
+interface Props {
+	label?: string;
+}
+const { label } = Astro.props;
+---
+<pre class="diagram" aria-label={label ? `${label} diagram` : undefined}><code><slot /></code></pre>

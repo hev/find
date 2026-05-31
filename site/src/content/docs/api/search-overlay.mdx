@@ -1,0 +1,117 @@
+---
+title: "SearchOverlay component"
+description: "The SearchOverlay.astro command palette: props, the data-hev-find-open opener attribute, keyboard model, the mode toggle, and theming through CSS variables."
+group: "API"
+order: 1
+---
+
+import Callout from "../../../components/docs/Callout.astro";
+
+`SearchOverlay.astro` renders the `⌘K` command palette. Add it **once** in a
+global layout. It's a `<dialog>` that opens over the page; it doesn't affect
+layout until opened.
+
+```astro
+---
+import SearchOverlay from "@hev/find/components/SearchOverlay.astro";
+---
+<SearchOverlay />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `endpoint` | `string` | `'/api/find'` | Endpoint the overlay posts queries to. Must match the integration's `endpoint` option. |
+| `placeholder` | `string` | `'Search the docs…'` | Placeholder text for the input. |
+| `debounce` | `number` | `500` | Milliseconds after typing stops before a keyword query is sent. |
+
+```astro
+<SearchOverlay
+  endpoint="/api/find"
+  placeholder="Search hev find…"
+  debounce={400}
+/>
+```
+
+## Opening the overlay
+
+Two ways, both built in:
+
+- **`⌘K` / `Ctrl-K`** is bound automatically once the component is on the page.
+- **Any element with `data-hev-find-open`** opens it on click — wire up as many
+  triggers as you like (header button, sidebar, inline links).
+
+```astro
+<button type="button" data-hev-find-open>
+  Search <kbd>⌘K</kbd>
+</button>
+
+<a href="#" data-hev-find-open>Search the docs</a>
+```
+
+## Keyboard model
+
+The interaction is the core of hev find's two-path design:
+
+- **Type** → debounced keyword search runs; the first result is auto-active.
+- **Enter** → if you haven't moved the selection, runs the **agentic loop**
+  ("ask AI"). If you *have* moved the selection with `↑`/`↓` or hovered a
+  result, Enter **opens** that result instead.
+- **`↑` / `↓`** → move the active result.
+- **Esc** → close.
+
+So *type → Enter* is AI search, and *type → ↓↓ → Enter* opens a keyword hit. The
+footer shows the hint `⏎ ask AI · ↑↓ open`.
+
+<Callout label="when there's no API key">
+If the server has no ANTHROPIC_API_KEY, pressing Enter returns keyword results
+and the response carries a warning the overlay can surface. Search still works;
+it just doesn't escalate to the model.
+</Callout>
+
+## The mode toggle
+
+The overlay persists an "AI on Enter" preference in `localStorage` under the key
+`hev-find:mode` (`agentic` or `keyword`). Readers who never want the model call
+can flip it off; the choice survives reloads.
+
+## Keyword results and deep links
+
+Each keyword result row renders the document title, an optional heading
+breadcrumb (`Concepts › The agentic loop`), and a one-line snippet. The row's
+link is the chunk's `url`, which already carries the `#anchor` — so clicking a
+result lands on the exact heading.
+
+## The streamed answer
+
+Pressing Enter (with a key configured) replaces the keyword rows with an
+**answer panel**. The sub-queries the model runs appear live as a faint
+`searched: …` line, then the grounded answer **streams in token-by-token** with
+a blinking caret until it completes. Inline **deep links** in the prose are
+styled in the accent color and point at the exact `/docs/page#anchor`; hovering
+shows the section breadcrumb. A **Sources** chip row beneath the answer lists
+every section it drew from.
+
+Links are validated against the source set the endpoint streamed: any link the
+model emits to a URL outside that set is rendered as plain text, so a
+hallucinated anchor can never become a clickable dead link.
+
+## Theming
+
+The overlay's markup uses the `as-` class prefix and reads your page's CSS
+custom properties. Define these on `:root` (this site's values shown) and the
+overlay inherits your palette:
+
+```css
+:root {
+  --paper: #111111;       /* overlay background */
+  --ink: #fafaf5;         /* primary text */
+  --muted: #6b6b66;       /* secondary text */
+  --signal: #e25822;      /* accent / active state */
+}
+```
+
+Because the component ships scoped styles keyed to these variables, matching
+your site's look is usually just defining the tokens — no overlay CSS to
+override.

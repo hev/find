@@ -1,0 +1,133 @@
+---
+title: "Search endpoint"
+description: "The /api/find route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses."
+group: "API"
+order: 2
+---
+
+import Callout from "../../../components/docs/Callout.astro";
+
+The integration injects one on-demand route (default `/api/find`). The overlay
+posts to it. **Keyword mode returns JSON**; **agentic mode streams a grounded
+answer as Server-Sent Events** (`text/event-stream`).
+
+## Request
+
+`POST` with a JSON body:
+
+```json
+{
+  "query": "how does autoscaling work",
+  "mode": "agentic"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `query` | `string` | The search query. Empty or whitespace returns an empty result set. |
+| `mode` | `'keyword' \| 'agentic'` | Optional. `keyword` forces the instant path; `agentic` requests the loop. Omitted behaves like `agentic` when a key is present. |
+
+## Keyword response (JSON)
+
+Keyword mode returns a `200` JSON envelope:
+
+```json
+{
+  "results": [
+    {
+      "title": "Concepts",
+      "heading": "The agentic search loop",
+      "url": "/docs/concepts#the-agentic-search-loop",
+      "group": "Overview",
+      "snippet": "When the reader presses Enter, the query goes to a bounded loop…"
+    }
+  ],
+  "query": "how does agentic search work",
+  "model": "claude-haiku-4-5",
+  "mode": "keyword"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `results` | `Result[]` | Ranked keyword matches (`title`, `heading?`, `url`, `group?`, `snippet`). |
+| `query` | `string` | Echoed back. |
+| `model` | `string` | The configured loop model. |
+| `mode` | `'keyword'` | The mode that ran. |
+| `warning` | `string?` | Present when agentic was requested but no key is configured (downgrade). |
+
+The `url` field carries the deep link — the page URL with `#anchor` appended for
+a section, absent only for a document's intro chunk.
+
+## Agentic response (SSE)
+
+When a key is present and `mode` is `agentic`, the endpoint responds with
+`content-type: text/event-stream` and streams the answer as it is generated.
+Each event is a named SSE frame:
+
+```text
+event: search
+data: {"query":"autoscaling"}
+
+event: sources
+data: {"sources":[{"title":"Core Concepts","heading":"Kubernetes autoscaling","url":"/docs/concepts#kubernetes-autoscaling","group":"Overview"}],"model":"claude-haiku-4-5","mode":"agentic"}
+
+event: token
+data: {"text":"Autoscaling scales workers based on "}
+
+event: token
+data: {"text":"lag signals. See [autoscaling](/docs/concepts#kubernetes-autoscaling)."}
+
+event: done
+data: {}
+```
+
+| Event | Data | Meaning |
+|---|---|---|
+| `search` | `{ query }` | Context the model gathered — a search sub-query, or the heading of a section it opened. May fire several times. |
+| `sources` | `{ sources: Source[], model, mode }` | The grounding source set, sent **once before any `token`**. Clients validate answer links against it. |
+| `token` | `{ text }` | One delta of the streamed Markdown answer. |
+| `done` | `{}` | The stream is complete. |
+| `error` | `{ error }` | A failure that occurred **after** streaming began (HTTP status is already `200`). |
+
+A `Source` is `{ title, heading?, url, group? }` — note there is no `snippet`;
+the answer prose carries the substance, and links point at `url`.
+
+## Mode selection
+
+The endpoint decides what to run:
+
+- **Empty query** → `{ results: [], query: "", model }` (JSON).
+- **`mode: "keyword"`**, or **no API key** → keyword JSON, `mode: "keyword"`.
+- **`mode: "agentic"` but no key** → keyword JSON plus a `warning`, and
+  `mode: "keyword"`.
+- **otherwise** → the agentic SSE stream.
+
+<Callout label="graceful by default">
+There is no error path for "AI unavailable." A missing key downgrades the
+request to a keyword JSON response and says so in `warning`; the reader still
+gets results. The overlay branches on the response `content-type`, so it handles
+both shapes from the one endpoint.
+</Callout>
+
+## Errors
+
+| Status | Body | Cause |
+|---|---|---|
+| `400` | `{ "error": "Invalid JSON body." }` | The request body wasn't valid JSON. |
+| `500` | `{ "error": "…" }` | The chunk index failed to build (e.g. a misconfigured collection). |
+| — | `event: error` | A failure during the agentic stream. The HTTP status is already `200`, so errors arrive as a final SSE `error` event rather than a status code. |
+
+## The API key
+
+The endpoint resolves `ANTHROPIC_API_KEY` from, in order: the adapter runtime
+env (`locals.runtime.env`, e.g. Cloudflare), `process.env`, then
+`import.meta.env`. Set it wherever your host injects server secrets; it is never
+sent to the browser.
+
+## Index lifecycle
+
+The chunk index is built once per server instance on the first request and
+cached for the process lifetime. On the first request the endpoint also compares
+the live content hash against the knowledge graph's hash and logs a one-time
+warning if they differ — your cue to run [`hev-find-kg build`](/docs/api/cli).

@@ -1,0 +1,87 @@
+@font-face {
+	font-family: "JetBrains Mono Variable";
+	src: url("/fonts/JetBrainsMono-var.ttf") format("truetype-variations");
+	font-weight: 100 800;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* hev brand — light mode tokens (OSS = white, like hevmind) */
+:root {
+	--paper: #fafaf5;
+	--paper-warm: #f4f0e6;
+	--ink: #111111;
+	--ink-soft: #2a2a28;
+	--muted: #6b6b66;
+	--signal: #e25822;
+	--signal-dark: #c2451b;
+	--rule: #e8e5dc;
+	--rule-strong: #d8d4c6;
+	--page: min(100% - 2.5rem, 1080px);
+	--measure: 720px;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html {
+	font-size: 16px;
+	scroll-behavior: smooth;
+}
+
+body {
+	font-family: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+	background: var(--paper);
+	color: var(--ink);
+	line-height: 1.65;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+.mono {
+	font-family:
+		"JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+code {
+	font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+	font-size: 0.9em;
+	padding: 0.05em 0.3em;
+	background: var(--paper-warm);
+	border-radius: 2px;
+	color: var(--ink);
+}
+
+a {
+	color: inherit;
+}
+
+button,
+input {
+	font: inherit;
+}
+
+button {
+	color: inherit;
+}
+
+::selection {
+	background: var(--signal);
+	color: var(--paper);
+}
+
+@keyframes blink {
+	0%,
+	50% {
+		opacity: 1;
+	}
+	51%,
+	100% {
+		opacity: 0;
+	}
+}

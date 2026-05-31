@@ -1,0 +1,103 @@
+---
+const properties = [
+	{ slug: "find", href: "/", label: "find" },
+	{ slug: "github", href: "https://github.com/hev/find", label: "github" },
+	{ slug: "npm", href: "https://www.npmjs.com/package/@hev/find", label: "npm" },
+];
+---
+
+<footer>
+	<div class="footer-inner">
+		<span class="footer-tag">Docs first. Pitch second.</span>
+		<div class="footer-strip">
+			{
+				properties.map((p, i) => (
+					<>
+						{i > 0 && <span class="dot" aria-hidden="true">.</span>}
+						{p.slug === "find" ? (
+							<span class="here" aria-current="page">{p.label}</span>
+						) : (
+							<a href={p.href}>{p.label}</a>
+						)}
+					</>
+				))
+			}
+		</div>
+	</div>
+	<div class="signature-row">
+		<img src="/vibe-check.png" alt="" class="mascot" width="40" height="70" />
+		<span class="copyright">&copy; hev · MIT</span>
+	</div>
+</footer>
+
+<style>
+	footer {
+		margin-top: 5rem;
+		background: var(--ink);
+		padding: 3rem 2rem 3.5rem;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 0.75rem;
+		color: rgba(250, 250, 245, 0.5);
+	}
+
+	.footer-inner,
+	.signature-row {
+		max-width: 1120px;
+		margin: 0 auto;
+	}
+
+	.footer-inner {
+		display: flex;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 1rem;
+		align-items: center;
+	}
+
+	.footer-tag {
+		font-style: italic;
+	}
+
+	.footer-strip {
+		display: flex;
+		gap: 0.5rem;
+		align-items: baseline;
+	}
+
+	.footer-strip a {
+		color: rgba(250, 250, 245, 0.5);
+		text-decoration: none;
+		transition: color 0.15s;
+	}
+
+	.footer-strip a:hover {
+		color: var(--signal);
+	}
+
+	.here {
+		color: var(--paper);
+		text-decoration: underline;
+		text-decoration-color: rgba(250, 250, 245, 0.3);
+		text-underline-offset: 3px;
+	}
+
+	.dot {
+		color: rgba(250, 250, 245, 0.25);
+	}
+
+	.signature-row {
+		margin-top: 1.5rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.mascot {
+		image-rendering: pixelated;
+		opacity: 0.85;
+	}
+
+	.copyright {
+		color: rgba(250, 250, 245, 0.5);
+	}
+</style>

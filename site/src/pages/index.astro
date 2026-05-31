@@ -1,0 +1,376 @@
+---
+import Base from "../layouts/Base.astro";
+
+const facts = [
+	{ k: "type", v: "instant keyword search — keyless, runs on the server" },
+	{ k: "enter", v: "Claude searches and streams a grounded answer" },
+	{ k: "result", v: "a deep link to the exact heading: /docs/page#section" },
+];
+---
+
+<Base
+	title="hev find - search for Astro docs sites"
+	description="A ⌘K search overlay for Astro docs sites: instant keyword search anchored to headings, plus a Claude-powered search loop on Enter. One integration, one component."
+	current="product"
+>
+	<main>
+		<section class="hero">
+			<p class="kicker">// search for astro docs sites</p>
+			<h1>Search your docs.<br />Keyword fast, AI deep.</h1>
+			<p class="lede">
+				A <span class="mono">⌘K</span> search overlay for Astro. Instant keyword
+				search as the reader types, a Claude search loop on Enter — every result
+				a deep link to the exact heading.
+			</p>
+			<div class="cta-row">
+				<a href="/docs/quickstart" class="btn">Quick start</a>
+				<button type="button" class="ghost" data-hev-find-open>
+					press <kbd>⌘K</kbd> to search this site
+				</button>
+			</div>
+		</section>
+
+		<section class="install" aria-label="The whole integration">
+			<ol class="steps">
+				<li>
+					<span class="step-label">install</span>
+					<pre><code>pnpm add @hev/find</code></pre>
+				</li>
+				<li>
+					<span class="step-label">register the integration</span>
+					<pre><code><span class="cmt">// astro.config.mjs</span>
+integrations: [hevFind(&#123; collections: ["docs"] &#125;)]</code></pre>
+				</li>
+				<li>
+					<span class="step-label">drop in the overlay</span>
+					<pre><code><span class="cmt">// any layout</span>
+&lt;SearchOverlay /&gt;</code></pre>
+				</li>
+			</ol>
+			<p class="caption">
+				That's the whole integration. This site runs on it — keyword search needs
+				no API key. <a href="/docs/quickstart">Full quick start →</a>
+			</p>
+		</section>
+
+		<section class="facts" aria-label="What the reader gets">
+			<ul>
+				{
+					facts.map((f) => (
+						<li>
+							<span class="fk">{f.k}</span>
+							<span class="fv">{f.v}</span>
+						</li>
+					))
+				}
+			</ul>
+
+			<a href="/kg" class="kg-peek">
+				<span class="kg-peek-label">// show, don't tell</span>
+				<strong>See what the agent sees →</strong>
+				<span class="kg-peek-note">
+					The rendered knowledge graph for this site — the distilled summaries and
+					verbatim facts Claude reasons over. Injected, committed, reviewable.
+				</span>
+			</a>
+
+			<p class="more">
+				<a href="/docs/concepts">how it works</a>
+				<a href="/docs/tradeoffs">tradeoffs</a>
+				<a href="/docs/limits">limits</a>
+				<a href="https://github.com/hev/find">source</a>
+			</p>
+		</section>
+	</main>
+</Base>
+
+<style>
+	main {
+		width: var(--page);
+		max-width: 820px;
+		margin: 0 auto;
+		padding: 4rem 0 2rem;
+	}
+
+	.kicker {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.75rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--signal);
+		margin-bottom: 1.5rem;
+	}
+
+	h1 {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 3.25rem;
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+		margin-bottom: 1.5rem;
+	}
+
+	.lede {
+		color: var(--ink-soft);
+		font-size: 1.1875rem;
+		line-height: 1.6;
+		max-width: 36em;
+		margin-bottom: 2rem;
+	}
+
+	.cta-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.btn {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		background: var(--ink);
+		color: var(--paper);
+		border: 1px solid var(--ink);
+		border-radius: 2px;
+		text-decoration: none;
+		padding: 0.7rem 1.1rem;
+		font-size: 0.9375rem;
+		transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.btn::before {
+		content: "$";
+		color: var(--signal);
+	}
+
+	.btn:hover {
+		background: transparent;
+		color: var(--signal);
+		border-color: var(--signal);
+	}
+
+	.ghost {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		background: none;
+		border: 0;
+		color: var(--muted);
+		font-size: 0.875rem;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.ghost:hover {
+		color: var(--signal);
+	}
+
+	.ghost kbd {
+		font-family: inherit;
+		font-size: 0.8em;
+		padding: 0.1em 0.4em;
+		border: 1px solid var(--rule-strong);
+		border-radius: 3px;
+		color: var(--ink-soft);
+	}
+
+	.install {
+		margin-top: 3rem;
+		padding-top: 2.75rem;
+		border-top: 1px solid var(--rule);
+	}
+
+	.steps {
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+		counter-reset: step;
+	}
+
+	.steps li {
+		counter-increment: step;
+	}
+
+	.step-label {
+		display: block;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.75rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--muted);
+		margin-bottom: 0.55rem;
+	}
+
+	.step-label::before {
+		content: counter(step, decimal-leading-zero) " · ";
+		color: var(--signal);
+	}
+
+	.install pre {
+		background: var(--paper-warm);
+		border: 1px solid var(--rule-strong);
+		border-left: 2px solid var(--signal);
+		border-radius: 2px;
+		padding: 0.85rem 1.1rem;
+		overflow-x: auto;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.875rem;
+		line-height: 1.6;
+		color: var(--ink);
+	}
+
+	.install pre code {
+		background: transparent;
+		padding: 0;
+		color: var(--ink);
+	}
+
+	.cmt {
+		color: var(--muted);
+	}
+
+	.caption {
+		margin-top: 1.75rem;
+		color: var(--muted);
+		font-size: 0.9375rem;
+		line-height: 1.6;
+	}
+
+	.caption a {
+		color: var(--signal);
+		text-decoration: none;
+	}
+
+	.caption a:hover {
+		text-decoration: underline;
+	}
+
+	.facts {
+		margin-top: 4rem;
+		padding-top: 3rem;
+		border-top: 1px solid var(--rule);
+	}
+
+	.facts ul {
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.facts li {
+		display: grid;
+		grid-template-columns: 5.5rem 1fr;
+		gap: 1rem;
+		align-items: baseline;
+	}
+
+	.fk {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.8125rem;
+		color: var(--signal);
+		text-align: right;
+	}
+
+	.fk::before {
+		content: "⏎ ";
+		opacity: 0.5;
+	}
+
+	.facts li:first-child .fk::before {
+		content: "⌨ ";
+	}
+
+	.fv {
+		color: var(--ink-soft);
+		font-size: 1rem;
+		line-height: 1.5;
+	}
+
+	.kg-peek {
+		display: block;
+		margin-top: 2.5rem;
+		padding: 1.25rem 1.4rem;
+		background: var(--paper-warm);
+		border: 1px solid var(--rule-strong);
+		border-radius: 2px;
+		text-decoration: none;
+		transition: border-color 0.15s ease;
+	}
+
+	.kg-peek:hover {
+		border-color: var(--signal);
+	}
+
+	.kg-peek-label {
+		display: block;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.7rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--signal);
+		margin-bottom: 0.5rem;
+	}
+
+	.kg-peek strong {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 1.0625rem;
+		color: var(--ink);
+	}
+
+	.kg-peek-note {
+		display: block;
+		margin-top: 0.4rem;
+		color: var(--muted);
+		font-size: 0.875rem;
+		line-height: 1.55;
+		max-width: 44em;
+	}
+
+	.more {
+		margin-top: 2rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.5rem;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.875rem;
+	}
+
+	.more a {
+		color: var(--muted);
+		text-decoration: none;
+	}
+
+	.more a::before {
+		content: "→ ";
+		color: var(--signal);
+	}
+
+	.more a:hover {
+		color: var(--signal);
+	}
+
+	@media (max-width: 640px) {
+		main {
+			width: min(100% - 2rem, 720px);
+			padding: 3rem 0 4rem;
+		}
+
+		h1 {
+			font-size: 2.25rem;
+		}
+
+		.lede {
+			font-size: 1.0625rem;
+		}
+
+		.facts li {
+			grid-template-columns: 1fr;
+			gap: 0.2rem;
+		}
+
+		.fk {
+			text-align: left;
+		}
+	}
+</style>

@@ -1,0 +1,73 @@
+---
+title: "Introduction"
+description: "hev find is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter."
+group: "Overview"
+order: 0
+---
+
+import Diagram from "../../components/docs/Diagram.astro";
+import Callout from "../../components/docs/Callout.astro";
+import { findMapDiagram } from "../../lib/diagrams";
+
+**hev find** is a search overlay for [Astro](https://astro.build) documentation
+sites. You add one integration, drop one component in your layout, and readers
+get a `⌘K` command palette over your content collection. It searches two ways:
+
+- **Instant keyword search** as the reader types — runs on the server with no
+  API key, and links to the exact heading (`/docs/page#section`), not just the
+  page.
+- **Agentic search on Enter** — Claude decides its own sub-queries, searches
+  your chunks a few times, then **streams a grounded answer** with inline deep
+  links to the sections it drew from.
+
+This site is built with hev find and searches itself. Press `⌘K` and try
+*"how does the knowledge graph stay fresh"* to watch the agentic answer stream
+in over the real corpus you're reading.
+
+<Diagram label="hev find architecture">{findMapDiagram}</Diagram>
+
+## Who this is for
+
+You're building or maintaining an Astro 5 docs site. Your content lives in a
+[content collection](https://docs.astro.build/en/guides/content-collections/)
+as Markdown or MDX. You want search that:
+
+- works out of the box without standing up a service or running a crawler,
+- deep-links to the right section instead of dumping the reader at the top of a
+  long page, and
+- can answer a question phrased in the reader's words, not just match keywords.
+
+If you only need keyword search over a static site and never want an API key in
+the loop, [Pagefind](https://pagefind.app) is simpler and a great fit — see
+[Tradeoffs](/docs/tradeoffs) for an honest comparison.
+
+## How it fits an Astro site
+
+hev find ships as a single package, `@hev/find`, exposing an Astro integration
+as its default export:
+
+- The **integration** injects an on-demand `/api/find` route, exposes resolved
+  config and the knowledge graph through virtual modules, and runs the
+  knowledge-graph build during `astro build`.
+- The **`SearchOverlay.astro`** component renders the palette. Any element with
+  a `data-hev-find-open` attribute opens it; `⌘K` is wired automatically.
+- The **`/api/find`** endpoint answers queries — keyword mode with no key,
+  agentic mode when `ANTHROPIC_API_KEY` is set.
+- The **`hev-find-kg`** CLI builds and verifies the committed knowledge graph
+  offline.
+
+<Callout label="the corpus is your collection">
+hev find only searches the Astro content collection(s) you configure. There's
+no external index and nothing to keep in sync — the docs you render *are* the
+search corpus.
+</Callout>
+
+## Next steps
+
+- [Quick start](/docs/quickstart) — add search to your site in five minutes.
+- [Concepts](/docs/concepts) — chunks, anchors, the agentic loop, and the
+  knowledge graph.
+- [Tradeoffs](/docs/tradeoffs) and [Limits](/docs/limits) — what you're choosing,
+  and what hev find deliberately doesn't do.
+- [API reference](/docs/api/configuration) — every option, the component props,
+  the endpoint contract, and the CLI.

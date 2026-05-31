@@ -1,0 +1,26 @@
+{
+  "name": "hev-find-site",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "kg:build": "hev-find-kg build",
+    "kg:verify": "hev-find-kg verify",
+    "deploy": "pnpm run build && wrangler pages deploy"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
+    "@astrojs/mdx": "^5.0.6",
+    "@hev/find": "workspace:*",
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.7",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.95.0"
+  }
+}

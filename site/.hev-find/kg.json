@@ -1,0 +1,5593 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-31T01:23:22.159Z",
+  "contentHash": "9f2383a01c29b20b5850cd2b07ca59586d5ff8f14764c35eb9469337cb5fa1e7",
+  "context": "hev find is an Astro 5 integration that adds a ⌘K command-palette search overlay to documentation sites whose content lives in Astro content collections. It offers two search paths from one endpoint: an instant, keyless keyword path that runs as the reader types, and an optional Claude-powered agentic path triggered by pressing Enter that streams a grounded answer with inline deep links. Both paths chunk documents by heading so links land on the exact section anchor rather than the top of a page. The agentic path reads from an offline-built, git-committed knowledge graph (kg.json) — a distilled \"shadow site\" of section nodes — built by the hev-find-kg CLI and inlined into the build via a virtual module. The system is designed to degrade gracefully (no key, stale or missing graph) and to never hard-fail. This corpus documents the concepts, quick start, tradeoffs, limits, and the full API surface (integration config, SearchOverlay component, /api/find endpoint, knowledge-graph format, and the CLI).",
+  "glossary": [
+    {
+      "term": "hev find",
+      "aliases": [
+        "hevfind",
+        "@hev/find",
+        "hev-find"
+      ],
+      "definition": "An Astro integration that adds a ⌘K search overlay with instant keyword search and an optional Claude-powered agentic search path."
+    },
+    {
+      "term": "knowledge graph",
+      "aliases": [
+        "kg",
+        "kg.json",
+        "shadow site",
+        "kg artifact"
+      ],
+      "definition": "An offline-built, git-committed JSON artifact of distilled section nodes (with verbatim facts, summaries, and source links) that the agentic loop reasons from."
+    },
+    {
+      "term": "agentic search",
+      "aliases": [
+        "ask AI",
+        "AI search",
+        "agentic loop",
+        "agentic mode"
+      ],
+      "definition": "A bounded Claude tool-use loop, triggered by Enter, that opens sections it needs and then streams a grounded answer with inline deep links."
+    },
+    {
+      "term": "keyword search",
+      "aliases": [
+        "keyword mode",
+        "instant search",
+        "prefilter"
+      ],
+      "definition": "The dependency-free, keyless path that scores chunks by token overlap (widened by the glossary) and returns ranked section deep links as the reader types."
+    },
+    {
+      "term": "chunk",
+      "aliases": [
+        "section chunk",
+        "heading chunk",
+        "section"
+      ],
+      "definition": "A document slice split on a heading, carrying the heading, cleaned prose, and a basePath+slug+#anchor URL; the unit hev find indexes."
+    },
+    {
+      "term": "anchor",
+      "aliases": [
+        "#anchor",
+        "heading anchor",
+        "heading slug",
+        "deep link"
+      ],
+      "definition": "The #id appended to a section URL, generated with github-slugger so it matches Astro's rendered heading id."
+    },
+    {
+      "term": "hev-find-kg",
+      "aliases": [
+        "CLI",
+        "hev find cli",
+        "kg cli"
+      ],
+      "definition": "The single binary shipping with @hev/find, offering build and verify subcommands to generate and check the committed knowledge graph."
+    },
+    {
+      "term": "hevFind()",
+      "aliases": [
+        "integration",
+        "hev find integration",
+        "astro integration"
+      ],
+      "definition": "The default export of @hev/find: the Astro integration configured with an options object in astro.config.mjs."
+    },
+    {
+      "term": "SearchOverlay",
+      "aliases": [
+        "SearchOverlay.astro",
+        "overlay",
+        "command palette"
+      ],
+      "definition": "The Astro component that renders the ⌘K command palette and posts queries to the search endpoint."
+    },
+    {
+      "term": "/api/find",
+      "aliases": [
+        "search endpoint",
+        "find endpoint",
+        "endpoint"
+      ],
+      "definition": "The on-demand route the integration injects; returns keyword JSON or an agentic SSE stream depending on mode and key presence."
+    },
+    {
+      "term": "ANTHROPIC_API_KEY",
+      "aliases": [
+        "api key",
+        "anthropic key",
+        "ANTHROPICAPIKEY"
+      ],
+      "definition": "The server-side secret that enables the agentic path and the offline graph build; never exposed to the browser."
+    },
+    {
+      "term": "contentHash",
+      "aliases": [
+        "hash gate",
+        "content hash",
+        "freshness gate"
+      ],
+      "definition": "A sha256 of concatenated chunk text used to decide whether the graph needs regeneration; build skips the model call when a committed graph matches."
+    },
+    {
+      "term": "github-slugger",
+      "aliases": [
+        "slugger"
+      ],
+      "definition": "The same slug library Astro's renderer uses, adopted as hev find's single dependency to keep generated anchors byte-identical to rendered heading ids."
+    },
+    {
+      "term": "source-primary",
+      "aliases": [
+        "agent-primary",
+        "node mode"
+      ],
+      "definition": "A node mode flag: source-primary nodes (reference/API sections) are read verbatim by the agent, while agent-primary nodes are read as paraphrased summaries."
+    },
+    {
+      "term": "glossary",
+      "aliases": [
+        "aliases",
+        "query expansion",
+        "synonyms"
+      ],
+      "definition": "Terms with aliases and definitions in the knowledge graph that widen keyword queries (e.g. k8s → kubernetes) before retrieval."
+    },
+    {
+      "term": "maxIterations",
+      "aliases": [
+        "search rounds",
+        "tool rounds"
+      ],
+      "definition": "The cap on how many search tool rounds the agentic loop runs before it must stop and answer (default 4)."
+    },
+    {
+      "term": "server adapter",
+      "aliases": [
+        "adapter",
+        "hybrid adapter",
+        "cloudflare adapter"
+      ],
+      "definition": "A Node/Cloudflare/Vercel adapter required because the search endpoint renders on demand; static-only builds cannot serve search."
+    },
+    {
+      "term": "verify",
+      "aliases": [
+        "kg verify",
+        "anchor check",
+        "CI gate"
+      ],
+      "definition": "The CLI subcommand that builds the site and checks anchors, coverage, and literal fidelity against the committed graph without calling the model."
+    }
+  ],
+  "overview": "## API\n- CLI: hev-find-kg — `api/cli`\n- build — `api/cli#build`\n- Flags — `api/cli#flags`\n- verify — `api/cli#verify`\n- Where it runs — `api/cli#where-it-runs`\n- Configuration — `api/configuration`\n- Options — `api/configuration#options`\n- Tuning notes — `api/configuration#tuning-notes`\n- TypeScript — `api/configuration#typescript`\n- What the integration does — `api/configuration#what-the-integration-does`\n- Search endpoint — `api/endpoint`\n- Agentic response (SSE) — `api/endpoint#agentic-response-sse`\n- Errors — `api/endpoint#errors`\n- Index lifecycle — `api/endpoint#index-lifecycle`\n- Keyword response (JSON) — `api/endpoint#keyword-response-json`\n- Mode selection — `api/endpoint#mode-selection`\n- Request — `api/endpoint#request`\n- The API key — `api/endpoint#the-api-key`\n- Knowledge graph format — `api/knowledge-graph`\n- Degradation — `api/knowledge-graph#degradation`\n- Fields — `api/knowledge-graph#fields`\n- How each field is used — `api/knowledge-graph#how-each-field-is-used`\n- KnowledgeNode — `api/knowledge-graph#knowledgenode`\n- Regenerating — `api/knowledge-graph#regenerating`\n- Shape — `api/knowledge-graph#shape`\n- SearchOverlay component — `api/search-overlay`\n- Keyboard model — `api/search-overlay#keyboard-model`\n- Keyword results and deep links — `api/search-overlay#keyword-results-and-deep-links`\n- Opening the overlay — `api/search-overlay#opening-the-overlay`\n- Props — `api/search-overlay#props`\n- The mode toggle — `api/search-overlay#the-mode-toggle`\n- The streamed answer — `api/search-overlay#the-streamed-answer`\n- Theming — `api/search-overlay#theming`\n## Overview\n- Concepts — `concepts`\n- Chunks and anchors — `concepts#chunks-and-anchors`\n- Degradation, by design — `concepts#degradation-by-design`\n- Keyword search and the glossary — `concepts#keyword-search-and-the-glossary`\n- The agentic search loop — `concepts#the-agentic-search-loop`\n- The knowledge graph — `concepts#the-knowledge-graph`\n- The system prompt is cached — `concepts#the-system-prompt-is-cached`\n- Introduction — `index`\n- How it fits an Astro site — `index#how-it-fits-an-astro-site`\n- Next steps — `index#next-steps`\n- Who this is for — `index#who-this-is-for`\n- Limits — `limits`\n- A server route is required — `limits#a-server-route-is-required`\n- Agentic search adds latency — `limits#agentic-search-adds-latency`\n- Anchors depend on Astro's slugger — `limits#anchors-depend-on-astros-slugger`\n- Frontmatter parsing is a flat-YAML subset — `limits#frontmatter-parsing-is-a-flat-yaml-subset`\n- Recall has a keyword ceiling — `limits#recall-has-a-keyword-ceiling`\n- Secrets live server-side — `limits#secrets-live-server-side`\n- The corpus is your content collection — `limits#the-corpus-is-your-content-collection`\n- The knowledge-graph build is a single model call — `limits#the-knowledge-graph-build-is-a-single-model-call`\n- Quick start — `quickstart`\n- 1. Install — `quickstart#1-install`\n- 2. Register the integration — `quickstart#2-register-the-integration`\n- 3. Add a server adapter — `quickstart#3-add-a-server-adapter`\n- 4. Render the overlay — `quickstart#4-render-the-overlay`\n- 5. Build the knowledge graph — `quickstart#5-build-the-knowledge-graph`\n- Install and wire it up — `quickstart#install-and-wire-it-up`\n- Prerequisites — `quickstart#prerequisites`\n- Turn on agentic search — `quickstart#turn-on-agentic-search`\n- Verify it works — `quickstart#verify-it-works`\n- Tradeoffs — `tradeoffs`\n- A committed knowledge graph — `tradeoffs#a-committed-knowledge-graph`\n- Cost and latency of agentic search — `tradeoffs#cost-and-latency-of-agentic-search`\n- How it compares — `tradeoffs#how-it-compares`\n- Keyword retrieval, not embeddings — `tradeoffs#keyword-retrieval-not-embeddings`\n- One dependency, deliberately — `tradeoffs#one-dependency-deliberately`\n- Two paths instead of one — `tradeoffs#two-paths-instead-of-one`",
+  "nodes": [
+    {
+      "id": "api/cli",
+      "kind": "section",
+      "title": "CLI: hev-find-kg",
+      "heading": null,
+      "group": "API",
+      "url": "/docs/api/cli",
+      "summary": "The hev-find-kg command: build the committed knowledge graph offline (hash-gated) and verify every heading anchor resolves in the built HTML, with all flags. @hev/find ships one binary, hev-find-kg, with two commands: bu…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "pnpm exec hev-find-kg build\npnpm exec hev-find-kg verify",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "{\n  \"scripts\": {\n    \"kg:build\": \"hev-find-kg build\",\n    \"kg:verify\": \"hev-find-kg verify\"\n  }\n}",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "@hev/find",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-find-kg",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "build",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "verify",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "package.json",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "api/cli"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli",
+          "url": "/docs/api/cli",
+          "anchor": null
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "find",
+        "command",
+        "build",
+        "committed",
+        "knowledge",
+        "graph",
+        "offline",
+        "hash",
+        "gated",
+        "verify",
+        "every",
+        "heading",
+        "anchor",
+        "resolves",
+        "built",
+        "html",
+        "flags",
+        "ships",
+        "binary",
+        "commands",
+        "pnpm",
+        "exec",
+        "scripts",
+        "package",
+        "json",
+        "callout",
+        "astro",
+        "site",
+        "root",
+        "convenient",
+        "pattern",
+        "alias"
+      ]
+    },
+    {
+      "id": "api/cli#build",
+      "kind": "section",
+      "title": "CLI: hev-find-kg",
+      "heading": "build",
+      "group": "API",
+      "url": "/docs/api/cli#build",
+      "summary": "build Builds the knowledge graph and writes it to kgPath (default .hev-find/kg.json). It reads your content from disk, chunks it, and hashes the result. If a committed kg.json already matches that hash, it exits without…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-find-kg build\n# → [hev-find] kg:written .hev-find/kg.json (42 chunks)\n#   or kg:skipped when the hash already matches",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "build",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "kgPath",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": ".hev-find/kg.json",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "kg.json",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "--kg-model",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "claude-opus-4-8",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "context",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary",
+          "chunkId": "api/cli#build"
+        },
+        {
+          "kind": "code",
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "api/cli#build"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#build",
+          "url": "/docs/api/cli#build",
+          "anchor": "build"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "build",
+        "builds",
+        "knowledge",
+        "graph",
+        "writes",
+        "kgpath",
+        "default",
+        "find",
+        "json",
+        "reads",
+        "content",
+        "disk",
+        "chunks",
+        "hashes",
+        "result",
+        "committed",
+        "already",
+        "matches",
+        "hash",
+        "exits",
+        "without",
+        "export",
+        "anthropic",
+        "pnpm",
+        "exec",
+        "written",
+        "skipped",
+        "model",
+        "claude",
+        "opus",
+        "context",
+        "glossary",
+        "calling",
+        "spend",
+        "change",
+        "otherwise",
+        "calls",
+        "once",
+        "produce",
+        "summary"
+      ]
+    },
+    {
+      "id": "api/cli#flags",
+      "kind": "section",
+      "title": "CLI: hev-find-kg",
+      "heading": "Flags",
+      "group": "API",
+      "url": "/docs/api/cli#flags",
+      "summary": "Flags Both commands accept the same content-shaping flags as the integration options; defaults match the integration. Flag Applies to Default Description --collection both docs Collection to read. Repeat for multiple. --…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "hev-find-kg build --collection docs --collection guides --chunk-heading-depth 2\nhev-find-kg verify --skip-build",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--collection <name>",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "docs",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--base-path <path>",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "/docs/",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--kg-path <path>",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": ".hev-find/kg.json",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "build",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "verify",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--content-glob <glob>",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--chunk-heading-depth <n>",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--kg-model <model>",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "claude-opus-4-8",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--build-command <cmd>",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--skip-build",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "dist/",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--strict",
+          "chunkId": "api/cli#flags"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#flags",
+          "url": "/docs/api/cli#flags",
+          "anchor": "flags"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "flags",
+        "both",
+        "commands",
+        "accept",
+        "same",
+        "content",
+        "shaping",
+        "integration",
+        "options",
+        "defaults",
+        "match",
+        "flag",
+        "applies",
+        "default",
+        "description",
+        "collection",
+        "docs",
+        "read",
+        "repeat",
+        "multiple",
+        "find",
+        "build",
+        "guides",
+        "chunk",
+        "heading",
+        "depth",
+        "verify",
+        "skip",
+        "name",
+        "base",
+        "path",
+        "json",
+        "glob",
+        "model",
+        "claude",
+        "opus",
+        "command",
+        "dist",
+        "strict",
+        "slug"
+      ]
+    },
+    {
+      "id": "api/cli#verify",
+      "kind": "section",
+      "title": "CLI: hev-find-kg",
+      "heading": "verify",
+      "group": "API",
+      "url": "/docs/api/cli#verify",
+      "summary": "verify Builds the site, then checks the committed graph against the corpus. It reads only committed files — it never calls the model — so it is a clean CI gate. Three checks: Anchors (always fatal). Every chunk's #anchor…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "pnpm exec hev-find-kg verify\n# → [hev-find] verified 128 anchors",
+          "chunkId": "api/cli#verify"
+        },
+        {
+          "kind": "code",
+          "literal": "[hev-find] missing anchor old-name for /docs/concepts#old-name in dist/docs/concepts/index.html",
+          "chunkId": "api/cli#verify"
+        },
+        {
+          "kind": "code",
+          "literal": "verify",
+          "chunkId": "api/cli#verify"
+        },
+        {
+          "kind": "code",
+          "literal": "#anchor",
+          "chunkId": "api/cli#verify"
+        },
+        {
+          "kind": "code",
+          "literal": "id",
+          "chunkId": "api/cli#verify"
+        },
+        {
+          "kind": "code",
+          "literal": "--strict",
+          "chunkId": "api/cli#verify"
+        },
+        {
+          "kind": "code",
+          "literal": "facts",
+          "chunkId": "api/cli#verify"
+        },
+        {
+          "kind": "code",
+          "literal": "source-primary",
+          "chunkId": "api/cli#verify"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#verify",
+          "url": "/docs/api/cli#verify",
+          "anchor": "verify"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "verify",
+        "builds",
+        "site",
+        "checks",
+        "committed",
+        "graph",
+        "against",
+        "corpus",
+        "reads",
+        "only",
+        "files",
+        "never",
+        "calls",
+        "model",
+        "clean",
+        "gate",
+        "three",
+        "anchors",
+        "always",
+        "fatal",
+        "every",
+        "chunk",
+        "anchor",
+        "pnpm",
+        "exec",
+        "find",
+        "verified",
+        "missing",
+        "name",
+        "docs",
+        "concepts",
+        "dist",
+        "index",
+        "html",
+        "strict",
+        "facts",
+        "source",
+        "primary",
+        "must",
+        "exist"
+      ]
+    },
+    {
+      "id": "api/cli#where-it-runs",
+      "kind": "section",
+      "title": "CLI: hev-find-kg",
+      "heading": "Where it runs",
+      "group": "API",
+      "url": "/docs/api/cli#where-it-runs",
+      "summary": "Where it runs build and verify run in Node with filesystem access — locally or in CI, not on the edge. The committed kg.json they produce is what the running site reads through the virtual:hev-find/kg module. See the kno…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "build",
+          "chunkId": "api/cli#where-it-runs"
+        },
+        {
+          "kind": "code",
+          "literal": "verify",
+          "chunkId": "api/cli#where-it-runs"
+        },
+        {
+          "kind": "code",
+          "literal": "kg.json",
+          "chunkId": "api/cli#where-it-runs"
+        },
+        {
+          "kind": "code",
+          "literal": "virtual:hev-find/kg",
+          "chunkId": "api/cli#where-it-runs"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#where-it-runs",
+          "url": "/docs/api/cli#where-it-runs",
+          "anchor": "where-it-runs"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "runs",
+        "build",
+        "verify",
+        "node",
+        "filesystem",
+        "access",
+        "locally",
+        "edge",
+        "committed",
+        "json",
+        "produce",
+        "running",
+        "site",
+        "reads",
+        "through",
+        "virtual",
+        "find",
+        "module",
+        "knowledge",
+        "graph",
+        "format"
+      ]
+    },
+    {
+      "id": "api/configuration",
+      "kind": "section",
+      "title": "Configuration",
+      "heading": null,
+      "group": "API",
+      "url": "/docs/api/configuration",
+      "summary": "Every option for the hevFind() Astro integration: collections, models, endpoint and basePath, chunking depth, retrieval caps, and knowledge-graph paths, with defaults. The hevFind() integration is the default export of @…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "// astro.config.mjs\nimport hevFind from \"@hev/find\";\n\nexport default defineConfig({\n  integrations: [\n    hevFind({\n      collections: [\"docs\"],\n      basePath: \"/docs/\",\n      model: \"claude-haiku-4-5\",\n      maxResults: 6,\n    }),\n  ],\n});",
+          "chunkId": "api/configuration"
+        },
+        {
+          "kind": "code",
+          "literal": "hevFind()",
+          "chunkId": "api/configuration"
+        },
+        {
+          "kind": "code",
+          "literal": "@hev/find",
+          "chunkId": "api/configuration"
+        },
+        {
+          "kind": "code",
+          "literal": "collections",
+          "chunkId": "api/configuration"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "api/configuration"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/configuration",
+          "url": "/docs/api/configuration",
+          "anchor": null
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "every",
+        "option",
+        "hevfind",
+        "astro",
+        "integration",
+        "collections",
+        "models",
+        "endpoint",
+        "basepath",
+        "chunking",
+        "depth",
+        "retrieval",
+        "caps",
+        "knowledge",
+        "graph",
+        "paths",
+        "defaults",
+        "default",
+        "export",
+        "config",
+        "import",
+        "find",
+        "defineconfig",
+        "integrations",
+        "docs",
+        "model",
+        "claude",
+        "haiku",
+        "maxresults",
+        "callout",
+        "takes",
+        "options",
+        "object",
+        "only",
+        "effectively",
+        "required",
+        "everything",
+        "else"
+      ]
+    },
+    {
+      "id": "api/configuration#options",
+      "kind": "section",
+      "title": "Configuration",
+      "heading": "Options",
+      "group": "API",
+      "url": "/docs/api/configuration#options",
+      "summary": "Options Option Type Default Description collections string[] — Content collection name(s) to index and search. Without it the endpoint errors and the integration warns at build. basePath string '/docs/' Slug → URL prefix…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "collections",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "string[]",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "basePath",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "string",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "'/docs/'",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "basePath + slug",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "#anchor",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "endpoint",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "'/api/find'",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "model",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "'claude-haiku-4-5'",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "kgModel",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "'claude-opus-4-8'",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "maxResults",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "number",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "answerMaxTokens",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "1024",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "maxIterations",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "search",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "chunkHeadingDepth",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "##",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "###",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "candidatePerSearch",
+          "chunkId": "api/configuration#options"
+        },
+        {
+          "kind": "code",
+          "literal": "perDocCap",
+          "chunkId": "api/configuration#options"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/configuration#options",
+          "url": "/docs/api/configuration#options",
+          "anchor": "options"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "options",
+        "option",
+        "type",
+        "default",
+        "description",
+        "collections",
+        "string",
+        "content",
+        "collection",
+        "name",
+        "index",
+        "search",
+        "without",
+        "endpoint",
+        "errors",
+        "integration",
+        "warns",
+        "build",
+        "basepath",
+        "docs",
+        "slug",
+        "prefix",
+        "anchor",
+        "find",
+        "model",
+        "claude",
+        "haiku",
+        "kgmodel",
+        "opus",
+        "maxresults",
+        "number",
+        "answermaxtokens",
+        "1024",
+        "maxiterations",
+        "chunkheadingdepth",
+        "candidatepersearch",
+        "perdoccap",
+        "plus",
+        "section",
+        "route"
+      ]
+    },
+    {
+      "id": "api/configuration#tuning-notes",
+      "kind": "section",
+      "title": "Configuration",
+      "heading": "Tuning notes",
+      "group": "API",
+      "url": "/docs/api/configuration#tuning-notes",
+      "summary": "Tuning notes Chunk granularity: raise chunkHeadingDepth to 3 (the default) for finer section anchors on long pages; drop to 2 if your ### sections are too small to stand alone as results. Latency: lower maxIterations to…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "chunkHeadingDepth",
+          "chunkId": "api/configuration#tuning-notes"
+        },
+        {
+          "kind": "code",
+          "literal": "###",
+          "chunkId": "api/configuration#tuning-notes"
+        },
+        {
+          "kind": "code",
+          "literal": "maxIterations",
+          "chunkId": "api/configuration#tuning-notes"
+        },
+        {
+          "kind": "code",
+          "literal": "perDocCap",
+          "chunkId": "api/configuration#tuning-notes"
+        },
+        {
+          "kind": "code",
+          "literal": "candidatePerSearch",
+          "chunkId": "api/configuration#tuning-notes"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/configuration#tuning-notes",
+          "url": "/docs/api/configuration#tuning-notes",
+          "anchor": "tuning-notes"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "tuning",
+        "notes",
+        "chunk",
+        "granularity",
+        "raise",
+        "chunkheadingdepth",
+        "default",
+        "finer",
+        "section",
+        "anchors",
+        "long",
+        "pages",
+        "drop",
+        "sections",
+        "small",
+        "stand",
+        "alone",
+        "results",
+        "latency",
+        "lower",
+        "maxiterations",
+        "perdoccap",
+        "candidatepersearch",
+        "agentic",
+        "round",
+        "trips",
+        "multi",
+        "part",
+        "questions",
+        "need",
+        "more",
+        "search",
+        "rounds",
+        "result",
+        "spread",
+        "keeps",
+        "page",
+        "filling",
+        "single",
+        "legitimately"
+      ]
+    },
+    {
+      "id": "api/configuration#typescript",
+      "kind": "section",
+      "title": "Configuration",
+      "heading": "TypeScript",
+      "group": "API",
+      "url": "/docs/api/configuration#typescript",
+      "summary": "TypeScript The options type is exported for editor help and config typing:",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "import type { HevFindOptions } from \"@hev/find\";",
+          "chunkId": "api/configuration#typescript"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/configuration#typescript",
+          "url": "/docs/api/configuration#typescript",
+          "anchor": "typescript"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "typescript",
+        "options",
+        "type",
+        "exported",
+        "editor",
+        "help",
+        "config",
+        "typing",
+        "import",
+        "hevfindoptions",
+        "find"
+      ]
+    },
+    {
+      "id": "api/configuration#what-the-integration-does",
+      "kind": "section",
+      "title": "Configuration",
+      "heading": "What the integration does",
+      "group": "API",
+      "url": "/docs/api/configuration#what-the-integration-does",
+      "summary": "What the integration does When Astro starts up (astro:config:setup) the integration: injects the endpoint route, pointing at @hev/find/endpoint, with prerender: false so it renders on demand; registers two virtual module…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "astro:config:setup",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "endpoint",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "@hev/find/endpoint",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "prerender: false",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "virtual:hev-find/config",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "virtual:hev-find/kg",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "kgPath",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "collections",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "astro:build:start",
+          "chunkId": "api/configuration#what-the-integration-does"
+        },
+        {
+          "kind": "code",
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "api/configuration#what-the-integration-does"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/configuration#what-the-integration-does",
+          "url": "/docs/api/configuration#what-the-integration-does",
+          "anchor": "what-the-integration-does"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "integration",
+        "does",
+        "astro",
+        "starts",
+        "config",
+        "setup",
+        "injects",
+        "endpoint",
+        "route",
+        "pointing",
+        "find",
+        "prerender",
+        "false",
+        "renders",
+        "demand",
+        "registers",
+        "virtual",
+        "module",
+        "kgpath",
+        "collections",
+        "build",
+        "start",
+        "anthropic",
+        "modules",
+        "resolved",
+        "options",
+        "committed",
+        "knowledge",
+        "graph",
+        "inlined",
+        "adds",
+        "watched",
+        "file",
+        "reloads",
+        "changes",
+        "warns",
+        "empty",
+        "runs",
+        "anthropicapikey",
+        "present"
+      ]
+    },
+    {
+      "id": "api/endpoint",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": null,
+      "group": "API",
+      "url": "/docs/api/endpoint",
+      "summary": "The /api/find route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses. The integration injects one on-demand route (default /api/find). The over…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "/api/find",
+          "chunkId": "api/endpoint"
+        },
+        {
+          "kind": "code",
+          "literal": "text/event-stream",
+          "chunkId": "api/endpoint"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "api/endpoint"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint",
+          "url": "/docs/api/endpoint",
+          "anchor": null
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "find",
+        "route",
+        "contract",
+        "post",
+        "request",
+        "body",
+        "keyword",
+        "json",
+        "response",
+        "agentic",
+        "event",
+        "stream",
+        "mode",
+        "selection",
+        "error",
+        "responses",
+        "integration",
+        "injects",
+        "demand",
+        "default",
+        "text",
+        "callout",
+        "astro",
+        "overlay",
+        "posts",
+        "returns",
+        "streams",
+        "grounded",
+        "answer",
+        "server",
+        "sent",
+        "events"
+      ]
+    },
+    {
+      "id": "api/endpoint#agentic-response-sse",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "Agentic response (SSE)",
+      "group": "API",
+      "url": "/docs/api/endpoint#agentic-response-sse",
+      "summary": "Agentic response (SSE) When a key is present and mode is agentic, the endpoint responds with content-type: text/event-stream and streams the answer as it is generated. Each event is a named SSE frame: event: search data:…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "mode",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "agentic",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "content-type: text/event-stream",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "search",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "{ query }",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "sources",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "{ sources: Source[], model, mode }",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "token",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "{ text }",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "done",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "{}",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "error",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "{ error }",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "200",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "Source",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "{ title, heading?, url, group? }",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "snippet",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        },
+        {
+          "kind": "code",
+          "literal": "url",
+          "chunkId": "api/endpoint#agentic-response-sse"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#agentic-response-sse",
+          "url": "/docs/api/endpoint#agentic-response-sse",
+          "anchor": "agentic-response-sse"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "agentic",
+        "response",
+        "present",
+        "mode",
+        "endpoint",
+        "responds",
+        "content",
+        "type",
+        "text",
+        "event",
+        "stream",
+        "streams",
+        "answer",
+        "generated",
+        "named",
+        "frame",
+        "search",
+        "data",
+        "query",
+        "sources",
+        "source",
+        "model",
+        "token",
+        "done",
+        "error",
+        "title",
+        "heading",
+        "group",
+        "snippet",
+        "autoscaling",
+        "core",
+        "concepts",
+        "kubernetes",
+        "docs",
+        "overview",
+        "claude",
+        "haiku",
+        "scales",
+        "workers",
+        "based"
+      ]
+    },
+    {
+      "id": "api/endpoint#errors",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "Errors",
+      "group": "API",
+      "url": "/docs/api/endpoint#errors",
+      "summary": "Errors Status Body Cause 400 { \"error\": \"Invalid JSON body.\" } The request body wasn't valid JSON. 500 { \"error\": \"…\" } The chunk index failed to build (e.g. a misconfigured collection). — event: error A failure during t…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "400",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "code",
+          "literal": "{ \"error\": \"Invalid JSON body.\" }",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "code",
+          "literal": "500",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "code",
+          "literal": "{ \"error\": \"…\" }",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "code",
+          "literal": "event: error",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "code",
+          "literal": "200",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "code",
+          "literal": "error",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "value",
+          "literal": "e.g",
+          "chunkId": "api/endpoint#errors"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#errors",
+          "url": "/docs/api/endpoint#errors",
+          "anchor": "errors"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "errors",
+        "status",
+        "body",
+        "cause",
+        "error",
+        "invalid",
+        "json",
+        "request",
+        "wasn",
+        "valid",
+        "chunk",
+        "index",
+        "failed",
+        "build",
+        "misconfigured",
+        "collection",
+        "event",
+        "failure",
+        "during",
+        "agentic",
+        "stream",
+        "http",
+        "already",
+        "arrive",
+        "final",
+        "rather",
+        "code"
+      ]
+    },
+    {
+      "id": "api/endpoint#index-lifecycle",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "Index lifecycle",
+      "group": "API",
+      "url": "/docs/api/endpoint#index-lifecycle",
+      "summary": "Index lifecycle The chunk index is built once per server instance on the first request and cached for the process lifetime. On the first request the endpoint also compares the live content hash against the knowledge grap…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "hev-find-kg build",
+          "chunkId": "api/endpoint#index-lifecycle"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#index-lifecycle",
+          "url": "/docs/api/endpoint#index-lifecycle",
+          "anchor": "index-lifecycle"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "index",
+        "lifecycle",
+        "chunk",
+        "built",
+        "once",
+        "server",
+        "instance",
+        "first",
+        "request",
+        "cached",
+        "process",
+        "lifetime",
+        "endpoint",
+        "also",
+        "compares",
+        "live",
+        "content",
+        "hash",
+        "against",
+        "knowledge",
+        "grap",
+        "find",
+        "build",
+        "graph",
+        "logs",
+        "time",
+        "warning",
+        "differ"
+      ]
+    },
+    {
+      "id": "api/endpoint#keyword-response-json",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "Keyword response (JSON)",
+      "group": "API",
+      "url": "/docs/api/endpoint#keyword-response-json",
+      "summary": "Keyword response (JSON) Keyword mode returns a 200 JSON envelope: { \"results\": [ { \"title\": \"Concepts\", \"heading\": \"The agentic search loop\", \"url\": \"/docs/concepts#the-agentic-search-loop\", \"group\": \"Overview\", \"snippet…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "{\n  \"results\": [\n    {\n      \"title\": \"Concepts\",\n      \"heading\": \"The agentic search loop\",\n      \"url\": \"/docs/concepts#the-agentic-search-loop\",\n      \"group\": \"Overview\",\n      \"snippet\": \"When the reader presses Enter, the query goes to a bounded loop…\"\n    }\n  ],\n  \"query\": \"how does agentic search work\",\n  \"model\": \"claude-haiku-4-5\",\n  \"mode\": \"keyword\"\n}",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "200",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "results",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "Result[]",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "title",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "heading?",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "url",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "group?",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "snippet",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "query",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "string",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "model",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "mode",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "'keyword'",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "warning",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "string?",
+          "chunkId": "api/endpoint#keyword-response-json"
+        },
+        {
+          "kind": "code",
+          "literal": "#anchor",
+          "chunkId": "api/endpoint#keyword-response-json"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#keyword-response-json",
+          "url": "/docs/api/endpoint#keyword-response-json",
+          "anchor": "keyword-response-json"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "keyword",
+        "response",
+        "json",
+        "mode",
+        "returns",
+        "envelope",
+        "results",
+        "title",
+        "concepts",
+        "heading",
+        "agentic",
+        "search",
+        "loop",
+        "docs",
+        "group",
+        "overview",
+        "snippet",
+        "reader",
+        "presses",
+        "enter",
+        "query",
+        "goes",
+        "bounded",
+        "does",
+        "work",
+        "model",
+        "claude",
+        "haiku",
+        "result",
+        "string",
+        "warning",
+        "anchor",
+        "field",
+        "type",
+        "description",
+        "ranked",
+        "matches",
+        "echoed",
+        "back",
+        "configured"
+      ]
+    },
+    {
+      "id": "api/endpoint#mode-selection",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "Mode selection",
+      "group": "API",
+      "url": "/docs/api/endpoint#mode-selection",
+      "summary": "Mode selection The endpoint decides what to run: Empty query → { results: [], query: \"\", model } (JSON). mode: \"keyword\", or no API key → keyword JSON, mode: \"keyword\". mode: \"agentic\" but no key → keyword JSON plus a wa…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "{ results: [], query: \"\", model }",
+          "chunkId": "api/endpoint#mode-selection"
+        },
+        {
+          "kind": "code",
+          "literal": "mode: \"keyword\"",
+          "chunkId": "api/endpoint#mode-selection"
+        },
+        {
+          "kind": "code",
+          "literal": "mode: \"agentic\"",
+          "chunkId": "api/endpoint#mode-selection"
+        },
+        {
+          "kind": "code",
+          "literal": "warning",
+          "chunkId": "api/endpoint#mode-selection"
+        },
+        {
+          "kind": "code",
+          "literal": "content-type",
+          "chunkId": "api/endpoint#mode-selection"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#mode-selection",
+          "url": "/docs/api/endpoint#mode-selection",
+          "anchor": "mode-selection"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "mode",
+        "selection",
+        "endpoint",
+        "decides",
+        "empty",
+        "query",
+        "results",
+        "model",
+        "json",
+        "keyword",
+        "agentic",
+        "plus",
+        "warning",
+        "content",
+        "type",
+        "otherwise",
+        "stream",
+        "there",
+        "error",
+        "path",
+        "unavailable",
+        "missing",
+        "downgrades",
+        "request",
+        "response",
+        "says",
+        "reader",
+        "still",
+        "gets",
+        "overlay",
+        "branches",
+        "handles",
+        "both",
+        "shapes"
+      ]
+    },
+    {
+      "id": "api/endpoint#request",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "Request",
+      "group": "API",
+      "url": "/docs/api/endpoint#request",
+      "summary": "Request POST with a JSON body: { \"query\": \"how does autoscaling work\", \"mode\": \"agentic\" } Field Type Description query string The search query. Empty or whitespace returns an empty result set. mode 'keyword' \\ 'agentic'…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "{\n  \"query\": \"how does autoscaling work\",\n  \"mode\": \"agentic\"\n}",
+          "chunkId": "api/endpoint#request"
+        },
+        {
+          "kind": "code",
+          "literal": "POST",
+          "chunkId": "api/endpoint#request"
+        },
+        {
+          "kind": "code",
+          "literal": "query",
+          "chunkId": "api/endpoint#request"
+        },
+        {
+          "kind": "code",
+          "literal": "string",
+          "chunkId": "api/endpoint#request"
+        },
+        {
+          "kind": "code",
+          "literal": "mode",
+          "chunkId": "api/endpoint#request"
+        },
+        {
+          "kind": "code",
+          "literal": "'keyword' \\| 'agentic'",
+          "chunkId": "api/endpoint#request"
+        },
+        {
+          "kind": "code",
+          "literal": "keyword",
+          "chunkId": "api/endpoint#request"
+        },
+        {
+          "kind": "code",
+          "literal": "agentic",
+          "chunkId": "api/endpoint#request"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#request",
+          "url": "/docs/api/endpoint#request",
+          "anchor": "request"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "request",
+        "post",
+        "json",
+        "body",
+        "query",
+        "does",
+        "autoscaling",
+        "work",
+        "mode",
+        "agentic",
+        "field",
+        "type",
+        "description",
+        "string",
+        "search",
+        "empty",
+        "whitespace",
+        "returns",
+        "result",
+        "keyword",
+        "optional",
+        "forces",
+        "instant",
+        "path",
+        "requests",
+        "loop",
+        "omitted",
+        "behaves",
+        "like",
+        "present"
+      ]
+    },
+    {
+      "id": "api/endpoint#the-api-key",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "The API key",
+      "group": "API",
+      "url": "/docs/api/endpoint#the-api-key",
+      "summary": "The API key The endpoint resolves ANTHROPICAPIKEY from, in order: the adapter runtime env (locals.runtime.env, e.g. Cloudflare), process.env, then import.meta.env. Set it wherever your host injects server secrets; it is…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "api/endpoint#the-api-key"
+        },
+        {
+          "kind": "code",
+          "literal": "locals.runtime.env",
+          "chunkId": "api/endpoint#the-api-key"
+        },
+        {
+          "kind": "code",
+          "literal": "process.env",
+          "chunkId": "api/endpoint#the-api-key"
+        },
+        {
+          "kind": "code",
+          "literal": "import.meta.env",
+          "chunkId": "api/endpoint#the-api-key"
+        },
+        {
+          "kind": "value",
+          "literal": "e.g",
+          "chunkId": "api/endpoint#the-api-key"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#the-api-key",
+          "url": "/docs/api/endpoint#the-api-key",
+          "anchor": "the-api-key"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "endpoint",
+        "resolves",
+        "anthropicapikey",
+        "order",
+        "adapter",
+        "runtime",
+        "locals",
+        "cloudflare",
+        "process",
+        "import",
+        "meta",
+        "wherever",
+        "host",
+        "injects",
+        "server",
+        "secrets",
+        "anthropic",
+        "never",
+        "sent",
+        "browser"
+      ]
+    },
+    {
+      "id": "api/knowledge-graph",
+      "kind": "section",
+      "title": "Knowledge graph format",
+      "heading": null,
+      "group": "API",
+      "url": "/docs/api/knowledge-graph",
+      "summary": "The committed .hev-find/kg.json artifact: distilled section nodes with verbatim facts and source links, the glossary and overview, how each field is used, and how it degrades when absent. The knowledge graph is a single…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": ".hev-find/kg.json",
+          "chunkId": "api/knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-find-kg build",
+          "chunkId": "api/knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "virtual:hev-find/kg",
+          "chunkId": "api/knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "url#anchor",
+          "chunkId": "api/knowledge-graph"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "api/knowledge-graph"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/knowledge-graph",
+          "url": "/docs/api/knowledge-graph",
+          "anchor": null
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "committed",
+        "find",
+        "json",
+        "artifact",
+        "distilled",
+        "section",
+        "nodes",
+        "verbatim",
+        "facts",
+        "source",
+        "links",
+        "glossary",
+        "overview",
+        "field",
+        "degrades",
+        "absent",
+        "knowledge",
+        "graph",
+        "single",
+        "build",
+        "virtual",
+        "anchor",
+        "callout",
+        "astro",
+        "file",
+        "default",
+        "built",
+        "offline",
+        "repo",
+        "integration",
+        "inlines",
+        "through",
+        "module",
+        "running",
+        "site",
+        "reads",
+        "filesystem",
+        "access",
+        "agent",
+        "view"
+      ]
+    },
+    {
+      "id": "api/knowledge-graph#degradation",
+      "kind": "section",
+      "title": "Knowledge graph format",
+      "heading": "Degradation",
+      "group": "API",
+      "url": "/docs/api/knowledge-graph#degradation",
+      "summary": "Degradation The graph is read defensively. If the file is missing or malformed, or it is an older node-less (v1) artifact, the integration uses it as-is: with no nodes the agentic loop falls back to keyword-style search,…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "api/knowledge-graph#degradation",
+          "url": "/docs/api/knowledge-graph#degradation",
+          "anchor": "degradation"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "degradation",
+        "graph",
+        "read",
+        "defensively",
+        "file",
+        "missing",
+        "malformed",
+        "older",
+        "node",
+        "less",
+        "artifact",
+        "integration",
+        "uses",
+        "nodes",
+        "agentic",
+        "loop",
+        "falls",
+        "back",
+        "keyword",
+        "style",
+        "search",
+        "mode",
+        "still",
+        "works",
+        "nothing",
+        "hard",
+        "fails",
+        "because",
+        "committed",
+        "json",
+        "shows",
+        "pull",
+        "requests",
+        "structure",
+        "sources",
+        "facts",
+        "deterministic",
+        "reviewable",
+        "only",
+        "prose"
+      ]
+    },
+    {
+      "id": "api/knowledge-graph#fields",
+      "kind": "section",
+      "title": "Knowledge graph format",
+      "heading": "Fields",
+      "group": "API",
+      "url": "/docs/api/knowledge-graph#fields",
+      "summary": "Fields Field Type Description version 2 Schema version. generatedAt string ISO timestamp stamped by the build (Node time, not edge). contentHash string sha256 of the concatenated chunk text. The freshness gate. context s…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "version",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "generatedAt",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "string",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "contentHash",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "context",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "GlossaryEntry[]",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "overview",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "nodes",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "KnowledgeNode[]",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "edges",
+          "chunkId": "api/knowledge-graph#fields"
+        },
+        {
+          "kind": "code",
+          "literal": "KnowledgeEdge[]",
+          "chunkId": "api/knowledge-graph#fields"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/knowledge-graph#fields",
+          "url": "/docs/api/knowledge-graph#fields",
+          "anchor": "fields"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "fields",
+        "field",
+        "type",
+        "description",
+        "version",
+        "schema",
+        "generatedat",
+        "string",
+        "timestamp",
+        "stamped",
+        "build",
+        "node",
+        "time",
+        "edge",
+        "contenthash",
+        "sha256",
+        "concatenated",
+        "chunk",
+        "text",
+        "freshness",
+        "gate",
+        "context",
+        "glossary",
+        "glossaryentry",
+        "overview",
+        "nodes",
+        "knowledgenode",
+        "edges",
+        "knowledgeedge",
+        "compact",
+        "orientation",
+        "degradation",
+        "fallback",
+        "there",
+        "terms",
+        "aliases",
+        "definitions",
+        "widens",
+        "keyword",
+        "search"
+      ]
+    },
+    {
+      "id": "api/knowledge-graph#how-each-field-is-used",
+      "kind": "section",
+      "title": "Knowledge graph format",
+      "heading": "How each field is used",
+      "group": "API",
+      "url": "/docs/api/knowledge-graph#how-each-field-is-used",
+      "summary": "How each field is used overview + nodes are injected into the agentic loop's system prompt (prompt-cached). The agent opens the sections it needs and answers from their summaries, quoting facts verbatim for exact strings…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "overview",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "nodes",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "facts",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "k8s",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "kubernetes",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "terms",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "contentHash",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        },
+        {
+          "kind": "code",
+          "literal": "build",
+          "chunkId": "api/knowledge-graph#how-each-field-is-used"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/knowledge-graph#how-each-field-is-used",
+          "url": "/docs/api/knowledge-graph#how-each-field-is-used",
+          "anchor": "how-each-field-is-used"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "field",
+        "overview",
+        "nodes",
+        "injected",
+        "agentic",
+        "loop",
+        "system",
+        "prompt",
+        "cached",
+        "agent",
+        "opens",
+        "sections",
+        "needs",
+        "answers",
+        "their",
+        "summaries",
+        "quoting",
+        "facts",
+        "verbatim",
+        "exact",
+        "strings",
+        "glossary",
+        "kubernetes",
+        "terms",
+        "contenthash",
+        "build",
+        "drives",
+        "keyword",
+        "query",
+        "expansion",
+        "term",
+        "picks",
+        "aliases",
+        "before",
+        "retrieval",
+        "finds",
+        "back",
+        "render",
+        "time",
+        "check"
+      ]
+    },
+    {
+      "id": "api/knowledge-graph#knowledgenode",
+      "kind": "section",
+      "title": "Knowledge graph format",
+      "heading": "KnowledgeNode",
+      "group": "API",
+      "url": "/docs/api/knowledge-graph#knowledgenode",
+      "summary": "KnowledgeNode Field Type Description id string Equals the chunk id, so it maps 1:1 to a real anchor. summary string The model's paraphrase — what the agent reasons from. facts Fact[] Verbatim literals (flags, code, ident…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "KnowledgeNode",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "id",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "string",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "summary",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "facts",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "Fact[]",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "sources",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "SourceRef[]",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "url",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "anchor",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "mode",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "'agent-primary' \\| 'source-primary'",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "source-primary",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "terms",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        },
+        {
+          "kind": "code",
+          "literal": "string[]",
+          "chunkId": "api/knowledge-graph#knowledgenode"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/knowledge-graph#knowledgenode",
+          "url": "/docs/api/knowledge-graph#knowledgenode",
+          "anchor": "knowledgenode"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "knowledgenode",
+        "field",
+        "type",
+        "description",
+        "string",
+        "equals",
+        "chunk",
+        "maps",
+        "real",
+        "anchor",
+        "summary",
+        "model",
+        "paraphrase",
+        "agent",
+        "reasons",
+        "facts",
+        "fact",
+        "verbatim",
+        "literals",
+        "flags",
+        "code",
+        "ident",
+        "sources",
+        "sourceref",
+        "mode",
+        "primary",
+        "source",
+        "terms",
+        "identifiers",
+        "extracted",
+        "deterministically",
+        "never",
+        "authors",
+        "quotes",
+        "exact",
+        "strings",
+        "without",
+        "reading",
+        "page",
+        "provenance"
+      ]
+    },
+    {
+      "id": "api/knowledge-graph#regenerating",
+      "kind": "section",
+      "title": "Knowledge graph format",
+      "heading": "Regenerating",
+      "group": "API",
+      "url": "/docs/api/knowledge-graph#regenerating",
+      "summary": "Regenerating Run hev-find-kg build after content changes and commit the result. The hash gate makes this safe to run on every build — it only spends a model call when the content actually changed. The integration also ru…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "hev-find-kg build",
+          "chunkId": "api/knowledge-graph#regenerating"
+        },
+        {
+          "kind": "code",
+          "literal": "astro build",
+          "chunkId": "api/knowledge-graph#regenerating"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-find-kg verify",
+          "chunkId": "api/knowledge-graph#regenerating"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/knowledge-graph#regenerating",
+          "url": "/docs/api/knowledge-graph#regenerating",
+          "anchor": "regenerating"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "regenerating",
+        "find",
+        "build",
+        "after",
+        "content",
+        "changes",
+        "commit",
+        "result",
+        "hash",
+        "gate",
+        "makes",
+        "safe",
+        "every",
+        "only",
+        "spends",
+        "model",
+        "call",
+        "actually",
+        "changed",
+        "integration",
+        "also",
+        "astro",
+        "verify",
+        "runs",
+        "during",
+        "present",
+        "anchors",
+        "coverage",
+        "literal",
+        "fidelity"
+      ]
+    },
+    {
+      "id": "api/knowledge-graph#shape",
+      "kind": "section",
+      "title": "Knowledge graph format",
+      "heading": "Shape",
+      "group": "API",
+      "url": "/docs/api/knowledge-graph#shape",
+      "summary": "Shape { \"version\": 2, \"generatedAt\": \"2026-05-30T12:00:00.000Z\", \"contentHash\": \"a1b2c3…\", \"context\": \"## hev find\\n\\nA search overlay for Astro docs…\", \"glossary\": [ { \"term\": \"knowledge graph\", \"aliases\": [\"kg\"], \"defi…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "api/knowledge-graph#shape",
+          "url": "/docs/api/knowledge-graph#shape",
+          "anchor": "shape"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "shape",
+        "version",
+        "generatedat",
+        "2026",
+        "30t12",
+        "000z",
+        "contenthash",
+        "a1b2c3",
+        "context",
+        "find",
+        "search",
+        "overlay",
+        "astro",
+        "docs",
+        "glossary",
+        "term",
+        "knowledge",
+        "graph",
+        "aliases",
+        "defi",
+        "definition",
+        "offline",
+        "built",
+        "artifact",
+        "overview",
+        "kubernetes",
+        "autoscaling",
+        "concepts",
+        "nodes",
+        "kind",
+        "section",
+        "title",
+        "core",
+        "heading",
+        "group",
+        "summary",
+        "scales",
+        "workers",
+        "throughput",
+        "signals"
+      ]
+    },
+    {
+      "id": "api/search-overlay",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": null,
+      "group": "API",
+      "url": "/docs/api/search-overlay",
+      "summary": "The SearchOverlay.astro command palette: props, the data-hev-find-open opener attribute, keyboard model, the mode toggle, and theming through CSS variables. SearchOverlay.astro renders the ⌘K command palette. Add it once…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "---\nimport SearchOverlay from \"@hev/find/components/SearchOverlay.astro\";\n---\n<SearchOverlay />",
+          "chunkId": "api/search-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "SearchOverlay.astro",
+          "chunkId": "api/search-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "⌘K",
+          "chunkId": "api/search-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "<dialog>",
+          "chunkId": "api/search-overlay"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "api/search-overlay"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay",
+          "url": "/docs/api/search-overlay",
+          "anchor": null
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "searchoverlay",
+        "astro",
+        "command",
+        "palette",
+        "props",
+        "data",
+        "find",
+        "open",
+        "opener",
+        "attribute",
+        "keyboard",
+        "model",
+        "mode",
+        "toggle",
+        "theming",
+        "through",
+        "variables",
+        "renders",
+        "once",
+        "import",
+        "components",
+        "dialog",
+        "callout",
+        "global",
+        "layout",
+        "opens",
+        "page",
+        "doesn",
+        "affect",
+        "until",
+        "opened"
+      ]
+    },
+    {
+      "id": "api/search-overlay#keyboard-model",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": "Keyboard model",
+      "group": "API",
+      "url": "/docs/api/search-overlay#keyboard-model",
+      "summary": "Keyboard model The interaction is the core of hev find's two-path design: Type → debounced keyword search runs; the first result is auto-active. Enter → if you haven't moved the selection, runs the agentic loop (\"ask AI\"…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "⏎ ask AI · ↑↓ open",
+          "chunkId": "api/search-overlay#keyboard-model"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay#keyboard-model",
+          "url": "/docs/api/search-overlay#keyboard-model",
+          "anchor": "keyboard-model"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "keyboard",
+        "model",
+        "interaction",
+        "core",
+        "find",
+        "path",
+        "design",
+        "type",
+        "debounced",
+        "keyword",
+        "search",
+        "runs",
+        "first",
+        "result",
+        "auto",
+        "active",
+        "enter",
+        "haven",
+        "moved",
+        "selection",
+        "agentic",
+        "loop",
+        "open",
+        "hovered",
+        "opens",
+        "instead",
+        "move",
+        "close",
+        "footer",
+        "shows",
+        "hint",
+        "server",
+        "anthropicapikey",
+        "pressing",
+        "returns",
+        "results",
+        "response",
+        "carries",
+        "warning",
+        "overlay"
+      ]
+    },
+    {
+      "id": "api/search-overlay#keyword-results-and-deep-links",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": "Keyword results and deep links",
+      "group": "API",
+      "url": "/docs/api/search-overlay#keyword-results-and-deep-links",
+      "summary": "Keyword results and deep links Each keyword result row renders the document title, an optional heading breadcrumb (Concepts › The agentic loop), and a one-line snippet. The row's link is the chunk's url, which already ca…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "Concepts › The agentic loop",
+          "chunkId": "api/search-overlay#keyword-results-and-deep-links"
+        },
+        {
+          "kind": "code",
+          "literal": "url",
+          "chunkId": "api/search-overlay#keyword-results-and-deep-links"
+        },
+        {
+          "kind": "code",
+          "literal": "#anchor",
+          "chunkId": "api/search-overlay#keyword-results-and-deep-links"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay#keyword-results-and-deep-links",
+          "url": "/docs/api/search-overlay#keyword-results-and-deep-links",
+          "anchor": "keyword-results-and-deep-links"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "keyword",
+        "results",
+        "deep",
+        "links",
+        "result",
+        "renders",
+        "document",
+        "title",
+        "optional",
+        "heading",
+        "breadcrumb",
+        "concepts",
+        "agentic",
+        "loop",
+        "line",
+        "snippet",
+        "link",
+        "chunk",
+        "already",
+        "anchor",
+        "carries",
+        "clicking",
+        "lands",
+        "exact"
+      ]
+    },
+    {
+      "id": "api/search-overlay#opening-the-overlay",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": "Opening the overlay",
+      "group": "API",
+      "url": "/docs/api/search-overlay#opening-the-overlay",
+      "summary": "Opening the overlay Two ways, both built in: ⌘K / Ctrl-K is bound automatically once the component is on the page. Any element with data-hev-find-open opens it on click — wire up as many triggers as you like (header butt…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "<button type=\"button\" data-hev-find-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<a href=\"#\" data-hev-find-open>Search the docs</a>",
+          "chunkId": "api/search-overlay#opening-the-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "⌘K",
+          "chunkId": "api/search-overlay#opening-the-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "Ctrl-K",
+          "chunkId": "api/search-overlay#opening-the-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "data-hev-find-open",
+          "chunkId": "api/search-overlay#opening-the-overlay"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay#opening-the-overlay",
+          "url": "/docs/api/search-overlay#opening-the-overlay",
+          "anchor": "opening-the-overlay"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "opening",
+        "overlay",
+        "ways",
+        "both",
+        "built",
+        "ctrl",
+        "bound",
+        "automatically",
+        "once",
+        "component",
+        "page",
+        "element",
+        "data",
+        "find",
+        "open",
+        "opens",
+        "click",
+        "wire",
+        "many",
+        "triggers",
+        "like",
+        "header",
+        "butt",
+        "button",
+        "type",
+        "search",
+        "href",
+        "docs",
+        "sidebar",
+        "inline",
+        "links"
+      ]
+    },
+    {
+      "id": "api/search-overlay#props",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": "Props",
+      "group": "API",
+      "url": "/docs/api/search-overlay#props",
+      "summary": "Props Prop Type Default Description endpoint string '/api/find' Endpoint the overlay posts queries to. Must match the integration's endpoint option. placeholder string 'Search the docs…' Placeholder text for the input. d…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "<SearchOverlay\n  endpoint=\"/api/find\"\n  placeholder=\"Search hev find…\"\n  debounce={400}\n/>",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "endpoint",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "string",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "'/api/find'",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "placeholder",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "'Search the docs…'",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "debounce",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "number",
+          "chunkId": "api/search-overlay#props"
+        },
+        {
+          "kind": "code",
+          "literal": "500",
+          "chunkId": "api/search-overlay#props"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay#props",
+          "url": "/docs/api/search-overlay#props",
+          "anchor": "props"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "props",
+        "prop",
+        "type",
+        "default",
+        "description",
+        "endpoint",
+        "string",
+        "find",
+        "overlay",
+        "posts",
+        "queries",
+        "must",
+        "match",
+        "integration",
+        "option",
+        "placeholder",
+        "search",
+        "docs",
+        "text",
+        "input",
+        "searchoverlay",
+        "debounce",
+        "number",
+        "milliseconds",
+        "after",
+        "typing",
+        "stops",
+        "before",
+        "keyword",
+        "query",
+        "sent"
+      ]
+    },
+    {
+      "id": "api/search-overlay#the-mode-toggle",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": "The mode toggle",
+      "group": "API",
+      "url": "/docs/api/search-overlay#the-mode-toggle",
+      "summary": "The mode toggle The overlay persists an \"AI on Enter\" preference in localStorage under the key hev-find:mode (agentic or keyword). Readers who never want the model call can flip it off; the choice survives reloads.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "localStorage",
+          "chunkId": "api/search-overlay#the-mode-toggle"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-find:mode",
+          "chunkId": "api/search-overlay#the-mode-toggle"
+        },
+        {
+          "kind": "code",
+          "literal": "agentic",
+          "chunkId": "api/search-overlay#the-mode-toggle"
+        },
+        {
+          "kind": "code",
+          "literal": "keyword",
+          "chunkId": "api/search-overlay#the-mode-toggle"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay#the-mode-toggle",
+          "url": "/docs/api/search-overlay#the-mode-toggle",
+          "anchor": "the-mode-toggle"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "mode",
+        "toggle",
+        "overlay",
+        "persists",
+        "enter",
+        "preference",
+        "localstorage",
+        "under",
+        "find",
+        "agentic",
+        "keyword",
+        "readers",
+        "never",
+        "want",
+        "model",
+        "call",
+        "flip",
+        "choice",
+        "survives",
+        "reloads"
+      ]
+    },
+    {
+      "id": "api/search-overlay#the-streamed-answer",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": "The streamed answer",
+      "group": "API",
+      "url": "/docs/api/search-overlay#the-streamed-answer",
+      "summary": "The streamed answer Pressing Enter (with a key configured) replaces the keyword rows with an answer panel. The sub-queries the model runs appear live as a faint searched: … line, then the grounded answer streams in token…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "searched: …",
+          "chunkId": "api/search-overlay#the-streamed-answer"
+        },
+        {
+          "kind": "code",
+          "literal": "/docs/page#anchor",
+          "chunkId": "api/search-overlay#the-streamed-answer"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay#the-streamed-answer",
+          "url": "/docs/api/search-overlay#the-streamed-answer",
+          "anchor": "the-streamed-answer"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "streamed",
+        "answer",
+        "pressing",
+        "enter",
+        "configured",
+        "replaces",
+        "keyword",
+        "rows",
+        "panel",
+        "queries",
+        "model",
+        "runs",
+        "appear",
+        "live",
+        "faint",
+        "searched",
+        "line",
+        "grounded",
+        "streams",
+        "token",
+        "docs",
+        "page",
+        "anchor",
+        "blinking",
+        "caret",
+        "until",
+        "completes",
+        "inline",
+        "deep",
+        "links",
+        "prose",
+        "styled",
+        "accent",
+        "color",
+        "point",
+        "exact",
+        "hovering",
+        "shows",
+        "section",
+        "breadcrumb"
+      ]
+    },
+    {
+      "id": "api/search-overlay#theming",
+      "kind": "section",
+      "title": "SearchOverlay component",
+      "heading": "Theming",
+      "group": "API",
+      "url": "/docs/api/search-overlay#theming",
+      "summary": "Theming The overlay's markup uses the as- class prefix and reads your page's CSS custom properties. Define these on :root (this site's values shown) and the overlay inherits your palette: :root { --paper: #111111; / over…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": ":root {\n  --paper: #111111;       /* overlay background */\n  --ink: #fafaf5;         /* primary text */\n  --muted: #6b6b66;       /* secondary text */\n  --signal: #e25822;      /* accent / active state */\n}",
+          "chunkId": "api/search-overlay#theming"
+        },
+        {
+          "kind": "code",
+          "literal": "as-",
+          "chunkId": "api/search-overlay#theming"
+        },
+        {
+          "kind": "code",
+          "literal": ":root",
+          "chunkId": "api/search-overlay#theming"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/search-overlay#theming",
+          "url": "/docs/api/search-overlay#theming",
+          "anchor": "theming"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "theming",
+        "overlay",
+        "markup",
+        "uses",
+        "class",
+        "prefix",
+        "reads",
+        "page",
+        "custom",
+        "properties",
+        "define",
+        "these",
+        "root",
+        "site",
+        "values",
+        "shown",
+        "inherits",
+        "palette",
+        "paper",
+        "111111",
+        "background",
+        "fafaf5",
+        "primary",
+        "text",
+        "muted",
+        "6b6b66",
+        "secondary",
+        "signal",
+        "e25822",
+        "accent",
+        "active",
+        "state",
+        "because",
+        "component",
+        "ships",
+        "scoped",
+        "styles",
+        "keyed",
+        "variables",
+        "matching"
+      ]
+    },
+    {
+      "id": "concepts",
+      "kind": "section",
+      "title": "Concepts",
+      "heading": null,
+      "group": "Overview",
+      "url": "/docs/concepts",
+      "summary": "How hev find works: heading-chunk indexing with real anchors, keyword prefiltering widened by a glossary, the bounded agentic search loop, and the offline knowledge graph. hev find is three parts: a heading-chunk index w…",
+      "facts": [
+        {
+          "kind": "value",
+          "literal": "Diagram.astro",
+          "chunkId": "concepts"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "concepts"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "concepts",
+          "url": "/docs/concepts",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "find",
+        "works",
+        "heading",
+        "chunk",
+        "indexing",
+        "real",
+        "anchors",
+        "keyword",
+        "prefiltering",
+        "widened",
+        "glossary",
+        "bounded",
+        "agentic",
+        "search",
+        "loop",
+        "offline",
+        "knowledge",
+        "graph",
+        "three",
+        "parts",
+        "index",
+        "diagram",
+        "astro",
+        "callout",
+        "navigates",
+        "distilled",
+        "source",
+        "grounded",
+        "shadow",
+        "site",
+        "reads",
+        "page",
+        "explains",
+        "together",
+        "findmapdiagram",
+        "split",
+        "matters",
+        "built",
+        "strong",
+        "model"
+      ]
+    },
+    {
+      "id": "concepts#chunks-and-anchors",
+      "kind": "section",
+      "title": "Concepts",
+      "heading": "Chunks and anchors",
+      "group": "Overview",
+      "url": "/docs/concepts#chunks-and-anchors",
+      "summary": "Chunks and anchors hev find does not index pages — it indexes sections. Each document is split on its headings (up to a configurable depth, default ## and ###). Content before the first heading becomes the intro chunk wh…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "##",
+          "chunkId": "concepts#chunks-and-anchors"
+        },
+        {
+          "kind": "code",
+          "literal": "###",
+          "chunkId": "concepts#chunks-and-anchors"
+        },
+        {
+          "kind": "code",
+          "literal": "basePath + slug + #anchor",
+          "chunkId": "concepts#chunks-and-anchors"
+        },
+        {
+          "kind": "code",
+          "literal": "github-slugger",
+          "chunkId": "concepts#chunks-and-anchors"
+        },
+        {
+          "kind": "code",
+          "literal": "getCollection",
+          "chunkId": "concepts#chunks-and-anchors"
+        },
+        {
+          "kind": "value",
+          "literal": "github.com",
+          "chunkId": "concepts#chunks-and-anchors"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "concepts#chunks-and-anchors",
+          "url": "/docs/concepts#chunks-and-anchors",
+          "anchor": "chunks-and-anchors"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "chunks",
+        "anchors",
+        "find",
+        "does",
+        "index",
+        "pages",
+        "indexes",
+        "sections",
+        "document",
+        "split",
+        "headings",
+        "configurable",
+        "depth",
+        "default",
+        "content",
+        "before",
+        "first",
+        "heading",
+        "becomes",
+        "intro",
+        "chunk",
+        "basepath",
+        "slug",
+        "anchor",
+        "github",
+        "slugger",
+        "getcollection",
+        "whose",
+        "page",
+        "itself",
+        "carries",
+        "section",
+        "cleaned",
+        "prose",
+        "form",
+        "generated",
+        "same",
+        "astro",
+        "renderer",
+        "uses"
+      ]
+    },
+    {
+      "id": "concepts#degradation-by-design",
+      "kind": "section",
+      "title": "Concepts",
+      "heading": "Degradation, by design",
+      "group": "Overview",
+      "url": "/docs/concepts#degradation-by-design",
+      "summary": "Degradation, by design hev find is built to keep working as pieces drop away: No key at runtime → keyword mode only. The overlay still searches. No key at build → the committed kg.json is kept; the build warns but never…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "kg.json",
+          "chunkId": "concepts#degradation-by-design"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "concepts#degradation-by-design",
+          "url": "/docs/concepts#degradation-by-design",
+          "anchor": "degradation-by-design"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "degradation",
+        "design",
+        "find",
+        "built",
+        "keep",
+        "working",
+        "pieces",
+        "drop",
+        "away",
+        "runtime",
+        "keyword",
+        "mode",
+        "only",
+        "overlay",
+        "still",
+        "searches",
+        "build",
+        "committed",
+        "json",
+        "kept",
+        "warns",
+        "never",
+        "fails",
+        "lack",
+        "older",
+        "node",
+        "less",
+        "agentic",
+        "loop",
+        "falls",
+        "back",
+        "style",
+        "retrieval",
+        "answers",
+        "just",
+        "without",
+        "distilled",
+        "stale",
+        "logs",
+        "line"
+      ]
+    },
+    {
+      "id": "concepts#keyword-search-and-the-glossary",
+      "kind": "section",
+      "title": "Concepts",
+      "heading": "Keyword search and the glossary",
+      "group": "Overview",
+      "url": "/docs/concepts#keyword-search-and-the-glossary",
+      "summary": "Keyword search and the glossary As the reader types, the server runs a dependency-free prefilter over the chunks: 1. Expand the query. Each term picks up its glossary aliases (k8s → kubernetes) and the tokens of any matc…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "k8s",
+          "chunkId": "concepts#keyword-search-and-the-glossary"
+        },
+        {
+          "kind": "code",
+          "literal": "kubernetes",
+          "chunkId": "concepts#keyword-search-and-the-glossary"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "concepts#keyword-search-and-the-glossary",
+          "url": "/docs/concepts#keyword-search-and-the-glossary",
+          "anchor": "keyword-search-and-the-glossary"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "keyword",
+        "search",
+        "glossary",
+        "reader",
+        "types",
+        "server",
+        "runs",
+        "dependency",
+        "free",
+        "prefilter",
+        "chunks",
+        "expand",
+        "query",
+        "term",
+        "picks",
+        "aliases",
+        "kubernetes",
+        "tokens",
+        "matc",
+        "matched",
+        "expansion",
+        "additive",
+        "capped",
+        "score",
+        "token",
+        "overlap",
+        "between",
+        "expanded",
+        "chunk",
+        "document",
+        "default",
+        "long",
+        "page",
+        "monopolize",
+        "results",
+        "take",
+        "pool",
+        "excerpt",
+        "around",
+        "first"
+      ]
+    },
+    {
+      "id": "concepts#the-agentic-search-loop",
+      "kind": "section",
+      "title": "Concepts",
+      "heading": "The agentic search loop",
+      "group": "Overview",
+      "url": "/docs/concepts#the-agentic-search-loop",
+      "summary": "The agentic search loop When the reader presses Enter (and an API key is present), the query goes to a bounded tool-use loop that ends by streaming a grounded answer. It runs in two phases. Phase 1 — gather. The model is…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "open_section({ id })",
+          "chunkId": "concepts#the-agentic-search-loop"
+        },
+        {
+          "kind": "code",
+          "literal": "facts",
+          "chunkId": "concepts#the-agentic-search-loop"
+        },
+        {
+          "kind": "code",
+          "literal": "maxIterations",
+          "chunkId": "concepts#the-agentic-search-loop"
+        },
+        {
+          "kind": "code",
+          "literal": "url",
+          "chunkId": "concepts#the-agentic-search-loop"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "concepts#the-agentic-search-loop",
+          "url": "/docs/concepts#the-agentic-search-loop",
+          "anchor": "the-agentic-search-loop"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "agentic",
+        "search",
+        "loop",
+        "reader",
+        "presses",
+        "enter",
+        "present",
+        "query",
+        "goes",
+        "bounded",
+        "tool",
+        "ends",
+        "streaming",
+        "grounded",
+        "answer",
+        "runs",
+        "phases",
+        "phase",
+        "gather",
+        "model",
+        "open",
+        "section",
+        "facts",
+        "maxiterations",
+        "given",
+        "every",
+        "summary",
+        "front",
+        "plus",
+        "opensection",
+        "opens",
+        "read",
+        "distilled",
+        "verbatim",
+        "flags",
+        "code",
+        "identifiers",
+        "reference",
+        "sections",
+        "source"
+      ]
+    },
+    {
+      "id": "concepts#the-knowledge-graph",
+      "kind": "section",
+      "title": "Concepts",
+      "heading": "The knowledge graph",
+      "group": "Overview",
+      "url": "/docs/concepts#the-knowledge-graph",
+      "summary": "The knowledge graph The knowledge graph (kg.json) is built offline by a strong model (Claude Opus 4.8 by default) and committed to your repo as a reviewable artifact — the agent's view of your docs. It holds: nodes — one…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "kg.json",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "nodes",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "summary",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "facts",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "source",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "source-primary",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "overview",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "context",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary",
+          "chunkId": "concepts#the-knowledge-graph"
+        },
+        {
+          "kind": "value",
+          "literal": "4.8",
+          "chunkId": "concepts#the-knowledge-graph"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "concepts#the-knowledge-graph",
+          "url": "/docs/concepts#the-knowledge-graph",
+          "anchor": "the-knowledge-graph"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "knowledge",
+        "graph",
+        "json",
+        "built",
+        "offline",
+        "strong",
+        "model",
+        "claude",
+        "opus",
+        "default",
+        "committed",
+        "repo",
+        "reviewable",
+        "artifact",
+        "agent",
+        "view",
+        "docs",
+        "holds",
+        "nodes",
+        "summary",
+        "facts",
+        "source",
+        "primary",
+        "overview",
+        "context",
+        "glossary",
+        "distilled",
+        "section",
+        "heading",
+        "reasons",
+        "verbatim",
+        "flags",
+        "code",
+        "identifiers",
+        "quotes",
+        "exactly",
+        "link",
+        "back",
+        "real",
+        "page"
+      ]
+    },
+    {
+      "id": "concepts#the-system-prompt-is-cached",
+      "kind": "section",
+      "title": "Concepts",
+      "heading": "The system prompt is cached",
+      "group": "Overview",
+      "url": "/docs/concepts#the-system-prompt-is-cached",
+      "summary": "The system prompt is cached The knowledge graph's map and section summaries are injected into the system prompt with a cachecontrol marker, so across the rounds it's a prompt-cache hit rather than re-sent tokens. The ans…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "cache_control",
+          "chunkId": "concepts#the-system-prompt-is-cached"
+        },
+        {
+          "kind": "value",
+          "literal": "4.5",
+          "chunkId": "concepts#the-system-prompt-is-cached"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "concepts#the-system-prompt-is-cached",
+          "url": "/docs/concepts#the-system-prompt-is-cached",
+          "anchor": "the-system-prompt-is-cached"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "system",
+        "prompt",
+        "cached",
+        "knowledge",
+        "graph",
+        "section",
+        "summaries",
+        "injected",
+        "cachecontrol",
+        "marker",
+        "across",
+        "rounds",
+        "cache",
+        "rather",
+        "sent",
+        "tokens",
+        "control",
+        "answer",
+        "turn",
+        "changes",
+        "tool",
+        "none",
+        "reuse",
+        "search",
+        "last",
+        "call",
+        "anyway",
+        "loop",
+        "model",
+        "defaults",
+        "claude",
+        "haiku",
+        "configurable"
+      ]
+    },
+    {
+      "id": "index",
+      "kind": "section",
+      "title": "Introduction",
+      "heading": null,
+      "group": "Overview",
+      "url": "/docs",
+      "summary": "hev find is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter. hev find is a search overlay for Astro doc…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "⌘K",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "/docs/page#section",
+          "chunkId": "index"
+        },
+        {
+          "kind": "value",
+          "literal": "Diagram.astro",
+          "chunkId": "index"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "index"
+        },
+        {
+          "kind": "value",
+          "literal": "astro.build",
+          "chunkId": "index"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "index",
+          "url": "/docs",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "find",
+        "astro",
+        "integration",
+        "adds",
+        "search",
+        "overlay",
+        "docs",
+        "site",
+        "instant",
+        "keyword",
+        "anchored",
+        "headings",
+        "plus",
+        "optional",
+        "claude",
+        "powered",
+        "loop",
+        "enter",
+        "page",
+        "section",
+        "diagram",
+        "callout",
+        "build",
+        "documentation",
+        "sites",
+        "drop",
+        "component",
+        "layout",
+        "readers",
+        "command",
+        "palette",
+        "content",
+        "collection",
+        "searches",
+        "ways",
+        "reader",
+        "types",
+        "runs",
+        "server",
+        "links"
+      ]
+    },
+    {
+      "id": "index#how-it-fits-an-astro-site",
+      "kind": "section",
+      "title": "Introduction",
+      "heading": "How it fits an Astro site",
+      "group": "Overview",
+      "url": "/docs#how-it-fits-an-astro-site",
+      "summary": "How it fits an Astro site hev find ships as a single package, @hev/find, exposing an Astro integration as its default export: The integration injects an on-demand /api/find route, exposes resolved config and the knowledg…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "@hev/find",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "/api/find",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "astro build",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "SearchOverlay.astro",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "data-hev-find-open",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "⌘K",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-find-kg",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "index#how-it-fits-an-astro-site",
+          "url": "/docs#how-it-fits-an-astro-site",
+          "anchor": "how-it-fits-an-astro-site"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "fits",
+        "astro",
+        "site",
+        "find",
+        "ships",
+        "single",
+        "package",
+        "exposing",
+        "integration",
+        "default",
+        "export",
+        "injects",
+        "demand",
+        "route",
+        "exposes",
+        "resolved",
+        "config",
+        "knowledg",
+        "build",
+        "searchoverlay",
+        "data",
+        "open",
+        "anthropic",
+        "knowledge",
+        "graph",
+        "through",
+        "virtual",
+        "modules",
+        "runs",
+        "during",
+        "component",
+        "renders",
+        "palette",
+        "element",
+        "attribute",
+        "opens",
+        "wired",
+        "automatically",
+        "endpoint",
+        "answers"
+      ]
+    },
+    {
+      "id": "index#next-steps",
+      "kind": "section",
+      "title": "Introduction",
+      "heading": "Next steps",
+      "group": "Overview",
+      "url": "/docs#next-steps",
+      "summary": "Next steps Quick start — add search to your site in five minutes. Concepts — chunks, anchors, the agentic loop, and the knowledge graph. Tradeoffs and Limits — what you're choosing, and what hev find deliberately doesn't…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "index#next-steps",
+          "url": "/docs#next-steps",
+          "anchor": "next-steps"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "next",
+        "steps",
+        "quick",
+        "start",
+        "search",
+        "site",
+        "five",
+        "minutes",
+        "concepts",
+        "chunks",
+        "anchors",
+        "agentic",
+        "loop",
+        "knowledge",
+        "graph",
+        "tradeoffs",
+        "limits",
+        "choosing",
+        "find",
+        "deliberately",
+        "doesn",
+        "reference",
+        "every",
+        "option",
+        "component",
+        "props",
+        "endpoint",
+        "contract"
+      ]
+    },
+    {
+      "id": "index#who-this-is-for",
+      "kind": "section",
+      "title": "Introduction",
+      "heading": "Who this is for",
+      "group": "Overview",
+      "url": "/docs#who-this-is-for",
+      "summary": "Who this is for You're building or maintaining an Astro 5 docs site. Your content lives in a content collection as Markdown or MDX. You want search that: works out of the box without standing up a service or running a cr…",
+      "facts": [
+        {
+          "kind": "value",
+          "literal": "docs.astro.build",
+          "chunkId": "index#who-this-is-for"
+        },
+        {
+          "kind": "value",
+          "literal": "pagefind.app",
+          "chunkId": "index#who-this-is-for"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "index#who-this-is-for",
+          "url": "/docs#who-this-is-for",
+          "anchor": "who-this-is-for"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "building",
+        "maintaining",
+        "astro",
+        "docs",
+        "site",
+        "content",
+        "lives",
+        "collection",
+        "markdown",
+        "want",
+        "search",
+        "works",
+        "without",
+        "standing",
+        "service",
+        "running",
+        "build",
+        "pagefind",
+        "crawler",
+        "deep",
+        "links",
+        "right",
+        "section",
+        "instead",
+        "dumping",
+        "reader",
+        "long",
+        "page",
+        "answer",
+        "question",
+        "phrased",
+        "words",
+        "just",
+        "match",
+        "keywords",
+        "only",
+        "need",
+        "keyword",
+        "static",
+        "never"
+      ]
+    },
+    {
+      "id": "limits",
+      "kind": "section",
+      "title": "Limits",
+      "heading": null,
+      "group": "Overview",
+      "url": "/docs/limits",
+      "summary": "The hard boundaries of hev find: corpus scope, recall ceiling, single-call knowledge-graph build, frontmatter parsing, latency, and adapter requirements — what it deliberately does not do. These are the boundaries you sh…",
+      "facts": [
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "limits"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits",
+          "url": "/docs/limits",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "hard",
+        "boundaries",
+        "find",
+        "corpus",
+        "scope",
+        "recall",
+        "ceiling",
+        "single",
+        "call",
+        "knowledge",
+        "graph",
+        "build",
+        "frontmatter",
+        "parsing",
+        "latency",
+        "adapter",
+        "requirements",
+        "deliberately",
+        "does",
+        "these",
+        "callout",
+        "astro",
+        "should",
+        "know",
+        "before",
+        "adopting",
+        "none",
+        "bugs",
+        "edges",
+        "current",
+        "design",
+        "covers"
+      ]
+    },
+    {
+      "id": "limits#a-server-route-is-required",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "A server route is required",
+      "group": "Overview",
+      "url": "/docs/limits#a-server-route-is-required",
+      "summary": "A server route is required The /api/find endpoint renders on demand, so a fully static build cannot serve search. You need a server or hybrid adapter (Node, Cloudflare, Vercel, etc.). Static-only sites should use a stati…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "/api/find",
+          "chunkId": "limits#a-server-route-is-required"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits#a-server-route-is-required",
+          "url": "/docs/limits#a-server-route-is-required",
+          "anchor": "a-server-route-is-required"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "server",
+        "route",
+        "required",
+        "find",
+        "endpoint",
+        "renders",
+        "demand",
+        "fully",
+        "static",
+        "build",
+        "cannot",
+        "serve",
+        "search",
+        "need",
+        "hybrid",
+        "adapter",
+        "node",
+        "cloudflare",
+        "vercel",
+        "only",
+        "sites",
+        "should",
+        "stati",
+        "tool",
+        "instead",
+        "tradeoffs"
+      ]
+    },
+    {
+      "id": "limits#agentic-search-adds-latency",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "Agentic search adds latency",
+      "group": "Overview",
+      "url": "/docs/limits#agentic-search-adds-latency",
+      "summary": "Agentic search adds latency The agentic path is bounded by maxIterations (default 4) Claude round-trips — worst case a few seconds. It is not instant, by nature. The keyword path is the instant lane and always available;…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "maxIterations",
+          "chunkId": "limits#agentic-search-adds-latency"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits#agentic-search-adds-latency",
+          "url": "/docs/limits#agentic-search-adds-latency",
+          "anchor": "agentic-search-adds-latency"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "agentic",
+        "search",
+        "adds",
+        "latency",
+        "path",
+        "bounded",
+        "maxiterations",
+        "default",
+        "claude",
+        "round",
+        "trips",
+        "worst",
+        "case",
+        "seconds",
+        "instant",
+        "nature",
+        "keyword",
+        "lane",
+        "always",
+        "available",
+        "considered",
+        "tune",
+        "down",
+        "need",
+        "tighter",
+        "ceiling"
+      ]
+    },
+    {
+      "id": "limits#anchors-depend-on-astros-slugger",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "Anchors depend on Astro's slugger",
+      "group": "Overview",
+      "url": "/docs/limits#anchors-depend-on-astros-slugger",
+      "summary": "Anchors depend on Astro's slugger Deep links are only correct as long as the heading slugs hev find generates match Astro's rendered id attributes. hev find uses the same github-slugger to stay aligned, and ships a hev-f…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "id",
+          "chunkId": "limits#anchors-depend-on-astros-slugger"
+        },
+        {
+          "kind": "code",
+          "literal": "github-slugger",
+          "chunkId": "limits#anchors-depend-on-astros-slugger"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-find-kg verify",
+          "chunkId": "limits#anchors-depend-on-astros-slugger"
+        },
+        {
+          "kind": "code",
+          "literal": "verify",
+          "chunkId": "limits#anchors-depend-on-astros-slugger"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits#anchors-depend-on-astros-slugger",
+          "url": "/docs/limits#anchors-depend-on-astros-slugger",
+          "anchor": "anchors-depend-on-astros-slugger"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "anchors",
+        "depend",
+        "astro",
+        "slugger",
+        "deep",
+        "links",
+        "only",
+        "correct",
+        "long",
+        "heading",
+        "slugs",
+        "find",
+        "generates",
+        "match",
+        "rendered",
+        "attributes",
+        "uses",
+        "same",
+        "github",
+        "stay",
+        "aligned",
+        "ships",
+        "verify",
+        "command",
+        "fails",
+        "chunk",
+        "anchor",
+        "missing",
+        "built",
+        "html",
+        "wire",
+        "ever",
+        "changes",
+        "slugging",
+        "verifier",
+        "catches",
+        "before",
+        "broken",
+        "link"
+      ]
+    },
+    {
+      "id": "limits#frontmatter-parsing-is-a-flat-yaml-subset",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "Frontmatter parsing is a flat-YAML subset",
+      "group": "Overview",
+      "url": "/docs/limits#frontmatter-parsing-is-a-flat-yaml-subset",
+      "summary": "Frontmatter parsing is a flat-YAML subset The offline build parses frontmatter with a small flat-YAML splitter, not a full YAML parser. It handles the common docs schema (string and number fields). Nested frontmatter str…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "getCollection",
+          "chunkId": "limits#frontmatter-parsing-is-a-flat-yaml-subset"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits#frontmatter-parsing-is-a-flat-yaml-subset",
+          "url": "/docs/limits#frontmatter-parsing-is-a-flat-yaml-subset",
+          "anchor": "frontmatter-parsing-is-a-flat-yaml-subset"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "frontmatter",
+        "parsing",
+        "flat",
+        "yaml",
+        "subset",
+        "offline",
+        "build",
+        "parses",
+        "small",
+        "splitter",
+        "full",
+        "parser",
+        "handles",
+        "common",
+        "docs",
+        "schema",
+        "string",
+        "number",
+        "fields",
+        "nested",
+        "getcollection",
+        "structures",
+        "aren",
+        "supported",
+        "time",
+        "only",
+        "affects",
+        "knowledge",
+        "graph",
+        "reading",
+        "files",
+        "disk",
+        "runtime",
+        "index",
+        "uses",
+        "astro",
+        "honors",
+        "real"
+      ]
+    },
+    {
+      "id": "limits#recall-has-a-keyword-ceiling",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "Recall has a keyword ceiling",
+      "group": "Overview",
+      "url": "/docs/limits#recall-has-a-keyword-ceiling",
+      "summary": "Recall has a keyword ceiling Retrieval is keyword token-overlap widened by the glossary — not embeddings. The agentic loop grounds its answer in what retrieval surfaces; it cannot ground in — or link to — what retrieval…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "k8s",
+          "chunkId": "limits#recall-has-a-keyword-ceiling"
+        },
+        {
+          "kind": "code",
+          "literal": "kubernetes",
+          "chunkId": "limits#recall-has-a-keyword-ceiling"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits#recall-has-a-keyword-ceiling",
+          "url": "/docs/limits#recall-has-a-keyword-ceiling",
+          "anchor": "recall-has-a-keyword-ceiling"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "recall",
+        "keyword",
+        "ceiling",
+        "retrieval",
+        "token",
+        "overlap",
+        "widened",
+        "glossary",
+        "embeddings",
+        "agentic",
+        "loop",
+        "grounds",
+        "answer",
+        "surfaces",
+        "cannot",
+        "ground",
+        "link",
+        "kubernetes",
+        "missed",
+        "practice",
+        "recovers",
+        "most",
+        "synonym",
+        "cases",
+        "abbreviations",
+        "product",
+        "aliases",
+        "reader",
+        "searches",
+        "language",
+        "shares",
+        "tokens",
+        "docs",
+        "covered",
+        "right",
+        "section",
+        "never",
+        "enter",
+        "candidate",
+        "pool"
+      ]
+    },
+    {
+      "id": "limits#secrets-live-server-side",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "Secrets live server-side",
+      "group": "Overview",
+      "url": "/docs/limits#secrets-live-server-side",
+      "summary": "Secrets live server-side The agentic path needs ANTHROPICAPIKEY in the server environment that runs /api/find. The key is never exposed to the browser. If the key isn't present at runtime, the endpoint serves keyword res…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "limits#secrets-live-server-side"
+        },
+        {
+          "kind": "code",
+          "literal": "/api/find",
+          "chunkId": "limits#secrets-live-server-side"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits#secrets-live-server-side",
+          "url": "/docs/limits#secrets-live-server-side",
+          "anchor": "secrets-live-server-side"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "secrets",
+        "live",
+        "server",
+        "side",
+        "agentic",
+        "path",
+        "needs",
+        "anthropicapikey",
+        "environment",
+        "runs",
+        "find",
+        "never",
+        "exposed",
+        "browser",
+        "present",
+        "runtime",
+        "endpoint",
+        "serves",
+        "keyword",
+        "anthropic",
+        "results",
+        "search",
+        "degrades",
+        "doesn",
+        "break"
+      ]
+    },
+    {
+      "id": "limits#the-corpus-is-your-content-collection",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "The corpus is your content collection",
+      "group": "Overview",
+      "url": "/docs/limits#the-corpus-is-your-content-collection",
+      "summary": "The corpus is your content collection hev find searches the Astro content collection(s) you configure, and nothing else. There is no crawler, no external sitemap ingestion, and no way to index pages that aren't collectio…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": ".astro",
+          "chunkId": "limits#the-corpus-is-your-content-collection"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "limits#the-corpus-is-your-content-collection",
+          "url": "/docs/limits#the-corpus-is-your-content-collection",
+          "anchor": "the-corpus-is-your-content-collection"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "corpus",
+        "content",
+        "collection",
+        "find",
+        "searches",
+        "astro",
+        "configure",
+        "nothing",
+        "else",
+        "there",
+        "crawler",
+        "external",
+        "sitemap",
+        "ingestion",
+        "index",
+        "pages",
+        "aren",
+        "collectio",
+        "entries",
+        "hand",
+        "written",
+        "example",
+        "configured",
+        "appear",
+        "search",
+        "want",
+        "searchable"
+      ]
+    },
+    {
+      "id": "limits#the-knowledge-graph-build-is-a-single-model-call",
+      "kind": "section",
+      "title": "Limits",
+      "heading": "The knowledge-graph build is a single model call",
+      "group": "Overview",
+      "url": "/docs/limits#the-knowledge-graph-build-is-a-single-model-call",
+      "summary": "The knowledge-graph build is a single model call The offline build sends your full cleaned corpus to the model in one call. For a typical docs site (dozens of pages) this fits comfortably. A very large corpus would excee…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "limits#the-knowledge-graph-build-is-a-single-model-call",
+          "url": "/docs/limits#the-knowledge-graph-build-is-a-single-model-call",
+          "anchor": "the-knowledge-graph-build-is-a-single-model-call"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "knowledge",
+        "graph",
+        "build",
+        "single",
+        "model",
+        "call",
+        "offline",
+        "sends",
+        "full",
+        "cleaned",
+        "corpus",
+        "typical",
+        "docs",
+        "site",
+        "dozens",
+        "pages",
+        "fits",
+        "comfortably",
+        "very",
+        "large",
+        "would",
+        "excee",
+        "exceed",
+        "context",
+        "window",
+        "reduce",
+        "builder",
+        "summaries",
+        "merged",
+        "noted",
+        "follow",
+        "implemented",
+        "today",
+        "assume"
+      ]
+    },
+    {
+      "id": "quickstart",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": null,
+      "group": "Overview",
+      "url": "/docs/quickstart",
+      "summary": "Add hev find to an Astro docs site: install the package, register the integration, drop the SearchOverlay component in your layout, and build the knowledge graph. This walks through adding search to an existing Astro 5 d…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "src/content/docs",
+          "chunkId": "quickstart"
+        },
+        {
+          "kind": "value",
+          "literal": "Steps.astro",
+          "chunkId": "quickstart"
+        },
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "quickstart"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart",
+          "url": "/docs/quickstart",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "find",
+        "astro",
+        "docs",
+        "site",
+        "install",
+        "package",
+        "register",
+        "integration",
+        "drop",
+        "searchoverlay",
+        "component",
+        "layout",
+        "build",
+        "knowledge",
+        "graph",
+        "walks",
+        "through",
+        "adding",
+        "search",
+        "existing",
+        "content",
+        "steps",
+        "callout",
+        "whose",
+        "lives",
+        "collection",
+        "example",
+        "takes",
+        "about",
+        "five",
+        "minutes",
+        "keyword",
+        "path",
+        "works",
+        "immediately",
+        "agentic",
+        "turns",
+        "once"
+      ]
+    },
+    {
+      "id": "quickstart#1-install",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "1. Install",
+      "group": "Overview",
+      "url": "/docs/quickstart#1-install",
+      "summary": "1. Install Once published, install from npm: pnpm add @hev/find Until then, consume the latest version straight from the package subdirectory on GitHub: pnpm add \"git+ssh://git@github.com/hev/find.git#main&path:/packages…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "pnpm add @hev/find",
+          "chunkId": "quickstart#1-install"
+        },
+        {
+          "kind": "code",
+          "literal": "pnpm add \"git+ssh://git@github.com/hev/find.git#main&path:/packages/ui\"",
+          "chunkId": "quickstart#1-install"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#1-install",
+          "url": "/docs/quickstart#1-install",
+          "anchor": "1-install"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "install",
+        "once",
+        "published",
+        "pnpm",
+        "find",
+        "until",
+        "consume",
+        "latest",
+        "version",
+        "straight",
+        "package",
+        "subdirectory",
+        "github",
+        "main",
+        "path",
+        "packages"
+      ]
+    },
+    {
+      "id": "quickstart#2-register-the-integration",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "2. Register the integration",
+      "group": "Overview",
+      "url": "/docs/quickstart#2-register-the-integration",
+      "summary": "2. Register the integration // astro.config.mjs integrations: [ hevFind({ collections: [\"docs\"], // your content collection name(s) basePath: \"/docs/\", // slug → URL prefix: basePath + slug }), ], }); collections is the…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "// astro.config.mjs\nimport { defineConfig } from \"astro/config\";\nimport hevFind from \"@hev/find\";\n\nexport default defineConfig({\n  integrations: [\n    hevFind({\n      collections: [\"docs\"],   // your content collection name(s)\n      basePath: \"/docs/\",      // slug → URL prefix: basePath + slug\n    }),\n  ],\n});",
+          "chunkId": "quickstart#2-register-the-integration"
+        },
+        {
+          "kind": "code",
+          "literal": "collections",
+          "chunkId": "quickstart#2-register-the-integration"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#2-register-the-integration",
+          "url": "/docs/quickstart#2-register-the-integration",
+          "anchor": "2-register-the-integration"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "register",
+        "integration",
+        "astro",
+        "config",
+        "integrations",
+        "hevfind",
+        "collections",
+        "docs",
+        "content",
+        "collection",
+        "name",
+        "basepath",
+        "slug",
+        "prefix",
+        "import",
+        "defineconfig",
+        "find",
+        "export",
+        "default",
+        "option",
+        "must",
+        "everything",
+        "else",
+        "configuration",
+        "reference"
+      ]
+    },
+    {
+      "id": "quickstart#3-add-a-server-adapter",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "3. Add a server adapter",
+      "group": "Overview",
+      "url": "/docs/quickstart#3-add-a-server-adapter",
+      "summary": "3. Add a server adapter The /api/find route is rendered on demand. Add whichever adapter matches your host; this site uses Cloudflare: // astro.config.mjs adapter: cloudflare({ platformProxy: { enabled: true } }), // ...…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "// astro.config.mjs\nimport cloudflare from \"@astrojs/cloudflare\";\n\nexport default defineConfig({\n  adapter: cloudflare({ platformProxy: { enabled: true } }),\n  // ...integrations as above\n});",
+          "chunkId": "quickstart#3-add-a-server-adapter"
+        },
+        {
+          "kind": "code",
+          "literal": "/api/find",
+          "chunkId": "quickstart#3-add-a-server-adapter"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#3-add-a-server-adapter",
+          "url": "/docs/quickstart#3-add-a-server-adapter",
+          "anchor": "3-add-a-server-adapter"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "server",
+        "adapter",
+        "find",
+        "route",
+        "rendered",
+        "demand",
+        "whichever",
+        "matches",
+        "host",
+        "site",
+        "uses",
+        "cloudflare",
+        "astro",
+        "config",
+        "platformproxy",
+        "enabled",
+        "true",
+        "import",
+        "astrojs",
+        "export",
+        "default",
+        "defineconfig",
+        "integrations",
+        "above",
+        "existing",
+        "pages",
+        "stay",
+        "prerendered",
+        "only",
+        "runs",
+        "function"
+      ]
+    },
+    {
+      "id": "quickstart#4-render-the-overlay",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "4. Render the overlay",
+      "group": "Overview",
+      "url": "/docs/quickstart#4-render-the-overlay",
+      "summary": "4. Render the overlay Add the component once, somewhere global like your base layout, and give readers a way to open it. Any element with data-hev-find-open opens the palette, and ⌘K is bound automatically. // src/layout…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "---\n// src/layouts/Base.astro\nimport SearchOverlay from \"@hev/find/components/SearchOverlay.astro\";\n---\n<button type=\"button\" data-hev-find-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<slot />\n\n<SearchOverlay />",
+          "chunkId": "quickstart#4-render-the-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "data-hev-find-open",
+          "chunkId": "quickstart#4-render-the-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "⌘K",
+          "chunkId": "quickstart#4-render-the-overlay"
+        },
+        {
+          "kind": "code",
+          "literal": "astro dev",
+          "chunkId": "quickstart#4-render-the-overlay"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#4-render-the-overlay",
+          "url": "/docs/quickstart#4-render-the-overlay",
+          "anchor": "4-render-the-overlay"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "render",
+        "overlay",
+        "component",
+        "once",
+        "somewhere",
+        "global",
+        "like",
+        "base",
+        "layout",
+        "give",
+        "readers",
+        "open",
+        "element",
+        "data",
+        "find",
+        "opens",
+        "palette",
+        "bound",
+        "automatically",
+        "layouts",
+        "astro",
+        "import",
+        "searchoverlay",
+        "components",
+        "button",
+        "type",
+        "search",
+        "slot",
+        "point",
+        "keyword",
+        "works",
+        "press"
+      ]
+    },
+    {
+      "id": "quickstart#5-build-the-knowledge-graph",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "5. Build the knowledge graph",
+      "group": "Overview",
+      "url": "/docs/quickstart#5-build-the-knowledge-graph",
+      "summary": "5. Build the knowledge graph The knowledge graph is an offline-built JSON file committed to your repo. It gives the agentic loop domain context and a glossary (so k8s finds kubernetes). Build it once, then whenever conte…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-find-kg build      # writes .hev-find/kg.json\npnpm exec hev-find-kg verify     # builds the site, checks every anchor resolves\ngit add .hev-find/kg.json",
+          "chunkId": "quickstart#5-build-the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "k8s",
+          "chunkId": "quickstart#5-build-the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "kubernetes",
+          "chunkId": "quickstart#5-build-the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "build",
+          "chunkId": "quickstart#5-build-the-knowledge-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "astro build",
+          "chunkId": "quickstart#5-build-the-knowledge-graph"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#5-build-the-knowledge-graph",
+          "url": "/docs/quickstart#5-build-the-knowledge-graph",
+          "anchor": "5-build-the-knowledge-graph"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "build",
+        "knowledge",
+        "graph",
+        "offline",
+        "built",
+        "json",
+        "file",
+        "committed",
+        "repo",
+        "gives",
+        "agentic",
+        "loop",
+        "domain",
+        "context",
+        "glossary",
+        "finds",
+        "kubernetes",
+        "once",
+        "whenever",
+        "conte",
+        "export",
+        "anthropic",
+        "pnpm",
+        "exec",
+        "find",
+        "writes",
+        "verify",
+        "builds",
+        "site",
+        "checks",
+        "every",
+        "anchor",
+        "resolves",
+        "astro",
+        "content",
+        "changes",
+        "hashes",
+        "skips",
+        "model",
+        "call"
+      ]
+    },
+    {
+      "id": "quickstart#install-and-wire-it-up",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "Install and wire it up",
+      "group": "Overview",
+      "url": "/docs/quickstart#install-and-wire-it-up",
+      "summary": "Install and wire it up",
+      "facts": [
+        {
+          "kind": "value",
+          "literal": "astro.config.mjs",
+          "chunkId": "quickstart#install-and-wire-it-up"
+        },
+        {
+          "kind": "value",
+          "literal": "SearchOverlay.astro",
+          "chunkId": "quickstart#install-and-wire-it-up"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#install-and-wire-it-up",
+          "url": "/docs/quickstart#install-and-wire-it-up",
+          "anchor": "install-and-wire-it-up"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "install",
+        "wire",
+        "astro",
+        "config",
+        "searchoverlay"
+      ]
+    },
+    {
+      "id": "quickstart#prerequisites",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "Prerequisites",
+      "group": "Overview",
+      "url": "/docs/quickstart#prerequisites",
+      "summary": "Prerequisites Astro 5 with at least one content collection. A server or hybrid adapter (Node, Cloudflare, Vercel, …). The search endpoint renders on demand, so a fully static build can't serve it. Optional: an ANTHROPICA…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "quickstart#prerequisites"
+        },
+        {
+          "kind": "value",
+          "literal": "docs.astro.build",
+          "chunkId": "quickstart#prerequisites"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#prerequisites",
+          "url": "/docs/quickstart#prerequisites",
+          "anchor": "prerequisites"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "prerequisites",
+        "astro",
+        "least",
+        "content",
+        "collection",
+        "server",
+        "hybrid",
+        "adapter",
+        "node",
+        "cloudflare",
+        "vercel",
+        "search",
+        "endpoint",
+        "renders",
+        "demand",
+        "fully",
+        "static",
+        "build",
+        "serve",
+        "optional",
+        "anthropica",
+        "anthropic",
+        "docs",
+        "anthropicapikey",
+        "agentic",
+        "loop"
+      ]
+    },
+    {
+      "id": "quickstart#turn-on-agentic-search",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "Turn on agentic search",
+      "group": "Overview",
+      "url": "/docs/quickstart#turn-on-agentic-search",
+      "summary": "Turn on agentic search Set ANTHROPICAPIKEY in the server environment where /api/find runs (your host's secrets, or .env in local dev). With a key present, pressing Enter in the overlay runs the agentic loop; without one,…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "quickstart#turn-on-agentic-search"
+        },
+        {
+          "kind": "code",
+          "literal": "/api/find",
+          "chunkId": "quickstart#turn-on-agentic-search"
+        },
+        {
+          "kind": "code",
+          "literal": ".env",
+          "chunkId": "quickstart#turn-on-agentic-search"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#turn-on-agentic-search",
+          "url": "/docs/quickstart#turn-on-agentic-search",
+          "anchor": "turn-on-agentic-search"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "turn",
+        "agentic",
+        "search",
+        "anthropicapikey",
+        "server",
+        "environment",
+        "find",
+        "runs",
+        "host",
+        "secrets",
+        "local",
+        "present",
+        "pressing",
+        "enter",
+        "overlay",
+        "loop",
+        "without",
+        "anthropic",
+        "returns",
+        "keyword",
+        "results"
+      ]
+    },
+    {
+      "id": "quickstart#verify-it-works",
+      "kind": "section",
+      "title": "Quick start",
+      "heading": "Verify it works",
+      "group": "Overview",
+      "url": "/docs/quickstart#verify-it-works",
+      "summary": "Verify it works Keyword: type a word from a heading; the top result should deep-link to that section (/docs/page#heading). Agentic: press Enter on a question; the footer shows the sub-queries the model ran, and a grounde…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "/docs/page#heading",
+          "chunkId": "quickstart#verify-it-works"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-find-kg verify",
+          "chunkId": "quickstart#verify-it-works"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "quickstart#verify-it-works",
+          "url": "/docs/quickstart#verify-it-works",
+          "anchor": "verify-it-works"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "verify",
+        "works",
+        "keyword",
+        "type",
+        "word",
+        "heading",
+        "result",
+        "should",
+        "deep",
+        "link",
+        "section",
+        "docs",
+        "page",
+        "agentic",
+        "press",
+        "enter",
+        "question",
+        "footer",
+        "shows",
+        "queries",
+        "model",
+        "grounde",
+        "find",
+        "grounded",
+        "answer",
+        "streams",
+        "inline",
+        "links",
+        "anchors",
+        "exits",
+        "zero",
+        "chunk",
+        "anchor",
+        "doesn",
+        "exist",
+        "built",
+        "html",
+        "wire",
+        "here",
+        "full"
+      ]
+    },
+    {
+      "id": "tradeoffs",
+      "kind": "section",
+      "title": "Tradeoffs",
+      "heading": null,
+      "group": "Overview",
+      "url": "/docs/tradeoffs",
+      "summary": "What you're choosing by adopting hev find: the dependency posture, the committed knowledge graph, the cost and latency of agentic search, and how it compares to Pagefind, Algolia, and Orama. Every search tool makes choic…",
+      "facts": [
+        {
+          "kind": "value",
+          "literal": "Callout.astro",
+          "chunkId": "tradeoffs"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "tradeoffs",
+          "url": "/docs/tradeoffs",
+          "anchor": null
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "choosing",
+        "adopting",
+        "find",
+        "dependency",
+        "posture",
+        "committed",
+        "knowledge",
+        "graph",
+        "cost",
+        "latency",
+        "agentic",
+        "search",
+        "compares",
+        "pagefind",
+        "algolia",
+        "orama",
+        "every",
+        "tool",
+        "makes",
+        "choic",
+        "callout",
+        "astro",
+        "choices",
+        "page",
+        "honest",
+        "version",
+        "trades",
+        "away",
+        "gives",
+        "decide",
+        "whether",
+        "trade",
+        "fits",
+        "docs"
+      ]
+    },
+    {
+      "id": "tradeoffs#a-committed-knowledge-graph",
+      "kind": "section",
+      "title": "Tradeoffs",
+      "heading": "A committed knowledge graph",
+      "group": "Overview",
+      "url": "/docs/tradeoffs#a-committed-knowledge-graph",
+      "summary": "A committed knowledge graph The knowledge graph is generated offline and committed to git as JSON, rather than computed at runtime or hidden in a service. Upside: it's reviewable in pull requests, deterministic at runtim…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "tradeoffs#a-committed-knowledge-graph",
+          "url": "/docs/tradeoffs#a-committed-knowledge-graph",
+          "anchor": "a-committed-knowledge-graph"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "committed",
+        "knowledge",
+        "graph",
+        "generated",
+        "offline",
+        "json",
+        "rather",
+        "computed",
+        "runtime",
+        "hidden",
+        "service",
+        "upside",
+        "reviewable",
+        "pull",
+        "requests",
+        "deterministic",
+        "runtim",
+        "free",
+        "read",
+        "model",
+        "call",
+        "request",
+        "path",
+        "bundled",
+        "edge",
+        "worker",
+        "filesystem",
+        "access",
+        "cost",
+        "stale",
+        "only",
+        "regenerates",
+        "content",
+        "changes",
+        "build",
+        "runs",
+        "find",
+        "logs",
+        "warning",
+        "live"
+      ]
+    },
+    {
+      "id": "tradeoffs#cost-and-latency-of-agentic-search",
+      "kind": "section",
+      "title": "Tradeoffs",
+      "heading": "Cost and latency of agentic search",
+      "group": "Overview",
+      "url": "/docs/tradeoffs#cost-and-latency-of-agentic-search",
+      "summary": "Cost and latency of agentic search The agentic path calls Claude. That means real, if small, money and latency: Latency: worst case is roughly maxIterations Haiku round-trips (a few seconds). The keyword path stays insta…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "maxIterations",
+          "chunkId": "tradeoffs#cost-and-latency-of-agentic-search"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "tradeoffs#cost-and-latency-of-agentic-search",
+          "url": "/docs/tradeoffs#cost-and-latency-of-agentic-search",
+          "anchor": "cost-and-latency-of-agentic-search"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "cost",
+        "latency",
+        "agentic",
+        "search",
+        "path",
+        "calls",
+        "claude",
+        "means",
+        "real",
+        "small",
+        "money",
+        "worst",
+        "case",
+        "roughly",
+        "maxiterations",
+        "haiku",
+        "round",
+        "trips",
+        "seconds",
+        "keyword",
+        "stays",
+        "insta",
+        "instant",
+        "fast",
+        "lane",
+        "knob",
+        "want",
+        "bound",
+        "tighter",
+        "bounded",
+        "loop",
+        "submitted",
+        "query",
+        "default",
+        "model",
+        "domain",
+        "context",
+        "prompt",
+        "cached",
+        "across"
+      ]
+    },
+    {
+      "id": "tradeoffs#how-it-compares",
+      "kind": "section",
+      "title": "Tradeoffs",
+      "heading": "How it compares",
+      "group": "Overview",
+      "url": "/docs/tradeoffs#how-it-compares",
+      "summary": "How it compares Tool Retrieval AI ranking Deep links Hosting hev find keyword + glossary yes, on Enter heading anchors your adapter + optional API key Pagefind keyword (static index) no page / anchor static, none Algolia…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "tradeoffs#how-it-compares",
+          "url": "/docs/tradeoffs#how-it-compares",
+          "anchor": "how-it-compares"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "compares",
+        "tool",
+        "retrieval",
+        "ranking",
+        "deep",
+        "links",
+        "hosting",
+        "find",
+        "keyword",
+        "glossary",
+        "enter",
+        "heading",
+        "anchors",
+        "adapter",
+        "optional",
+        "pagefind",
+        "static",
+        "index",
+        "page",
+        "anchor",
+        "none",
+        "algolia",
+        "docsearch",
+        "hosted",
+        "classic",
+        "service",
+        "crawler",
+        "orama",
+        "vector",
+        "search",
+        "only",
+        "configurable",
+        "client",
+        "short",
+        "version",
+        "choose",
+        "want",
+        "excellent",
+        "site",
+        "zero"
+      ]
+    },
+    {
+      "id": "tradeoffs#keyword-retrieval-not-embeddings",
+      "kind": "section",
+      "title": "Tradeoffs",
+      "heading": "Keyword retrieval, not embeddings",
+      "group": "Overview",
+      "url": "/docs/tradeoffs#keyword-retrieval-not-embeddings",
+      "summary": "Keyword retrieval, not embeddings Retrieval is dependency-free token overlap widened by the glossary — no embeddings, no vector store. Upside: nothing to host, nothing to keep in sync, edge-safe, and instant. The glossar…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "tradeoffs#keyword-retrieval-not-embeddings",
+          "url": "/docs/tradeoffs#keyword-retrieval-not-embeddings",
+          "anchor": "keyword-retrieval-not-embeddings"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "keyword",
+        "retrieval",
+        "embeddings",
+        "dependency",
+        "free",
+        "token",
+        "overlap",
+        "widened",
+        "glossary",
+        "vector",
+        "store",
+        "upside",
+        "nothing",
+        "host",
+        "keep",
+        "sync",
+        "edge",
+        "safe",
+        "instant",
+        "glossar",
+        "recovers",
+        "synonym",
+        "recall",
+        "would",
+        "give",
+        "cost",
+        "paraphrase",
+        "ceiling",
+        "agent",
+        "answers",
+        "well",
+        "only",
+        "ground",
+        "surfaced",
+        "readers",
+        "routinely",
+        "search",
+        "words",
+        "share",
+        "tokens"
+      ]
+    },
+    {
+      "id": "tradeoffs#one-dependency-deliberately",
+      "kind": "section",
+      "title": "Tradeoffs",
+      "heading": "One dependency, deliberately",
+      "group": "Overview",
+      "url": "/docs/tradeoffs#one-dependency-deliberately",
+      "summary": "One dependency, deliberately hev find aims to be close to zero-dependency, with one exception: github-slugger (3 KB, pure JS, edge-safe). Generating heading anchors by hand risks drifting from Astro's renderer and shippi…",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "github-slugger",
+          "chunkId": "tradeoffs#one-dependency-deliberately"
+        },
+        {
+          "kind": "value",
+          "literal": "github.com",
+          "chunkId": "tradeoffs#one-dependency-deliberately"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "tradeoffs#one-dependency-deliberately",
+          "url": "/docs/tradeoffs#one-dependency-deliberately",
+          "anchor": "one-dependency-deliberately"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "dependency",
+        "deliberately",
+        "find",
+        "aims",
+        "close",
+        "zero",
+        "exception",
+        "github",
+        "slugger",
+        "pure",
+        "edge",
+        "safe",
+        "generating",
+        "heading",
+        "anchors",
+        "hand",
+        "risks",
+        "drifting",
+        "astro",
+        "renderer",
+        "shippi",
+        "shipping",
+        "link",
+        "404s",
+        "page",
+        "same",
+        "uses",
+        "guarantees",
+        "byte",
+        "identical",
+        "took",
+        "purpose"
+      ]
+    },
+    {
+      "id": "tradeoffs#two-paths-instead-of-one",
+      "kind": "section",
+      "title": "Tradeoffs",
+      "heading": "Two paths instead of one",
+      "group": "Overview",
+      "url": "/docs/tradeoffs#two-paths-instead-of-one",
+      "summary": "Two paths instead of one hev find runs an instant keyword path and an agentic path, and asks the reader to choose between them by pressing Enter. The upside is that the common case (a word or two) stays instant and keyle…",
+      "facts": [],
+      "sources": [
+        {
+          "chunkId": "tradeoffs#two-paths-instead-of-one",
+          "url": "/docs/tradeoffs#two-paths-instead-of-one",
+          "anchor": "two-paths-instead-of-one"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "paths",
+        "instead",
+        "find",
+        "runs",
+        "instant",
+        "keyword",
+        "path",
+        "agentic",
+        "asks",
+        "reader",
+        "choose",
+        "between",
+        "pressing",
+        "enter",
+        "upside",
+        "common",
+        "case",
+        "word",
+        "stays",
+        "keyle",
+        "keyless",
+        "while",
+        "hard",
+        "questions",
+        "smarter",
+        "ranker",
+        "cost",
+        "slightly",
+        "more",
+        "complex",
+        "interaction",
+        "model",
+        "single",
+        "search",
+        "readers",
+        "learn",
+        "means",
+        "think",
+        "right",
+        "trade"
+      ]
+    }
+  ],
+  "edges": []
+}

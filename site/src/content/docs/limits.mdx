@@ -1,0 +1,86 @@
+---
+title: "Limits"
+description: "The hard boundaries of hev find: corpus scope, recall ceiling, single-call knowledge-graph build, frontmatter parsing, latency, and adapter requirements — what it deliberately does not do."
+group: "Overview"
+order: 4
+---
+
+import Callout from "../../components/docs/Callout.astro";
+
+These are the boundaries you should know before adopting hev find. None of them
+are bugs — they're the edges of what the current design covers.
+
+## The corpus is your content collection
+
+hev find searches the Astro content collection(s) you configure, and nothing
+else. There is no crawler, no external sitemap ingestion, and no way to index
+pages that aren't collection entries (hand-written `.astro` pages, for example).
+
+If a doc isn't in a configured collection, it won't appear in search. Put what
+you want searchable in a collection.
+
+## Recall has a keyword ceiling
+
+Retrieval is keyword token-overlap widened by the glossary — not embeddings.
+The agentic loop **grounds its answer** in what retrieval surfaces; it cannot
+ground in — or link to — what retrieval missed.
+
+In practice the glossary recovers most synonym cases (`k8s` → `kubernetes`,
+abbreviations, product aliases). But if a reader searches in language that
+shares no tokens with your docs *and* isn't covered by the glossary, the right
+section may never enter the candidate pool.
+
+<Callout label="the deferred upgrade">
+Embeddings are the known fix for paraphrase recall and are deliberately not
+built yet. If your analytics show questions consistently missing, that's the
+signal it's time — until then, a richer glossary is the cheaper lever.
+</Callout>
+
+## The knowledge-graph build is a single model call
+
+The offline build sends your full cleaned corpus to the model in one call. For
+a typical docs site (dozens of pages) this fits comfortably. A very large
+corpus would exceed a single context window.
+
+A map-reduce builder (per-doc summaries merged into one graph) is noted as a
+follow-up but is **not implemented**. Today, assume the corpus fits one call.
+
+## Frontmatter parsing is a flat-YAML subset
+
+The offline build parses frontmatter with a small flat-YAML splitter, not a
+full YAML parser. It handles the common docs schema (string and number fields).
+**Nested frontmatter structures aren't supported** by the build-time parser.
+
+This only affects the offline knowledge-graph build reading files from disk; the
+runtime index uses Astro's own `getCollection`, which honors your real schema.
+
+## Agentic search adds latency
+
+The agentic path is bounded by `maxIterations` (default 4) Claude round-trips —
+worst case a few seconds. It is not instant, by nature. The keyword path is the
+instant lane and always available; agentic search is the considered one. Tune
+`maxIterations` down if you need a tighter ceiling.
+
+## Anchors depend on Astro's slugger
+
+Deep links are only correct as long as the heading slugs hev find generates
+match Astro's rendered `id` attributes. hev find uses the same `github-slugger`
+to stay aligned, and ships a `hev-find-kg verify` command that fails if any
+chunk anchor is missing from the built HTML.
+
+**Wire `verify` into CI.** If Astro ever changes its slugging, the verifier is
+what catches it before a broken link ships.
+
+## A server route is required
+
+The `/api/find` endpoint renders on demand, so a **fully static build cannot
+serve search**. You need a server or hybrid adapter (Node, Cloudflare, Vercel,
+etc.). Static-only sites should use a static search tool instead — see
+[Tradeoffs](/docs/tradeoffs#how-it-compares).
+
+## Secrets live server-side
+
+The agentic path needs `ANTHROPIC_API_KEY` in the **server environment** that
+runs `/api/find`. The key is never exposed to the browser. If the key isn't
+present at runtime, the endpoint serves keyword results — search degrades, it
+doesn't break.

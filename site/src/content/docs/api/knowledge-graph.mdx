@@ -1,0 +1,111 @@
+---
+title: "Knowledge graph format"
+description: "The committed .hev-find/kg.json artifact: distilled section nodes with verbatim facts and source links, the glossary and overview, how each field is used, and how it degrades when absent."
+group: "API"
+order: 4
+---
+
+import Callout from "../../../components/docs/Callout.astro";
+
+<Callout label="see it rendered">
+This site renders its own knowledge graph at [**/kg** — what the agent sees](/kg):
+the distilled summaries, verbatim facts, and glossary the loop reasons over.
+</Callout>
+
+The knowledge graph is a single JSON file, by default `.hev-find/kg.json`, built
+offline by [`hev-find-kg build`](/docs/api/cli) and committed to your repo. The
+integration inlines it into the build through the `virtual:hev-find/kg` module,
+so the running site reads it with no filesystem access.
+
+It is the **agent's view of your docs** — a distilled, source-grounded "shadow
+site." Humans read the rendered pages; the agentic loop reads the graph and links
+back to the real pages. Every node carries a `url#anchor` to its source.
+
+## Shape
+
+```json
+{
+  "version": 2,
+  "generatedAt": "2026-05-30T12:00:00.000Z",
+  "contentHash": "a1b2c3…",
+  "context": "## hev find\n\nA search overlay for Astro docs…",
+  "glossary": [
+    { "term": "knowledge graph", "aliases": ["kg"], "definition": "An offline-built artifact of the docs." }
+  ],
+  "overview": "## Overview\n- Kubernetes autoscaling — `concepts#kubernetes-autoscaling`\n…",
+  "nodes": [
+    {
+      "id": "concepts#kubernetes-autoscaling",
+      "kind": "section",
+      "title": "Core Concepts",
+      "heading": "Kubernetes autoscaling",
+      "group": "Overview",
+      "url": "/docs/concepts#kubernetes-autoscaling",
+      "summary": "Scales workers from lag and throughput signals.",
+      "facts": [{ "kind": "flag", "literal": "--max-workers", "chunkId": "concepts#kubernetes-autoscaling" }],
+      "sources": [{ "chunkId": "concepts#kubernetes-autoscaling", "url": "/docs/concepts#kubernetes-autoscaling", "anchor": "kubernetes-autoscaling" }],
+      "mode": "agent-primary",
+      "terms": ["autoscaling", "workers", "signals"]
+    }
+  ],
+  "edges": []
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `version` | `2` | Schema version. |
+| `generatedAt` | `string` | ISO timestamp stamped by the build (Node time, not edge). |
+| `contentHash` | `string` | sha256 of the concatenated chunk text. The freshness gate. |
+| `context` | `string` | Compact orientation; degradation fallback when there are no nodes. |
+| `glossary` | `GlossaryEntry[]` | Terms with aliases and definitions; widens keyword search. |
+| `overview` | `string` | A deterministic grouped map of every section, injected into the agent's prompt. |
+| `nodes` | `KnowledgeNode[]` | One distilled section per doc heading — the shadow site. |
+| `edges` | `KnowledgeEdge[]` | Reserved for a future node-to-node graph; ships empty. |
+
+### `KnowledgeNode`
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | Equals the chunk id, so it maps 1:1 to a real anchor. |
+| `summary` | `string` | The model's paraphrase — what the agent reasons from. |
+| `facts` | `Fact[]` | Verbatim literals (flags, code, identifiers) extracted **deterministically**. The model never authors them, so the agent quotes exact strings without re-reading the page. |
+| `sources` | `SourceRef[]` | Provenance — the chunk the node came from, with its `url`/`anchor`. |
+| `mode` | `'agent-primary' \| 'source-primary'` | Reference/API sections are `source-primary`: the agent reads their source text verbatim. |
+| `terms` | `string[]` | Distinctive tokens for the render-time link-support check. |
+
+## How each field is used
+
+- **`overview` + `nodes`** are injected into the agentic loop's system prompt
+  (prompt-cached). The agent opens the sections it needs and answers from their
+  summaries, quoting `facts` verbatim for exact strings.
+- **`glossary`** drives keyword **query expansion** — each query term picks up
+  its aliases before retrieval, so `k8s` finds `kubernetes` sections.
+- **`terms`** back a render-time check: a cited link degrades to plain text if
+  the surrounding answer shares none of the cited node's terms.
+- **`contentHash`** is the freshness gate. `build` recomputes it; if a committed
+  graph with nodes already matches, the build skips the model call.
+
+## Degradation
+
+The graph is read defensively. If the file is **missing or malformed**, or it is
+an older **node-less (v1) artifact**, the integration uses it as-is: with no
+nodes the agentic loop falls back to keyword-style search, and keyword mode still
+works. Nothing hard-fails.
+
+<Callout label="review it like code">
+Because the graph is committed JSON, it shows up in pull requests. Its structure
+— nodes, sources, facts — is deterministic and reviewable; only the prose
+summaries are model-authored. That reviewability is the reason it's a file and
+not a runtime computation.
+</Callout>
+
+## Regenerating
+
+Run `hev-find-kg build` after content changes and commit the result. The hash
+gate makes this safe to run on every build — it only spends a model call when the
+content actually changed. The integration also runs it during `astro build` when
+an API key is present. Run [`hev-find-kg verify`](/docs/api/cli) to gate anchors,
+coverage, and literal fidelity.

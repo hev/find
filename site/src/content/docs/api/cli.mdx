@@ -1,0 +1,111 @@
+---
+title: "CLI: hev-find-kg"
+description: "The hev-find-kg command: build the committed knowledge graph offline (hash-gated) and verify every heading anchor resolves in the built HTML, with all flags."
+group: "API"
+order: 3
+---
+
+import Callout from "../../../components/docs/Callout.astro";
+
+`@hev/find` ships one binary, `hev-find-kg`, with two commands: `build` and
+`verify`. Run them from your site root.
+
+```sh
+pnpm exec hev-find-kg build
+pnpm exec hev-find-kg verify
+```
+
+A convenient pattern is to alias them in your site's `package.json`:
+
+```json
+{
+  "scripts": {
+    "kg:build": "hev-find-kg build",
+    "kg:verify": "hev-find-kg verify"
+  }
+}
+```
+
+## `build`
+
+Builds the knowledge graph and writes it to `kgPath` (default
+`.hev-find/kg.json`). It reads your content from disk, chunks it, and hashes the
+result.
+
+- If a committed `kg.json` already matches that hash, **it exits without calling
+  the model** — no spend, no change.
+- Otherwise it calls the KG model (`--kg-model`, default `claude-opus-4-8`) once
+  to produce the `context`, `glossary`, and one summary per section, then
+  assembles the nodes (verbatim facts are extracted deterministically) and writes
+  the file stamped with the new hash and timestamp.
+
+Requires `ANTHROPIC_API_KEY` in the environment **only when it actually
+regenerates**. Commit the resulting JSON.
+
+```sh
+export ANTHROPIC_API_KEY=sk-ant-...
+pnpm exec hev-find-kg build
+# → [hev-find] kg:written .hev-find/kg.json (42 chunks)
+#   or kg:skipped when the hash already matches
+```
+
+## `verify`
+
+Builds the site, then checks the committed graph against the corpus. It reads
+only committed files — it never calls the model — so it is a clean CI gate. Three
+checks:
+
+- **Anchors (always fatal).** Every chunk's `#anchor` must exist as an `id` in
+  the rendered HTML. This catches heading-slug drift before it ships a link that
+  404s to the top of a page.
+- **Coverage (warn; fatal with `--strict`).** Every section must have a node.
+- **Literal fidelity (warn; fatal with `--strict`).** Every literal the builder
+  would extract must be recoverable from its node's `facts`, unless the node is
+  `source-primary`. This stops lossy distillation from yielding confident, wrong
+  exact answers.
+
+```sh
+pnpm exec hev-find-kg verify
+# → [hev-find] verified 128 anchors
+```
+
+It exits non-zero and lists each missing anchor if any don't resolve:
+
+```
+[hev-find] missing anchor old-name for /docs/concepts#old-name in dist/docs/concepts/index.html
+```
+
+<Callout label="put verify in CI">
+Anchor correctness is the contract that makes deep links trustworthy. Running
+verify on every build is the mechanical check that the slugs hev find generates
+still match what Astro renders.
+</Callout>
+
+## Flags
+
+Both commands accept the same content-shaping flags as the integration options;
+defaults match the integration.
+
+| Flag | Applies to | Default | Description |
+|---|---|---|---|
+| `--collection <name>` | both | `docs` | Collection to read. Repeat for multiple. |
+| `--base-path <path>` | both | `/docs/` | Slug → URL prefix. |
+| `--kg-path <path>` | both | `.hev-find/kg.json` | Path to the artifact (output for `build`, input for `verify`). |
+| `--content-glob <glob>` | both | derived | Source globs. Repeat for multiple. |
+| `--chunk-heading-depth <n>` | both | `3` | Deepest heading used as a chunk boundary. |
+| `--kg-model <model>` | `build` | `claude-opus-4-8` | Model used to build the graph. |
+| `--build-command <cmd>` | `verify` | astro build | Override the build command run before verifying. |
+| `--skip-build` | `verify` | off | Verify against an existing `dist/` without rebuilding. |
+| `--strict` | `verify` | off | Treat coverage and fidelity warnings as failures. |
+
+```sh
+hev-find-kg build --collection docs --collection guides --chunk-heading-depth 2
+hev-find-kg verify --skip-build
+```
+
+## Where it runs
+
+`build` and `verify` run in Node with filesystem access — locally or in CI, not
+on the edge. The committed `kg.json` they produce is what the running site reads
+through the `virtual:hev-find/kg` module. See the
+[knowledge graph format](/docs/api/knowledge-graph).
