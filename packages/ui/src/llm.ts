@@ -39,12 +39,19 @@ export interface CallClaudeOptions {
   signal?: AbortSignal;
 }
 
+export interface AnthropicUsage {
+  input_tokens: number;
+  output_tokens: number;
+}
+
 export interface AnthropicResponse {
   content: Array<
     | { type: 'text'; text: string }
     | { type: 'tool_use'; id: string; name: string; input: unknown }
   >;
   stop_reason: string | null;
+  /** Token counts returned by the Messages API; used for observability. */
+  usage?: AnthropicUsage;
 }
 
 function requestBody(opts: CallClaudeOptions, stream: boolean) {
@@ -87,7 +94,7 @@ export async function callClaude(opts: CallClaudeOptions): Promise<AnthropicResp
 export type StreamEvent =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: unknown }
-  | { type: 'stop'; stopReason: string | null };
+  | { type: 'stop'; stopReason: string | null; usage?: AnthropicUsage };
 
 /**
  * Streams a Messages API response, yielding text deltas as they arrive and
@@ -137,10 +144,12 @@ export interface SseParseState {
   buffer: string;
   /** Content blocks indexed by their position in the message. */
   blocks: Record<number, SseBlock>;
+  /** Token usage accumulated from `message_start` / `message_delta` frames. */
+  usage: AnthropicUsage;
 }
 
 export function newSseState(): SseParseState {
-  return { buffer: '', blocks: {} };
+  return { buffer: '', blocks: {}, usage: { input_tokens: 0, output_tokens: 0 } };
 }
 
 /**
@@ -153,6 +162,7 @@ export function parseSseChunk(
 ): { events: StreamEvent[]; state: SseParseState } {
   const events: StreamEvent[] = [];
   const blocks = prev.blocks;
+  const usage = prev.usage ?? { input_tokens: 0, output_tokens: 0 };
   let buffer = prev.buffer + chunk;
 
   let sep: number;
@@ -203,12 +213,27 @@ export function parseSseChunk(
         }
         events.push({ type: 'tool_use', id: block.id, name: block.name, input });
       }
+    } else if (type === 'message_start') {
+      // Carries the prompt token count; no event, just accumulate usage.
+      const message = payload.message as { usage?: { input_tokens?: number } } | undefined;
+      if (typeof message?.usage?.input_tokens === 'number') {
+        usage.input_tokens = message.usage.input_tokens;
+      }
     } else if (type === 'message_delta') {
       const delta = payload.delta as { stop_reason?: string | null };
-      events.push({ type: 'stop', stopReason: delta?.stop_reason ?? null });
+      const deltaUsage = payload.usage as { output_tokens?: number } | undefined;
+      if (typeof deltaUsage?.output_tokens === 'number') {
+        usage.output_tokens = deltaUsage.output_tokens;
+      }
+      const hasUsage = usage.input_tokens > 0 || usage.output_tokens > 0;
+      events.push({
+        type: 'stop',
+        stopReason: delta?.stop_reason ?? null,
+        ...(hasUsage ? { usage: { ...usage } } : {}),
+      });
     }
-    // `ping`, `message_start`, and `message_stop` need no surfaced event.
+    // `ping` and `message_stop` need no surfaced event.
   }
 
-  return { events, state: { buffer, blocks } };
+  return { events, state: { buffer, blocks, usage } };
 }

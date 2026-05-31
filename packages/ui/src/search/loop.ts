@@ -6,11 +6,15 @@ import {
   type AnthropicTextBlock,
   type AnthropicTool,
   type AnthropicToolResultBlock,
+  type AnthropicUsage,
+  type CallClaudeOptions,
+  type StreamEvent,
 } from '../llm.ts';
 import type { KnowledgeGraph, KnowledgeNode } from '../kg/schema';
 import type { Source } from '../components/markdown.ts';
 import type { Chunk } from './chunk';
 import { prefilter, type Candidate } from './prefilter.ts';
+import { makeTelemetry, type Telemetry } from '../observability.ts';
 
 export interface SearchLoopConfig {
   model: string;
@@ -42,6 +46,69 @@ export interface AnswerLoopArgs {
   signal?: AbortSignal;
   call?: CallClaude;
   stream?: StreamClaude;
+  /** PostHog LLM observability sink. Defaults to a no-op. */
+  telemetry?: Telemetry;
+}
+
+function randomSpanId(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  return c?.randomUUID ? c.randomUUID() : `span-${Date.now()}`;
+}
+
+/**
+ * Run one non-streaming tool turn and emit an `$ai_generation` for it. The input
+ * snapshot is taken before the call so the trace shows exactly what the model saw.
+ */
+async function tracedCall(
+  call: CallClaude,
+  opts: CallClaudeOptions,
+  telemetry: Telemetry,
+  step: number,
+): Promise<AnthropicResponse> {
+  const startedAt = Date.now();
+  const input = opts.messages.slice();
+  const response = await call(opts);
+  telemetry.generation({
+    spanId: randomSpanId(),
+    spanName: `turn ${step + 1}`,
+    model: opts.model,
+    input,
+    output: response.content,
+    usage: response.usage,
+    latencyMs: Date.now() - startedAt,
+    httpStatus: 200,
+  });
+  return response;
+}
+
+/**
+ * Wrap the streamed answer turn: forward every event untouched, accumulate the
+ * answer text and token usage, then emit a single `$ai_generation` at the end.
+ */
+async function* tracedStream(
+  stream: StreamClaude,
+  opts: CallClaudeOptions,
+  telemetry: Telemetry,
+): AsyncGenerator<StreamEvent> {
+  const startedAt = Date.now();
+  const input = opts.messages.slice();
+  let text = '';
+  let usage: AnthropicUsage | undefined;
+  for await (const event of stream(opts)) {
+    if (event.type === 'text') text += event.text;
+    else if (event.type === 'stop') usage = event.usage;
+    yield event;
+  }
+  telemetry.generation({
+    spanId: randomSpanId(),
+    spanName: 'answer',
+    model: opts.model,
+    input,
+    output: [{ type: 'text', text }],
+    usage,
+    latencyMs: Date.now() - startedAt,
+    httpStatus: 200,
+  });
 }
 
 /**
@@ -86,6 +153,7 @@ async function* graphAnswerLoop({
   signal,
   call = callClaude,
   stream = streamClaude,
+  telemetry = makeTelemetry(),
 }: AnswerLoopArgs): AsyncGenerator<AgenticEvent> {
   const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const nodesById = new Map(kg.nodes.map((node) => [node.id, node]));
@@ -101,16 +169,21 @@ async function* graphAnswerLoop({
 
   // Phase 1: bounded loop of section opens (non-streaming tool turns).
   for (let i = 0; i < config.maxIterations; i += 1) {
-    const response = await call({
-      apiKey,
-      model: config.model,
-      system,
-      messages,
-      tools: [OPEN_SECTION_TOOL],
-      toolChoice: { type: 'auto' },
-      maxTokens: 1024,
-      signal,
-    });
+    const response = await tracedCall(
+      call,
+      {
+        apiKey,
+        model: config.model,
+        system,
+        messages,
+        tools: [OPEN_SECTION_TOOL],
+        toolChoice: { type: 'auto' },
+        maxTokens: 1024,
+        signal,
+      },
+      telemetry,
+      i,
+    );
 
     messages.push({ role: 'assistant', content: response.content });
     const toolResults: AnthropicToolResultBlock[] = [];
@@ -160,14 +233,18 @@ async function* graphAnswerLoop({
   yield { type: 'sources', sources };
 
   // Phase 2: streamed answer turn — no tools, so the model can only answer.
-  for await (const event of stream({
-    apiKey,
-    model: config.model,
-    system: answerSystem(system, sources),
-    messages,
-    maxTokens: config.answerMaxTokens,
-    signal,
-  })) {
+  for await (const event of tracedStream(
+    stream,
+    {
+      apiKey,
+      model: config.model,
+      system: answerSystem(system, sources),
+      messages,
+      maxTokens: config.answerMaxTokens,
+      signal,
+    },
+    telemetry,
+  )) {
     if (event.type === 'text' && event.text) yield { type: 'token', text: event.text };
   }
 
@@ -275,6 +352,7 @@ async function* legacyAnswerLoop({
   signal,
   call = callClaude,
   stream = streamClaude,
+  telemetry = makeTelemetry(),
 }: AnswerLoopArgs): AsyncGenerator<AgenticEvent> {
   const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const seen = new Map<string, SeenCandidate>();
@@ -283,16 +361,21 @@ async function* legacyAnswerLoop({
 
   // Phase 1: bounded, non-streaming search loop.
   for (let i = 0; i < config.maxIterations; i += 1) {
-    const response = await call({
-      apiKey,
-      model: config.model,
-      system,
-      messages,
-      tools: [SEARCH_TOOL],
-      toolChoice: { type: 'auto' },
-      maxTokens: 1024,
-      signal,
-    });
+    const response = await tracedCall(
+      call,
+      {
+        apiKey,
+        model: config.model,
+        system,
+        messages,
+        tools: [SEARCH_TOOL],
+        toolChoice: { type: 'auto' },
+        maxTokens: 1024,
+        signal,
+      },
+      telemetry,
+      i,
+    );
 
     messages.push({ role: 'assistant', content: response.content });
     const toolResults: AnthropicToolResultBlock[] = [];
@@ -335,14 +418,18 @@ async function* legacyAnswerLoop({
   const sources = sourcesFromSeen(seen, config.maxResults);
   yield { type: 'sources', sources };
 
-  for await (const event of stream({
-    apiKey,
-    model: config.model,
-    system: answerSystem(system, sources),
-    messages,
-    maxTokens: config.answerMaxTokens,
-    signal,
-  })) {
+  for await (const event of tracedStream(
+    stream,
+    {
+      apiKey,
+      model: config.model,
+      system: answerSystem(system, sources),
+      messages,
+      maxTokens: config.answerMaxTokens,
+      signal,
+    },
+    telemetry,
+  )) {
     if (event.type === 'text' && event.text) yield { type: 'token', text: event.text };
   }
 
