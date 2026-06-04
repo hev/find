@@ -319,43 +319,34 @@ const {
     outline: none;
   }
 
-  /* Ask-mode primary affordance row. */
+  /* Ask-mode hint row: clicking it (or pressing Enter) runs the agentic ask.
+     Deliberately calm — a quiet prompt, not an alarming orange button. */
   .as-results :global(.as-ask-row) {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
     width: 100%;
     text-align: left;
-    padding: 11px;
-    border: 1px solid color-mix(in srgb, var(--as-accent) 40%, var(--as-border));
+    padding: 11px 12px;
+    border: 1px solid var(--as-border);
     border-radius: 8px;
-    background: color-mix(in srgb, var(--as-accent) 10%, transparent);
-    color: var(--as-fg);
+    background: var(--as-hover);
+    color: var(--as-muted);
     font: inherit;
     cursor: pointer;
+    transition: border-color 0.12s ease, color 0.12s ease;
   }
 
   .as-results :global(.as-ask-row:hover) {
-    border-color: var(--as-accent);
-    background: color-mix(in srgb, var(--as-accent) 16%, transparent);
+    border-color: color-mix(in srgb, var(--as-accent) 45%, var(--as-border));
+    color: var(--as-fg);
   }
 
-  .as-results :global(.as-ask-row-label) {
-    flex: none;
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--as-accent);
-  }
-
-  .as-results :global(.as-ask-row-q) {
+  .as-results :global(.as-ask-row-hint) {
     flex: 1;
     min-width: 0;
-    font-size: 0.9rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 0.88rem;
   }
 
   .as-results :global(.as-ask-row .as-kbd) {
@@ -400,6 +391,29 @@ const {
     padding: 1px 5px;
     border-radius: 5px;
     background: var(--as-hover);
+  }
+
+  /* Animated tool-calling status (spinner + cycling verb). Built at runtime, so
+     these live under :global() anchored to the scoped .as-answer-body. */
+  .as-answer-body :global(.as-thinking) {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 9px;
+    color: var(--as-muted);
+    font-size: 0.9rem;
+  }
+
+  .as-answer-body :global(.as-thinking-spin) {
+    display: inline-block;
+    width: 1ch;
+    color: var(--as-accent);
+    font-family: var(--font-mono, "JetBrains Mono Variable", ui-monospace, monospace);
+    font-size: 1.05rem;
+    line-height: 1;
+  }
+
+  .as-answer-body :global(.as-thinking-verb) {
+    font-variant-numeric: tabular-nums;
   }
 
   .as-answer-body :global(.as-answer-link) {
@@ -583,6 +597,16 @@ const {
     error?: string;
   }
 
+  // Braille spinner — reads as a smooth rotating glyph in monospace.
+  const SPIN_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  // Whimsical gerunds, cycled while the agent is tool-calling (à la Claude Code).
+  const THINKING_VERBS = [
+    'Sautéing', 'Percolating', 'Noodling', 'Marinating', 'Conjuring', 'Rummaging',
+    'Foraging', 'Spelunking', 'Distilling', 'Untangling', 'Divining', 'Pondering',
+    'Scheming', 'Brewing', 'Whisking', 'Simmering', 'Excavating', 'Sifting',
+    'Wrangling', 'Cogitating', 'Finagling', 'Tinkering', 'Riffing', 'Mulling',
+  ];
+
   class HevAskOverlay {
     private dialog: HTMLDialogElement;
     private input: HTMLInputElement;
@@ -611,6 +635,7 @@ const {
     private userSelected = false;
     private pressOnBackdrop = false;
     private answerRaf: number | undefined;
+    private thinkTimer: number | undefined;
     private suggestions: string[] = [];
     private suggestionsFetched = false;
     private defaultPlaceholder: string;
@@ -852,8 +877,7 @@ const {
       this.searched.textContent = '';
       this.searched.classList.remove('as-warning');
       this.showAnswer();
-      this.answerBody.classList.add('is-streaming');
-      this.answerBody.textContent = 'Searching…';
+      this.startThinking();
 
       const searches: string[] = [];
       let sources: Source[] = [];
@@ -925,10 +949,13 @@ const {
               if (!started) {
                 started = true;
                 answer = '';
+                this.stopThinking();
+                this.answerBody.classList.add('is-streaming');
               }
               answer += (evt.data as { text?: string }).text || '';
               this.scheduleAnswerRender(answer, sources);
             } else if (evt.event === 'done') {
+              this.stopThinking();
               this.flushAnswerRender(answer, sources);
               this.answerBody.classList.remove('is-streaming');
               if (searches.length) this.showSearched(`searched: ${searches.join(', ')}`);
@@ -963,6 +990,49 @@ const {
         return { event, data: JSON.parse(dataLines.join('')) };
       } catch {
         return null;
+      }
+    }
+
+    /**
+     * Animated "the agent is working" status: a braille spinner alongside a
+     * whimsical gerund that cycles every so often. Replaces the old static
+     * "Searching…" placeholder while the loop tool-calls, before tokens stream.
+     */
+    private startThinking() {
+      this.stopThinking();
+      this.answerBody.classList.remove('is-streaming');
+      this.answerBody.innerHTML =
+        '<span class="as-thinking"><span class="as-thinking-spin"></span><span class="as-thinking-verb"></span></span>';
+      const spin = this.answerBody.querySelector('.as-thinking-spin') as HTMLElement;
+      const verb = this.answerBody.querySelector('.as-thinking-verb') as HTMLElement;
+      // Start on a different verb each time so repeat asks feel alive.
+      let vi = Math.floor(Math.random() * THINKING_VERBS.length);
+      const setVerb = () => {
+        verb.textContent = `${THINKING_VERBS[vi % THINKING_VERBS.length]}…`;
+      };
+      spin.textContent = SPIN_FRAMES[0];
+      setVerb();
+      const reduce =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) return; // honour reduced-motion: static spinner + verb, no churn.
+      let fi = 0;
+      let tick = 0;
+      this.thinkTimer = window.setInterval(() => {
+        fi = (fi + 1) % SPIN_FRAMES.length;
+        spin.textContent = SPIN_FRAMES[fi];
+        // ~18 frames × 90ms ≈ 1.6s per verb.
+        if (++tick % 18 === 0) {
+          vi += 1;
+          setVerb();
+        }
+      }, 90);
+    }
+
+    private stopThinking() {
+      if (this.thinkTimer !== undefined) {
+        window.clearInterval(this.thinkTimer);
+        this.thinkTimer = undefined;
       }
     }
 
@@ -1010,6 +1080,7 @@ const {
     }
 
     private clearAnswer() {
+      this.stopThinking();
       if (this.answerRaf !== undefined) {
         window.cancelAnimationFrame(this.answerRaf);
         this.answerRaf = undefined;
@@ -1081,16 +1152,13 @@ const {
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'as-ask-row';
-      const label = document.createElement('span');
-      label.className = 'as-ask-row-label';
-      label.textContent = 'Ask AI';
-      const text = document.createElement('span');
-      text.className = 'as-ask-row-q';
-      text.textContent = query;
+      const hint = document.createElement('span');
+      hint.className = 'as-ask-row-hint';
+      hint.textContent = 'Press Enter to send your question';
       const kbd = document.createElement('kbd');
       kbd.className = 'as-kbd';
       kbd.textContent = '↵';
-      row.append(label, text, kbd);
+      row.append(hint, kbd);
       row.addEventListener('click', () => this.runAgentic(query));
       this.results.appendChild(row);
     }

@@ -1,16 +1,19 @@
 ---
 title: "Search endpoint"
-description: "The /api/ask route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses."
+description: "The /api/ask route contract: suggestions, keyless knowledge-graph reads, keyword JSON, agentic SSE, mode selection, and error responses."
 group: "API"
 order: 2
 ---
 
 import Callout from "../../../components/docs/Callout.astro";
 
-The integration injects one on-demand route (default `/api/ask`). The overlay
-posts to it. **Keyword mode returns JSON**; **agentic mode streams a grounded
-answer as Server-Sent Events** (`text/event-stream`). A `GET` to the same route
-returns the suggested questions the overlay shows on open.
+The integration injects one on-demand route tree (default `/api/ask`). The base
+route serves the overlay: **keyword mode returns JSON**; **agentic mode streams
+a grounded answer as Server-Sent Events** (`text/event-stream`). Keyless
+sub-routes expose the committed knowledge graph for CLIs, MCP servers, and
+generated clients.
+
+The OpenAPI 3.1 contract is published at [`/openapi.yaml`](/openapi.yaml).
 
 ## Suggested questions (GET)
 
@@ -27,6 +30,31 @@ model — no query, no model call:
 The overlay fetches this once on first open (when AI is on) to populate its
 suggested questions. An empty `suggestions` array — a graph without them, or no
 graph at all — just means the overlay shows none.
+
+## Knowledge graph reads (GET)
+
+These routes read `virtual:hev-ask/kg`, never call a model, and never require an
+API key:
+
+| Route | Response |
+|---|---|
+| `GET /api/ask/glossary` | `{ "terms": GlossaryEntry[] }` |
+| `GET /api/ask/glossary/{term}` | one `GlossaryEntry`, matched by term or alias |
+| `GET /api/ask/sections` | `{ "sections": SectionSummary[] }` |
+| `GET /api/ask/sections?group=API` | section summaries filtered by group |
+| `GET /api/ask/sections/{id}` | one full `KnowledgeNode` |
+| `GET /api/ask/overview` | `{ "overview": string, "context": string }` |
+
+A `SectionSummary` is the lightweight shape `{ id, title, heading, group, url }`.
+For section IDs that contain `/` or `#`, URL-encode the ID when placing it in
+the path, for example `/api/ask/sections/api%2Fcli%23flags`.
+
+Missing glossary terms, section IDs, or unknown read routes return `404` with a
+JSON error:
+
+```json
+{ "error": "Not found." }
+```
 
 ## Request
 
@@ -114,7 +142,7 @@ the answer prose carries the substance, and links point at `url`.
 
 The endpoint decides what to run:
 
-- **Empty query** → `{ results: [], query: "", model }` (JSON).
+- **Empty query** → `{ results: [], query: "", model, mode: "keyword" }` (JSON).
 - **`mode: "keyword"`**, or **no API key** → keyword JSON, `mode: "keyword"`.
 - **`mode: "agentic"` but no key** → keyword JSON plus a `warning`, and
   `mode: "keyword"`.
@@ -132,6 +160,7 @@ both shapes from the one endpoint.
 | Status | Body | Cause |
 |---|---|---|
 | `400` | `{ "error": "Invalid JSON body." }` | The request body wasn't valid JSON. |
+| `404` | `{ "error": "…" }` | A knowledge-graph read route, glossary term, or section ID wasn't found. |
 | `500` | `{ "error": "…" }` | The chunk index failed to build (e.g. a misconfigured collection). |
 | — | `event: error` | A failure during the agentic stream. The HTTP status is already `200`, so errors arrive as a final SSE `error` event rather than a status code. |
 
@@ -147,4 +176,4 @@ sent to the browser.
 The chunk index is built once per server instance on the first request and
 cached for the process lifetime. On the first request the endpoint also compares
 the live content hash against the knowledge graph's hash and logs a one-time
-warning if they differ — your cue to run [`hev-ask-kg build`](/docs/api/cli).
+warning if they differ — your cue to run [`ask kg build`](/docs/api/cli).

@@ -1,0 +1,15 @@
+{
+  "name": "@hev/ask-linux-x64",
+  "version": "0.0.1",
+  "description": "Linux x64 binary for the @hev/ask CLI.",
+  "license": "MIT",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/ask"
+  ]
+}

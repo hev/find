@@ -25,7 +25,7 @@ loop domain context and a glossary. Read `PLAN.md` for the full v2 design.
 ```
 packages/ui    # the package @hev/ask — integration, endpoint, search, kg/, CLI
 playground     # minimal Astro site for fast local dev of the package
-site           # the public docs + showcase site (ask.hev.dev); dogfoods @hev/ask
+site           # the public docs + showcase site (askhev.com); dogfoods @hev/ask
 ```
 
 It's a pnpm workspace. `packages/ui` is the only published artifact; `playground`
@@ -49,9 +49,9 @@ docs are also the search corpus, so doc edits are product edits.
 - **Corpus = configured content collection(s) only.** No crawler, no external
   index, no non-collection pages.
 - **Anchors come from `github-slugger`** (the one non-Astro dependency) to match
-  Astro's rendered `id`s byte-for-byte. `hev-ask-kg verify` is the CI gate that
+  Astro's rendered `id`s byte-for-byte. `ask kg verify` is the CI gate that
   catches drift — keep it green.
-- **The KG is committed JSON, hash-gated.** `hev-ask-kg build` skips the model
+- **The KG is committed JSON, hash-gated.** `ask kg build` skips the model
   call when the content hash is unchanged. Regenerate and commit after content
   changes. It's reviewable on purpose.
 - **Everything degrades, nothing hard-fails:** no key at runtime → keyword
@@ -69,13 +69,14 @@ docs are also the search corpus, so doc edits are product edits.
   `hev-ask:mode`.
 - `@hev/ask/endpoint` — `POST /api/ask`: keyword mode returns JSON, agentic
   mode streams SSE (`text/event-stream`). Contract in `api/endpoint.mdx`.
-- `hev-ask-kg` bin — `build` / `verify`, flags in `api/cli.mdx`.
+- `ask` bin — read verbs, `mcp`, and `kg build` / `kg verify`; `hev-ask-kg` is
+  a deprecated alias. Flags in `api/cli.mdx`.
 - Virtual modules `virtual:hev-ask/config` and `virtual:hev-ask/kg`.
 
 When any of these change, update the matching `site/src/content/docs/api/*.mdx`
 page in the same PR.
 
-## The site (ask.hev.dev)
+## The site (askhev.com)
 
 - Styles, layouts, and doc components are copied from `../layer/site` (the hev
   house style: dark, JetBrains Mono, `--signal` orange). Reuse them; don't
@@ -87,8 +88,12 @@ page in the same PR.
 - ASCII architecture diagrams live in `site/src/lib/diagrams.ts`.
 - `/llms.txt` and `/llms-full.txt` are generated from the docs collection.
 - **Hosting:** Cloudflare Pages, project `hev-ask`, account
-  `ce0c7a0a6b9935ddf1a641fd32f596b5`. `pnpm --filter hev-ask-site deploy`
-  builds and `wrangler pages deploy`s. The API key for the live agentic path is
+  `ce0c7a0a6b9935ddf1a641fd32f596b5`. `pnpm --filter hev-ask-site run deploy`
+  builds and `wrangler pages deploy`s (`run` is required — pnpm's built-in
+  `deploy` command shadows the script). The project's production branch is
+  `main`; deploying from another git branch creates only a preview, so pass
+  `--branch=main` to `wrangler pages deploy` to update production (custom
+  domains serve production only). The API key for the live agentic path is
   a server secret, never bundled.
 
 ## Common commands
@@ -100,8 +105,8 @@ pnpm --filter hev-ask-site build     # build site (runs KG build if key present)
 pnpm --filter hev-ask-site check     # astro check
 pnpm test                             # package unit tests
 pnpm typecheck                        # tsc across the workspace
-pnpm exec hev-ask-kg build           # (from a site dir) rebuild the KG
-pnpm exec hev-ask-kg verify          # (from a site dir) verify anchors
+pnpm exec ask kg build               # (from a site dir) rebuild the KG
+pnpm exec ask kg verify              # (from a site dir) verify anchors
 ```
 
 ## Before changing the package's public API
@@ -109,6 +114,6 @@ pnpm exec hev-ask-kg verify          # (from a site dir) verify anchors
 1. Update `packages/ui/src/types.ts` and the implementation.
 2. Update the matching `site/src/content/docs/api/*.mdx`.
 3. `pnpm test && pnpm typecheck && pnpm --filter hev-ask-site check`.
-4. If anchors or chunking changed, run `hev-ask-kg verify` on `site/`.
+4. If anchors or chunking changed, run `ask kg verify` on `site/`.
 5. Public/breaking changes need a version bump in `packages/ui/package.json`
    (see `PLAN.md` for architecture notes and `README.md` for publishing notes).

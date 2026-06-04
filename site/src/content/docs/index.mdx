@@ -1,6 +1,6 @@
 ---
 title: "Introduction"
-description: "hev ask is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter."
+description: "hev ask builds a committed knowledge graph from your Astro docs and serves it two ways: a ⌘K answer overlay for readers, and an `ask` CLI + MCP server so your coding agent can query the same docs."
 group: "Overview"
 order: 0
 ---
@@ -9,63 +9,47 @@ import Diagram from "../../components/docs/Diagram.astro";
 import Callout from "../../components/docs/Callout.astro";
 import { askMapDiagram } from "../../lib/diagrams";
 
-**hev ask** is an ask-first search overlay for [Astro](https://astro.build)
-documentation sites. You add one integration, drop one component in your layout,
-and readers get a `⌘K` command palette over your content collection that leans
-toward **answering the question they actually have**:
+**hev ask** turns an [Astro](https://astro.build) docs site into a small
+**knowledge graph** — one distilled, source-grounded entry per heading section,
+plus a glossary — and then serves that graph to whoever needs to read your docs:
+a human pressing `⌘K`, or a coding agent working in your repo.
 
-- **Ask a question** — type more than one word (or press Enter) and Claude
-  decides its own sub-queries, navigates your knowledge graph, then **streams a
-  grounded answer** with inline deep links to the sections it drew from. The
-  overlay even **suggests questions** to ask, drawn from your docs.
-- **Instant keyword lookup** — type a single term and you get keyword results as
-  you type, ranked with the same knowledge graph and linked to the exact heading
-  (`/docs/page#section`), with no API key in the path.
-
-Readers who never want the model call can flip to keyword-only and it stays out
-of the way. This site is built with hev ask and searches itself — press `⌘K`
-and try *"how does the knowledge graph stay fresh"* to watch the answer stream
-in over the real corpus you're reading.
+The graph is built **offline** and **committed to your repo** as
+`.hev-ask/kg.json` — reviewable JSON that's the single source everything else
+reads.
 
 <Diagram label="hev ask architecture">{askMapDiagram}</Diagram>
 
+## Build it with your coding agent
+
+The knowledge graph is built **inside your coding agent** — the bundled Claude
+Code skill generates `.hev-ask/kg.json` using your existing **agentic coding
+subscription**, so there's no `ANTHROPIC_API_KEY` and no per-build token spend.
+Commit the JSON, drop `SearchOverlay.astro` into a layout, and your site has
+search — instant keyword results as readers type, plus a Claude answer loop on
+Enter, every result deep-linked to the exact heading.
+
+<Callout label="the corpus is your collection">
+hev ask only reads the Astro content collection(s) you configure. There's no
+crawler, no external index, and nothing to keep in sync — the docs you render
+*are* the graph, and the committed `kg.json` is reviewable in every PR.
+</Callout>
+
 ## Who this is for
 
-You're building or maintaining an Astro 5 docs site. Your content lives in a
-[content collection](https://docs.astro.build/en/guides/content-collections/)
-as Markdown or MDX. You want search that:
+You're building or maintaining an Astro 5 docs site whose content lives in a
+[content collection](https://docs.astro.build/en/guides/content-collections/) as
+Markdown or MDX. You want search and answers that:
 
-- works out of the box without standing up a service or running a crawler,
-- deep-links to the right section instead of dumping the reader at the top of a
-  long page, and
-- can answer a question phrased in the reader's words, not just match keywords.
+- work out of the box without standing up a service or running a crawler,
+- deep-link to the right section instead of dumping the reader at the top of a
+  long page,
+- can answer a question phrased in the reader's words, not just match keywords, and
+- are **queryable by your coding agent**, not only by humans in a browser.
 
 If you only need keyword search over a static site and never want an API key in
 the loop, [Pagefind](https://pagefind.app) is simpler and a great fit — see
 [Tradeoffs](/docs/tradeoffs) for an honest comparison.
-
-## How it fits an Astro site
-
-hev ask ships as a single package, `@hev/ask`, exposing an Astro integration
-as its default export:
-
-- The **integration** injects an on-demand `/api/ask` route, exposes resolved
-  config and the knowledge graph through virtual modules, and runs the
-  knowledge-graph build during `astro build`.
-- The **`SearchOverlay.astro`** component renders the palette. Any element with
-  a `data-hev-ask-open` attribute opens it; `⌘K` is wired automatically.
-- The **`/api/ask`** endpoint answers queries — keyword mode with no key,
-  agentic mode when `ANTHROPIC_API_KEY` is set — and serves the suggested
-  questions the overlay shows on open.
-- The knowledge graph is built **offline** — most conveniently with a
-  **Claude Code skill** (no API key, no per-build token spend), or with the
-  **`hev-ask-kg`** CLI as a fallback — and verified with the same CLI.
-
-<Callout label="the corpus is your collection">
-hev ask only searches the Astro content collection(s) you configure. There's
-no external index and nothing to keep in sync — the docs you render *are* the
-search corpus.
-</Callout>
 
 ## Next steps
 
@@ -74,5 +58,6 @@ search corpus.
   knowledge graph.
 - [Tradeoffs](/docs/tradeoffs) and [Limits](/docs/limits) — what you're choosing,
   and what hev ask deliberately doesn't do.
+- [CLI](/docs/api/cli) — build, verify, and query the graph from `ask`.
 - [API reference](/docs/api/configuration) — every option, the component props,
-  the endpoint contract, and the CLI.
+  and the endpoint contract.

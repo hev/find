@@ -1,0 +1,363 @@
+openapi: 3.1.0
+info:
+  title: hev ask API
+  version: 3.0.0
+  summary: Search, answer, and knowledge-graph read API exposed by the @hev/ask Astro integration.
+  description: |
+    `@hev/ask` mounts these routes on a consuming Astro site (default base `/api/ask`,
+    configurable via the integration's `endpoint` option). Two paths existed in v2:
+    keyword + agentic **search** (`POST /api/ask`) and **suggestions** (`GET /api/ask`).
+    v3 adds keyless **read** routes over the committed knowledge graph
+    (`/api/ask/glossary`, `/api/ask/sections`, `/api/ask/overview`) so a coding agent —
+    via the `ask` CLI, the MCP server, or a generated client — can query the docs
+    directly.
+
+    Degradation: with no `ANTHROPIC_API_KEY` configured on the server, `POST /api/ask`
+    falls back to keyword mode (HTTP 200 with a `warning`). The read routes never call a
+    model and never require a key.
+  license:
+    name: MIT
+servers:
+  - url: https://askhev.com
+    description: The hev ask docs site (dogfoods @hev/ask).
+  - url: "{origin}"
+    description: Any site running the integration.
+    variables:
+      origin:
+        default: http://localhost:4321
+tags:
+  - name: search
+    description: Keyword and agentic search/answer.
+  - name: knowledge-graph
+    description: Keyless reads over the committed knowledge graph.
+
+paths:
+  /api/ask:
+    get:
+      tags: [search]
+      operationId: getSuggestions
+      summary: Suggested questions and active model
+      description: |
+        Returns the model-authored example questions baked into the committed graph,
+        shown by the overlay on open. Keyless — no model call.
+      responses:
+        "200":
+          description: Suggestions and the configured answer model.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestionsResponse"
+    post:
+      tags: [search]
+      operationId: ask
+      summary: Search (keyword JSON) or answer (agentic SSE)
+      description: |
+        With `mode: "keyword"` (or when no API key is configured) returns ranked keyword
+        results as JSON. With `mode: "agentic"` and a configured key, returns a
+        Server-Sent Events stream of the grounded answer.
+
+        The SSE stream emits these named events, each with a JSON `data` payload:
+          - `sources` — `{ sources: Source[], model, mode: "agentic" }`
+          - `search`  — `{ query }` (a sub-query the loop issued)
+          - `token`   — `{ text }` (a chunk of the streamed answer)
+          - `done`    — `{}`
+          - `error`   — `{ error }` (failures after the stream has started)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AskRequest"
+      responses:
+        "200":
+          description: |
+            Keyword results (JSON) or the agentic answer stream (SSE), depending on `mode`
+            and server key configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeywordResponse"
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE stream; see operation description for event types.
+        "400":
+          description: Invalid JSON body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Index build failure (e.g. misconfigured collections).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/ask/glossary:
+    get:
+      tags: [knowledge-graph]
+      operationId: listGlossary
+      summary: List glossary terms
+      description: All glossary entries from the committed graph. Keyless.
+      responses:
+        "200":
+          description: The glossary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [terms]
+                properties:
+                  terms:
+                    type: array
+                    items: { $ref: "#/components/schemas/GlossaryEntry" }
+
+  /api/ask/glossary/{term}:
+    get:
+      tags: [knowledge-graph]
+      operationId: getGlossaryTerm
+      summary: Get one glossary entry
+      description: Matches case-insensitively on the term or any of its aliases.
+      parameters:
+        - $ref: "#/components/parameters/Term"
+      responses:
+        "200":
+          description: The matched glossary entry.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GlossaryEntry" }
+        "404":
+          description: No term or alias matched.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/ask/sections:
+    get:
+      tags: [knowledge-graph]
+      operationId: listSections
+      summary: List section nodes
+      description: |
+        A lightweight listing of every section node in the graph. Use `section get` /
+        `GET /api/ask/sections/{id}` for the full node with facts and sources.
+      parameters:
+        - name: group
+          in: query
+          required: false
+          schema: { type: string }
+          description: Filter to sections in this group (e.g. `API`).
+      responses:
+        "200":
+          description: Section summaries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sections]
+                properties:
+                  sections:
+                    type: array
+                    items: { $ref: "#/components/schemas/SectionSummary" }
+
+  /api/ask/sections/{id}:
+    get:
+      tags: [knowledge-graph]
+      operationId: getSection
+      summary: Get one section node
+      description: The full distilled node — summary, verbatim facts, sources, deep link.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          description: The section id, e.g. `concepts#the-agentic-loop`.
+      responses:
+        "200":
+          description: The section node.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KnowledgeNode" }
+        "404":
+          description: No node with that id.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/ask/overview:
+    get:
+      tags: [knowledge-graph]
+      operationId: getOverview
+      summary: Grouped map + orientation
+      description: |
+        The deterministic grouped table of contents (`overview`) and the model-authored
+        prose orientation (`context`). The cheapest way for an agent to get its bearings.
+      responses:
+        "200":
+          description: Overview and context.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [overview, context]
+                properties:
+                  overview: { type: string }
+                  context: { type: string }
+
+components:
+  parameters:
+    Term:
+      name: term
+      in: path
+      required: true
+      schema: { type: string }
+      description: A glossary term or alias (case-insensitive).
+
+  schemas:
+    AskRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: The user's search text.
+        mode:
+          type: string
+          enum: [keyword, agentic]
+          default: keyword
+          description: |
+            `keyword` returns JSON results. `agentic` streams a grounded answer over SSE
+            (falls back to keyword JSON with a `warning` if the server has no API key).
+
+    KeywordResponse:
+      type: object
+      required: [results, query, model, mode]
+      properties:
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/KeywordResult" }
+        query: { type: string }
+        model: { type: string }
+        mode:
+          type: string
+          enum: [keyword]
+        warning:
+          type: string
+          description: Present when agentic mode was requested but is unavailable.
+
+    KeywordResult:
+      type: object
+      required: [title, url, snippet]
+      properties:
+        title: { type: string }
+        heading: { type: string }
+        url:
+          type: string
+          description: Deep link, e.g. `/docs/concepts#the-agentic-loop`.
+        group: { type: string }
+        snippet: { type: string }
+
+    SuggestionsResponse:
+      type: object
+      required: [suggestions, model]
+      properties:
+        suggestions:
+          type: array
+          items: { type: string }
+        model: { type: string }
+
+    Source:
+      type: object
+      description: A source cited by the agentic answer.
+      required: [url]
+      properties:
+        title: { type: string }
+        heading: { type: string }
+        group: { type: string }
+        url: { type: string }
+        terms:
+          type: array
+          items: { type: string }
+
+    GlossaryEntry:
+      type: object
+      required: [term, aliases, definition]
+      properties:
+        term: { type: string }
+        aliases:
+          type: array
+          items: { type: string }
+        definition: { type: string }
+
+    SectionSummary:
+      type: object
+      required: [id, title, url]
+      properties:
+        id:
+          type: string
+          description: Section id (`slug#anchor`, or `slug` for a page-level section).
+        title: { type: string }
+        heading:
+          type: [string, "null"]
+        group:
+          type: [string, "null"]
+        url: { type: string }
+
+    Fact:
+      type: object
+      description: A byte-verbatim literal lifted from the source section.
+      required: [kind, literal, chunkId]
+      properties:
+        kind:
+          type: string
+          enum: [flag, code, value, default, key]
+        literal:
+          type: string
+          description: Exact source text — never paraphrased.
+        chunkId: { type: string }
+
+    SourceRef:
+      type: object
+      required: [chunkId, url]
+      properties:
+        chunkId: { type: string }
+        url: { type: string }
+        anchor:
+          type: [string, "null"]
+          description: github-slugger anchor, or null for a page-level section.
+
+    KnowledgeNode:
+      type: object
+      required: [id, kind, title, url, summary, facts, sources, mode, terms]
+      properties:
+        id: { type: string }
+        kind:
+          type: string
+          enum: [section]
+        title: { type: string }
+        heading:
+          type: [string, "null"]
+        group:
+          type: [string, "null"]
+        url: { type: string }
+        summary:
+          type: string
+          description: Model-distilled prose. Exact strings live in `facts`.
+        facts:
+          type: array
+          items: { $ref: "#/components/schemas/Fact" }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/SourceRef" }
+        mode:
+          type: string
+          enum: [agent-primary, source-primary]
+        terms:
+          type: array
+          items: { type: string }
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }

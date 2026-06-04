@@ -4,8 +4,8 @@ description: >-
   Build the @hev/ask knowledge graph (.hev-ask/kg.json) for an Astro docs site
   using your Claude Code subscription instead of an ANTHROPIC_API_KEY. Use when
   the user asks to build, rebuild, or refresh the hev ask knowledge graph, KG,
-  or search index, or after docs content changes. Runs `hev-ask-kg corpus`,
-  writes the distillation, and runs `hev-ask-kg assemble`.
+  or search index, or after docs content changes. Runs `ask kg corpus`,
+  writes the distillation, and runs `ask kg assemble`.
 ---
 
 # Build the hev ask knowledge graph
@@ -19,14 +19,14 @@ user's subscription, so it costs **no API tokens on their own key**.
 
 Run every command from the **site root** (the directory whose `astro.config.*`
 registers `hevAsk()` — usually where `src/content/` lives). Prefer
-`pnpm exec hev-ask-kg …`; fall back to `npx hev-ask-kg …` if pnpm isn't used.
+`pnpm exec ask kg …`; fall back to `npx -p @hev/ask ask kg …` if pnpm isn't used.
 
 ## Steps
 
 1. **Emit the corpus.**
 
    ```sh
-   pnpm exec hev-ask-kg corpus --out .hev-ask/kg-input.json
+   pnpm exec ask kg corpus --out .hev-ask/kg-input.json
    ```
 
    This is deterministic and keyless. It writes `.hev-ask/kg-input.json`.
@@ -69,7 +69,7 @@ registers `hevAsk()` — usually where `src/content/` lives). Prefer
 4. **Assemble.**
 
    ```sh
-   pnpm exec hev-ask-kg assemble --input .hev-ask/kg-distill.json
+   pnpm exec ask kg assemble --input .hev-ask/kg-distill.json
    ```
 
    This re-chunks the content, extracts facts, builds the overview and nodes
@@ -78,7 +78,7 @@ registers `hevAsk()` — usually where `src/content/` lives). Prefer
 5. **Verify (optional but recommended).**
 
    ```sh
-   pnpm exec hev-ask-kg verify
+   pnpm exec ask kg verify
    ```
 
    Anchor drift is fatal; coverage/fidelity warnings are informational.

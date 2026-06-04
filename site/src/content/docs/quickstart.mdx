@@ -1,6 +1,6 @@
 ---
 title: "Quick start"
-description: "Add hev ask to an Astro docs site: install the package, register the integration, drop the SearchOverlay component in your layout, and build the knowledge graph."
+description: "Add hev ask to an Astro docs site: install the integration and drop in the overlay for keyword search, build the knowledge graph, then add an API key to enable agentic search."
 group: "Overview"
 order: 1
 ---
@@ -8,26 +8,33 @@ order: 1
 import Steps from "../../components/docs/Steps.astro";
 import Callout from "../../components/docs/Callout.astro";
 
-This walks through adding search to an existing Astro 5 docs site whose content
-lives in a collection (for example `src/content/docs`). It takes about five
-minutes. The keyword path works immediately; the agentic path turns on once you
-add an API key.
+Add search to an existing Astro 5 docs site whose content lives in a collection
+(say `src/content/docs`) in about five minutes. You'll get keyword search
+working first, then add an `ANTHROPIC_API_KEY` to turn on Claude-powered
+agentic answers.
+
+<Callout label="two ways to run it">
+`SearchOverlay.astro` gives you **instant keyword search** — keyless, runs
+anywhere. Add an **`ANTHROPIC_API_KEY`** on the server and the same overlay also
+runs the **agentic answer loop** on Enter. Don't want agent search? Just ship the
+search UI and skip the key.
+</Callout>
 
 ## Prerequisites
 
 - **Astro 5** with at least one [content collection](https://docs.astro.build/en/guides/content-collections/).
-- A **server or hybrid adapter** (Node, Cloudflare, Vercel, …). The search
-  endpoint renders on demand, so a fully static build can't serve it.
-- Optional: an **`ANTHROPIC_API_KEY`** for the agentic search loop.
+- A **server or hybrid adapter** (Node, Cloudflare, Vercel, …) — the `/api/ask`
+  route renders on demand, so a fully static build can't serve it.
+- An **`ANTHROPIC_API_KEY`** to enable agentic search. Keyword search needs no key.
 
-## Install and wire it up
+## Set up keyword search
 
 <Steps items={[
   { title: "Install the package", body: "Add @hev/ask with your package manager." },
   { title: "Register the integration", body: "Add hevAsk() to astro.config.mjs and point it at your collection." },
-  { title: "Add an adapter", body: "Install a server/hybrid adapter so the /api/ask route can render on demand." },
-  { title: "Drop in the overlay", body: "Render SearchOverlay.astro once in your layout and add an opener button." },
-  { title: "Build the knowledge graph", body: "Use the Claude Code skill (or hev-ask-kg build) and commit the JSON artifact." },
+  { title: "Add an adapter", body: "Install a server/hybrid adapter so /api/ask can render on demand." },
+  { title: "Drop in the overlay", body: "Render SearchOverlay.astro once in your layout and add an opener." },
+  { title: "Build the knowledge graph", body: "Use the Claude Code skill (no key) and commit the JSON." },
 ]} />
 
 ### 1. Install
@@ -38,8 +45,7 @@ Once published, install from npm:
 pnpm add @hev/ask
 ```
 
-Until then, consume the latest version straight from the package subdirectory
-on GitHub:
+Until then, consume it straight from the package subdirectory on GitHub:
 
 ```sh
 pnpm add "git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui"
@@ -62,13 +68,14 @@ export default defineConfig({
 });
 ```
 
-`collections` is the one option you must set. Everything else has a default —
+`collections` is the one option you must set; everything else has a default —
 see the [configuration reference](/docs/api/configuration).
 
 ### 3. Add a server adapter
 
-The `/api/ask` route is rendered on demand. Add whichever adapter matches your
-host; this site uses Cloudflare:
+The `/api/ask` route renders on demand. Add whichever adapter matches your host
+(existing pages stay prerendered — only `/api/ask` runs as a function); this
+site uses Cloudflare:
 
 ```js
 // astro.config.mjs
@@ -80,13 +87,10 @@ export default defineConfig({
 });
 ```
 
-Existing pages stay prerendered. Only `/api/ask` runs as a function.
-
 ### 4. Render the overlay
 
-Add the component once, somewhere global like your base layout, and give
-readers a way to open it. **Any element with `data-hev-ask-open` opens the
-palette**, and `⌘K` is bound automatically.
+Add the component once somewhere global, like your base layout. **Any element
+with `data-hev-ask-open` opens the palette**, and `⌘K` is bound automatically.
 
 ```astro
 ---
@@ -102,63 +106,53 @@ import SearchOverlay from "@hev/ask/components/SearchOverlay.astro";
 <SearchOverlay />
 ```
 
-At this point keyword search works. Run `astro dev`, press `⌘K`, and type.
+Keyword search now works. Run `astro dev`, press `⌘K`, and type.
 
 ### 5. Build the knowledge graph
 
-The knowledge graph is an offline-built JSON file committed to your repo. It
-gives the agentic loop domain context, ranks keyword results, supplies the
-glossary (so `k8s` finds `kubernetes`), and holds the questions the overlay
-suggests. Only the distillation is model-authored; everything else is derived in
-code. There are two ways to produce that distillation:
+The knowledge graph is an offline-built JSON file you commit. It gives the
+agentic loop domain context, ranks keyword results, supplies the glossary (so
+`k8s` finds `kubernetes`), and holds the overlay's suggested questions.
 
-**Recommended — the Claude Code skill.** If you work in
+**Recommended — the Claude Code skill.** In
 [Claude Code](https://claude.com/claude-code), install the bundled skill and ask
 for it. It builds the graph inside your subscription — **no API key, no token
-spend on your own key**:
+spend**:
 
 ```text
 You: build the hev ask knowledge graph
 
 Claude runs:
-  hev-ask-kg corpus            # emits the sections to distil
+  ask kg corpus       # emits the sections to distil
   …writes context/glossary/summaries/suggestions…
-  hev-ask-kg assemble          # writes .hev-ask/kg.json (deterministically)
+  ask kg assemble     # writes .hev-ask/kg.json
 ```
 
-**Fallback — the CLI.** For CI or outside Claude Code, one API call does the same
-distillation:
+**Or use the CLI** — for CI or outside Claude Code, one API call does the same:
 
 ```sh
 export ANTHROPIC_API_KEY=sk-ant-...
-pnpm exec hev-ask-kg build      # writes .hev-ask/kg.json
+pnpm exec ask kg build      # writes .hev-ask/kg.json
 ```
 
 Then verify and commit, however you built it:
 
 ```sh
-pnpm exec hev-ask-kg verify     # builds the site, checks every anchor resolves
+pnpm exec ask kg verify     # builds the site, checks every anchor resolves
 git add .hev-ask/kg.json
 ```
 
-Both paths are **hash-gated** — they do no model work when content is unchanged,
-so they're cheap to re-run. The integration also runs `build` automatically
-during `astro build` when a key is present. See the
-[CLI reference](/docs/api/cli) for every command.
+Both paths are **hash-gated** — no model work when content is unchanged — and the
+integration runs the build automatically during `astro build` when a key is
+present. See the [CLI reference](/docs/api/cli).
 
-<Callout label="no key, no problem">
-Skip step 5 entirely and hev ask still works in keyword mode. Without a graph
-the agentic path falls back to keyword results, keyword ranking falls back to
-raw token overlap, and the overlay simply shows no suggestions. You can build
-the graph later.
-</Callout>
-
-## Turn on agentic search
+## Enable agentic search
 
 Set `ANTHROPIC_API_KEY` in the **server environment** where `/api/ask` runs
 (your host's secrets, or `.env` in local dev). With a key present, pressing
-Enter in the overlay runs the [agentic loop](/docs/concepts#the-agentic-search-loop);
-without one, Enter returns keyword results.
+Enter in the overlay runs the [agentic loop](/docs/concepts#the-agentic-search-loop) —
+self-issued sub-queries, a grounded answer, and inline deep links. Without one,
+Enter returns keyword results.
 
 ## Verify it works
 
@@ -167,8 +161,8 @@ without one, Enter returns keyword results.
 - **Agentic:** type a multi-word question (or click a suggested one) and press
   Enter; the footer shows the sub-queries the model ran, and a grounded answer
   streams in with inline deep links.
-- **Anchors:** `hev-ask-kg verify` exits non-zero if any chunk anchor doesn't
-  exist in the built HTML — wire it into CI.
+- **Anchors:** `ask kg verify` exits non-zero if any chunk anchor doesn't exist
+  in the built HTML — wire it into CI.
 
 From here, see the full [configuration options](/docs/api/configuration) or read
 [Concepts](/docs/concepts) to understand what's happening under the overlay.

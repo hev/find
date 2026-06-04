@@ -20,21 +20,31 @@
   "sideEffects": false,
   "files": [
     "bin",
+    "openapi.yaml",
     "src",
     "skills"
   ],
   "bin": {
+    "ask": "./bin/ask.mjs",
     "hev-ask-kg": "./bin/hev-ask-kg.mjs"
+  },
+  "optionalDependencies": {
+    "@hev/ask-darwin-arm64": "workspace:*",
+    "@hev/ask-darwin-x64": "workspace:*",
+    "@hev/ask-linux-arm64": "workspace:*",
+    "@hev/ask-linux-x64": "workspace:*",
+    "@hev/ask-win32-x64": "workspace:*"
   },
   "exports": {
     ".": "./src/index.ts",
     "./endpoint": "./src/endpoint.ts",
     "./components/SearchOverlay.astro": "./src/components/SearchOverlay.astro",
+    "./openapi.yaml": "./openapi.yaml",
     "./package.json": "./package.json"
   },
   "scripts": {
-    "kg:build": "node bin/hev-ask-kg.mjs build",
-    "kg:verify": "node bin/hev-ask-kg.mjs verify",
+    "kg:build": "node bin/ask.mjs kg build",
+    "kg:verify": "node bin/ask.mjs kg verify",
     "test": "node --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

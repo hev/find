@@ -12,6 +12,16 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/ask-darwin-arm64: {}
+
+  packages/ask-darwin-x64: {}
+
+  packages/ask-linux-arm64: {}
+
+  packages/ask-linux-x64: {}
+
+  packages/ask-win32-x64: {}
+
   packages/ui:
     dependencies:
       github-slugger:
@@ -27,6 +37,22 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+    optionalDependencies:
+      '@hev/ask-darwin-arm64':
+        specifier: workspace:*
+        version: link:../ask-darwin-arm64
+      '@hev/ask-darwin-x64':
+        specifier: workspace:*
+        version: link:../ask-darwin-x64
+      '@hev/ask-linux-arm64':
+        specifier: workspace:*
+        version: link:../ask-linux-arm64
+      '@hev/ask-linux-x64':
+        specifier: workspace:*
+        version: link:../ask-linux-x64
+      '@hev/ask-win32-x64':
+        specifier: workspace:*
+        version: link:../ask-win32-x64
 
   playground:
     dependencies:

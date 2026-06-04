@@ -1,0 +1,81 @@
+---
+title: "MCP server"
+description: "Run ask mcp to expose the committed knowledge graph as MCP tools for coding agents."
+group: "API"
+order: 4
+---
+
+`ask mcp` runs a stdio Model Context Protocol server over the same graph reads
+as the CLI and HTTP API. It is the zero-glue path for coding agents: point the
+agent at a checked-out repo's `.hev-ask/kg.json`, or at a deployed `/api/ask`
+endpoint, and the agent gets structured tools for your docs.
+
+## Configure
+
+For local, keyless graph reads:
+
+```json
+{
+  "mcpServers": {
+    "docs": {
+      "command": "ask",
+      "args": ["--kg-path", ".hev-ask/kg.json", "mcp"]
+    }
+  }
+}
+```
+
+For a deployed site:
+
+```json
+{
+  "mcpServers": {
+    "askhev": {
+      "command": "ask",
+      "args": ["--endpoint", "https://askhev.com/api/ask", "mcp"]
+    }
+  }
+}
+```
+
+Use the endpoint form when you want the freshest deployed graph or the
+`answer` tool. Local mode is fully offline and keyless, but `answer` returns a
+tool error unless `--endpoint` is set.
+
+## Tools
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `glossary_list` | none | `{ terms: GlossaryEntry[] }` |
+| `glossary_get` | `{ term }` | one glossary entry, matched by term or alias |
+| `sections_list` | `{ group? }` | `{ sections: SectionSummary[] }` |
+| `section_get` | `{ id }` | one full knowledge node |
+| `overview` | none | `{ overview, context }` |
+| `search` | `{ query, maxResults? }` | keyword results from the graph |
+| `answer` | `{ query }` | streamed endpoint answer collapsed into one tool result |
+
+Tool results include human-readable text in MCP `content` and the original
+machine shape in `structuredContent`, so agents can either read the text or
+route the structured object into later steps.
+
+## Data sources
+
+`ask mcp` uses the same resolution as the CLI:
+
+- `--endpoint <url>` calls the deployed HTTP read API and streams `answer`
+  through `POST /api/ask`.
+- Otherwise it reads `--kg-path` from disk, defaulting to `.hev-ask/kg.json`.
+
+Local reads load the graph on each tool call so a just-rebuilt `kg.json` is
+visible without restarting the MCP server.
+
+## Protocol surface
+
+The server speaks newline-delimited JSON-RPC over stdio. It handles
+`initialize`, `tools/list`, and `tools/call`, plus the initialized notification.
+Unknown JSON-RPC methods return a protocol error; tool-level failures return an
+MCP tool result with `isError: true`.
+
+This keeps the server small: all substantive behavior lives in `pkg/ask`, where
+the standalone CLI, embeddable command group, and MCP server share the same
+graph helpers.

@@ -1,0 +1,15 @@
+{
+  "name": "@hev/ask-win32-x64",
+  "version": "0.0.1",
+  "description": "Windows x64 binary for the @hev/ask CLI.",
+  "license": "MIT",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/ask.exe"
+  ]
+}

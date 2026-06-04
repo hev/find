@@ -20,6 +20,7 @@ export const docsNav = [
 			"api/search-overlay",
 			"api/endpoint",
 			"api/cli",
+			"api/mcp",
 			"api/knowledge-graph",
 		],
 	},

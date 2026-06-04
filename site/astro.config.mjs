@@ -7,7 +7,7 @@ import hevAsk from "@hev/ask";
 // are the product's own test corpus. Static pages stay prerendered; only the
 // on-demand /api/ask route runs as a Cloudflare Pages Function.
 export default defineConfig({
-	site: "https://ask.hev.dev",
+	site: "https://askhev.com",
 	devToolbar: { enabled: false },
 	// Pinned lane so dev fails loudly instead of hopping a neighbour's port.
 	server: { port: 4334, strictPort: true },

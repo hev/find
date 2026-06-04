@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { docsNav, getAllDocs, getDocHref } from "../lib/docs";
 
-const SITE = "https://ask.hev.dev";
+const SITE = "https://askhev.com";
 
 export const GET: APIRoute = async () => {
 	const all = await getAllDocs();

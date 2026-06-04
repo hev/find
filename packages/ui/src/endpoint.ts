@@ -1,6 +1,14 @@
 import type { APIRoute } from 'astro';
 import config from 'virtual:hev-ask/config';
 import kg from 'virtual:hev-ask/kg';
+import {
+  decodePathValue,
+  getGlossaryEntry,
+  getOverview,
+  getSection,
+  listGlossary,
+  listSectionSummaries,
+} from './kg/read.ts';
 import { hashableChunkText } from './search/chunk';
 import { buildIndex, prefilter, type Candidate, type Chunk } from './search/index';
 import { runAgenticAnswerLoop, type AgenticEvent } from './search/loop';
@@ -23,11 +31,17 @@ function resolveApiKey(locals: unknown): string | undefined {
   return fromRuntime ?? fromProcess ?? fromImportMeta;
 }
 
-// The overlay fetches the suggested questions on first open. They are baked into
-// the committed graph, so this is a cheap, keyless JSON response — no model call.
-export const GET: APIRoute = () => json({ suggestions: kg.suggestions ?? [], model: config.model });
+// The overlay fetches suggested questions from the base route. Sub-routes expose
+// keyless reads over the committed graph for CLI, MCP, and generated clients.
+export const GET: APIRoute = ({ params, request }) => {
+  const resource = resourceSegments(params.resource);
+  if (!resource.length) return json({ suggestions: kg.suggestions ?? [], model: config.model });
+  return readResource(resource, request);
+};
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, params }) => {
+  if (resourceSegments(params.resource).length) return notFound();
+
   let query: string | undefined;
   let mode: string | undefined;
   try {
@@ -35,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
-  if (!query || !query.trim()) return json({ results: [], query: '', model: config.model });
+  if (!query || !query.trim()) return json({ results: [], query: '', model: config.model, mode: 'keyword' });
 
   let chunks: Chunk[];
   try {
@@ -122,6 +136,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 };
 
+function readResource(resource: string[], request: Request): Response {
+  const [rawRoot, ...rest] = resource;
+  const root = decodePathValue(rawRoot).trim();
+
+  if (root === 'glossary') {
+    if (!rest.length) return json({ terms: listGlossary(kg) });
+    const entry = getGlossaryEntry(kg, rest.join('/'));
+    return entry ? json(entry) : notFound('No glossary entry matched that term or alias.');
+  }
+
+  if (root === 'sections') {
+    if (!rest.length) {
+      const group = new URL(request.url).searchParams.get('group');
+      return json({ sections: listSectionSummaries(kg, group) });
+    }
+    const node = getSection(kg, rest.join('/'));
+    return node ? json(node) : notFound('No section matched that id.');
+  }
+
+  if (root === 'overview' && rest.length === 0) return json(getOverview(kg));
+
+  return notFound();
+}
+
+function resourceSegments(value: string | undefined): string[] {
+  return (value ?? '')
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 function forward(send: (event: string, data: unknown) => void, ev: AgenticEvent, model: string): void {
   if (ev.type === 'sources') send('sources', { sources: ev.sources, model, mode: 'agentic' });
   else if (ev.type === 'token') send('token', { text: ev.text });
@@ -162,7 +207,7 @@ async function warnIfStale(chunks: Chunk[]) {
   staleWarningIssued = true;
   const hash = await sha256Hex(hashableChunkText(chunks)).catch(() => '');
   if (hash && hash !== kg.contentHash) {
-    console.warn('[hev-ask] Knowledge graph content hash is stale; run `hev-ask-kg build` to refresh it.');
+    console.warn('[hev-ask] Knowledge graph content hash is stale; run `ask kg build` to refresh it.');
   }
 }
 
@@ -177,4 +222,8 @@ function json(data: unknown, status = 200): Response {
     status,
     headers: { 'content-type': 'application/json' },
   });
+}
+
+function notFound(error = 'Not found.'): Response {
+  return json({ error }, 404);
 }

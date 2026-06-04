@@ -8,6 +8,7 @@
     "build": "pnpm --filter playground build",
     "kg:build": "pnpm --filter playground kg:build",
     "kg:verify": "pnpm --filter playground kg:verify",
+    "build:npm-binaries": "node scripts/build-npm-binaries.mjs",
     "test": "pnpm --filter @hev/ask test",
     "typecheck": "pnpm -r typecheck"
   },

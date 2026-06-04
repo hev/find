@@ -8,8 +8,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "kg:build": "hev-ask-kg build --collection docs --base-path /docs/",
-    "kg:verify": "hev-ask-kg verify --collection docs --base-path /docs/"
+    "kg:build": "ask kg build --collection docs --base-path /docs/",
+    "kg:verify": "ask kg verify --collection docs --base-path /docs/"
   },
   "dependencies": {
     "@astrojs/node": "^9.0.0",

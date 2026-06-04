@@ -1,162 +1,202 @@
 ---
-title: "CLI: hev-ask-kg"
-description: "The hev-ask-kg command: build the committed knowledge graph offline (hash-gated) and verify every heading anchor resolves in the built HTML, with all flags."
+title: "CLI"
+description: "The ask CLI reads, builds, verifies, and serves the committed knowledge graph for agents and CI."
 group: "API"
 order: 3
 ---
 
 import Callout from "../../../components/docs/Callout.astro";
 
-`@hev/ask` ships one binary, `hev-ask-kg`, with four commands. Two build the
-knowledge graph — `build` does it in one shot with an API key; `corpus` +
-`assemble` split the model step out so a **Claude Code skill** can do it with no
-key. `verify` is the CI gate. Run them from your site root.
+`@hev/ask` ships the `ask` binary. It has two command groups:
+
+- **Consumer commands** read the committed graph for agents:
+  `glossary`, `sections`, `section get`, `overview`, `search`, `answer`, and
+  `mcp`.
+- **Producer commands** live under `ask kg`: `build`, `corpus`, `assemble`, and
+  `verify`.
+
+`hev-ask-kg` is kept as a deprecated compatibility alias for one minor cycle.
+It forwards to `ask kg ...` and prints a one-line migration notice.
+
+## Reading the graph
+
+By default, `ask` reads `.hev-ask/kg.json` from the current repo. Pass
+`--endpoint <url>` to read from a deployed site's HTTP API instead.
 
 ```sh
-pnpm exec hev-ask-kg build      # one-shot build (needs ANTHROPIC_API_KEY)
-pnpm exec hev-ask-kg corpus     # emit the sections to distil (keyless)
-pnpm exec hev-ask-kg assemble   # assemble kg.json from a distillation (keyless)
-pnpm exec hev-ask-kg verify     # verify anchors, coverage, fidelity
+ask glossary list
+ask glossary get "knowledge graph"
+ask sections list --group API
+ask section get api/endpoint#knowledge-graph-reads-get
+ask overview
+ask search "read endpoints"
+ask --endpoint https://askhev.com/api/ask answer "what read routes exist?"
+ask mcp
 ```
 
-A convenient pattern is to alias them in your site's `package.json`:
+`ask answer` uses the deployed endpoint's agentic SSE path, so it requires
+`--endpoint`. For keyless local retrieval, use `ask search`.
+
+## Building the graph
+
+Run producer commands from the Astro site root:
+
+```sh
+ask kg build        # one-shot build; needs ANTHROPIC_API_KEY only when stale
+ask kg corpus       # emit sections for a keyless skill/model distillation
+ask kg assemble     # assemble .hev-ask/kg.json from that distillation
+ask kg verify       # build the site and verify anchors, coverage, fidelity
+```
+
+`ask kg build` is hash-gated. If the committed graph already matches the corpus,
+it exits without calling the model. Otherwise it asks the KG model for the
+distillation and writes `.hev-ask/kg.json`.
+
+`ask kg corpus` writes `.hev-ask/kg-input.json`; `ask kg assemble` reads
+`.hev-ask/kg-distill.json` and writes `.hev-ask/kg.json`. These commands expose
+the same deterministic seam used by the bundled Claude Code skill: the model
+authors only `context`, `glossary`, per-section `summaries`, and `suggestions`.
+Chunking, facts, overview, node sources, and the content hash are computed in
+code.
+
+`ask kg verify` builds the site unless `--skip-build` is set, then checks
+rendered heading anchors, graph coverage, and literal fidelity against the
+committed graph. Anchor drift is always fatal; coverage and literal-fidelity are
+warnings unless `--strict` is set.
+
+## Package scripts
+
+Use `ask kg` in site scripts:
 
 ```json
 {
   "scripts": {
-    "kg:build": "hev-ask-kg build",
-    "kg:verify": "hev-ask-kg verify"
+    "kg:build": "ask kg build",
+    "kg:verify": "ask kg verify"
   }
 }
 ```
 
-## Building with Claude Code (recommended)
+Existing scripts that call `hev-ask-kg build` or `hev-ask-kg verify` keep
+working through the alias, but new scripts should use `ask kg`.
 
-The only part of the build that needs a model is the **distillation**: the
-`context`, `glossary`, per-section `summaries`, and `suggestions`. Everything
-else — chunking, fact extraction, the overview map, the content hash — is
-deterministic. The `corpus` and `assemble` commands expose exactly that seam so
-the model step can run inside your Claude Code subscription instead of against
-your `ANTHROPIC_API_KEY`.
+## Claude Code skill
 
-`@hev/ask` bundles a skill for this. Point Claude Code at it and ask it to build
-the graph; it runs:
+The bundled `build-kg` skill can build a graph without using your
+`ANTHROPIC_API_KEY`. It runs the deterministic producer seam:
 
 ```text
-hev-ask-kg corpus       → .hev-ask/kg-input.json   (sections + freshness flag)
-…reads that file, writes the distillation to .hev-ask/kg-distill.json…
-hev-ask-kg assemble     → .hev-ask/kg.json          (deterministic assembly)
+ask kg corpus       -> .hev-ask/kg-input.json
+...writes .hev-ask/kg-distill.json...
+ask kg assemble     -> .hev-ask/kg.json
 ```
 
-Because the skill runs in your subscription, building the graph costs **no API
-tokens on your own key**. The result is byte-for-byte the same shape as
-`build` produces, and the same hash gate applies — `corpus` reports
-`upToDate: true` and the skill stops when content hasn't changed.
-
-### `corpus`
-
-Chunks your content and writes the model input to `--out` (default
-`.hev-ask/kg-input.json`): the content hash, an `upToDate` flag (true when the
-committed `kg.json` already matches), and one entry per section (`id`, `url`,
-`title`, `text`). Fully deterministic and keyless.
-
-### `assemble`
-
-Reads a distillation JSON from `--input` (default `.hev-ask/kg-distill.json`) —
-`{ context, glossary, summaries, suggestions }` — re-chunks your content from
-disk, and writes `kg.json` with the deterministic parts (facts, overview, nodes,
-hash) computed in code. The model never authors those, so they can't drift.
-Keyless.
-
-```sh
-hev-ask-kg corpus --out .hev-ask/kg-input.json
-# …Claude writes .hev-ask/kg-distill.json…
-hev-ask-kg assemble --input .hev-ask/kg-distill.json
-```
-
-## `build`
-
-Builds the knowledge graph and writes it to `kgPath` (default
-`.hev-ask/kg.json`). It reads your content from disk, chunks it, and hashes the
-result.
-
-- If a committed `kg.json` already matches that hash, **it exits without calling
-  the model** — no spend, no change.
-- Otherwise it calls the KG model (`--kg-model`, default `claude-opus-4-8`) once
-  to produce the distillation (`context`, `glossary`, one summary per section,
-  and a few `suggestions`), then assembles the nodes (verbatim facts are
-  extracted deterministically) and writes the file stamped with the new hash and
-  timestamp.
-
-Requires `ANTHROPIC_API_KEY` in the environment **only when it actually
-regenerates**. Commit the resulting JSON.
-
-```sh
-export ANTHROPIC_API_KEY=sk-ant-...
-pnpm exec hev-ask-kg build
-# → [hev-ask] kg:written .hev-ask/kg.json (42 chunks)
-#   or kg:skipped when the hash already matches
-```
-
-## `verify`
-
-Builds the site, then checks the committed graph against the corpus. It reads
-only committed files — it never calls the model — so it is a clean CI gate. Three
-checks:
-
-- **Anchors (always fatal).** Every chunk's `#anchor` must exist as an `id` in
-  the rendered HTML. This catches heading-slug drift before it ships a link that
-  404s to the top of a page.
-- **Coverage (warn; fatal with `--strict`).** Every section must have a node.
-- **Literal fidelity (warn; fatal with `--strict`).** Every literal the builder
-  would extract must be recoverable from its node's `facts`, unless the node is
-  `source-primary`. This stops lossy distillation from yielding confident, wrong
-  exact answers.
-
-```sh
-pnpm exec hev-ask-kg verify
-# → [hev-ask] verified 128 anchors
-```
-
-It exits non-zero and lists each missing anchor if any don't resolve:
-
-```
-[hev-ask] missing anchor old-name for /docs/concepts#old-name in dist/docs/concepts/index.html
-```
-
-<Callout label="put verify in CI">
-Anchor correctness is the contract that makes deep links trustworthy. Running
-verify on every build is the mechanical check that the slugs hev ask generates
-still match what Astro renders.
-</Callout>
+Because the model step runs inside your Claude Code subscription, the graph
+build costs no API tokens on your own key. The resulting `kg.json` has the same
+shape as `ask kg build` output, and the same hash gate applies.
 
 ## Flags
 
-All commands accept the same content-shaping flags as the integration options;
-defaults match the integration.
+| Flag | Default | Description |
+|---|---|---|
+| `--kg-path <path>` | `.hev-ask/kg.json` | Local graph path for reads; output/input path for producer commands. |
+| `--endpoint <url>` | - | Remote `/api/ask` base URL for read commands and `answer`. |
+| `--json` | automatic for non-TTY in the standalone CLI | Force machine-readable JSON output. |
+| `--max-results <n>` | `8` | Local search result cap. |
+| `--collection <name>` | `docs` | Collection to read for producer commands. Repeat for multiple. |
+| `--base-path <path>` | `/docs/` | Slug to URL prefix for producer commands. |
+| `--content-glob <glob>` | derived | Source globs for producer commands. Repeat for multiple. |
+| `--chunk-heading-depth <n>` | `3` | Deepest heading used as a chunk boundary. |
+| `--kg-model <model>` | `claude-opus-4-8` | Model used by `ask kg build`. |
+| `--out <path>` | `.hev-ask/kg-input.json` | Output path for `ask kg corpus`. |
+| `--input <path>` | `.hev-ask/kg-distill.json` | Input path for `ask kg assemble`. |
+| `--build-command <cmd>` | `pnpm build` | Override the build command for `ask kg verify`. |
+| `--skip-build` | off | Verify against an existing `dist/` without rebuilding. |
+| `--strict` | off | Treat graph coverage and literal-fidelity warnings as failures. |
 
-| Flag | Applies to | Default | Description |
-|---|---|---|---|
-| `--collection <name>` | both | `docs` | Collection to read. Repeat for multiple. |
-| `--base-path <path>` | both | `/docs/` | Slug → URL prefix. |
-| `--kg-path <path>` | all | `.hev-ask/kg.json` | Path to the artifact (output for `build`/`assemble`, input for `verify`). |
-| `--content-glob <glob>` | all | derived | Source globs. Repeat for multiple. |
-| `--chunk-heading-depth <n>` | all | `3` | Deepest heading used as a chunk boundary. |
-| `--kg-model <model>` | `build` | `claude-opus-4-8` | Model used to build the graph. |
-| `--out <path>` | `corpus` | `.hev-ask/kg-input.json` | Where to write the model-input payload. |
-| `--input <path>` | `assemble` | `.hev-ask/kg-distill.json` | Distillation JSON to assemble into `kg.json`. |
-| `--build-command <cmd>` | `verify` | astro build | Override the build command run before verifying. |
-| `--skip-build` | `verify` | off | Verify against an existing `dist/` without rebuilding. |
-| `--strict` | `verify` | off | Treat coverage and fidelity warnings as failures. |
+Global flags come before the command:
 
 ```sh
-hev-ask-kg build --collection docs --collection guides --chunk-heading-depth 2
-hev-ask-kg verify --skip-build
+ask --kg-path .hev-ask/kg.json --json search "openapi"
+ask --endpoint https://askhev.com/api/ask mcp
+ask kg build --collection docs --collection guides --chunk-heading-depth 2
+ask kg verify --skip-build
 ```
+
+## MCP
+
+`ask mcp` runs a stdio MCP server over the same read/search surface:
+`glossary_list`, `glossary_get`, `sections_list`, `section_get`, `overview`,
+`search`, and `answer`.
+
+Use local graph reads for checked-out repos:
+
+```json
+{
+  "mcpServers": {
+    "docs": {
+      "command": "ask",
+      "args": ["--kg-path", ".hev-ask/kg.json", "mcp"]
+    }
+  }
+}
+```
+
+Use a deployed endpoint when the agent needs the remote graph or `answer`:
+
+```json
+{
+  "mcpServers": {
+    "askhev": {
+      "command": "ask",
+      "args": ["--endpoint", "https://askhev.com/api/ask", "mcp"]
+    }
+  }
+}
+```
+
+See the [MCP page](/docs/api/mcp) for tool schemas and behavior.
+
+## Go library
+
+The reusable Go API lives in `pkg/ask`. Use pure helpers when you want direct
+control, or mount the dependency-free command group in your own CLI.
+
+```go
+group := ask.NewCommandGroup(ask.CommandOptions{
+	KGPath: ".hev-ask/kg.json",
+})
+err := group.Run(ctx, []string{"search", "read endpoints"}, os.Stdin, os.Stdout, os.Stderr)
+```
+
+The lower-level helpers include `LoadGraph`, `ListGlossary`, `GetSection`,
+`SearchGraph`, `NewEndpointClient`, `BuildKnowledgeGraph`, `VerifyAnchors`, and
+`ServeMCP`.
+
+## Distribution
+
+The npm package exposes two bins:
+
+| Bin | Purpose |
+|---|---|
+| `ask` | Main v3 CLI. |
+| `hev-ask-kg` | Deprecated alias that forwards to `ask kg ...`. |
+
+The launcher resolves `HEV_ASK_BINARY` first, then a platform-specific optional
+binary package when installed, then the checked-out Go source in this monorepo.
+That source fallback is for development; published installs use the packaged
+binary path.
 
 ## Where it runs
 
-`build` and `verify` run in Node with filesystem access — locally or in CI, not
-on the edge. The committed `kg.json` they produce is what the running site reads
-through the `virtual:hev-ask/kg` module. See the
-[knowledge graph format](/docs/api/knowledge-graph).
+The producer commands run locally or in CI with filesystem access. The Astro
+integration also invokes `ask kg build` during `astro build` when
+`ANTHROPIC_API_KEY` is present, then falls back to the committed artifact if the
+build command cannot run. The deployed site reads the committed graph through
+`virtual:hev-ask/kg`; it does not need filesystem access for graph reads.
+
+<Callout label="put verify in CI">
+Anchor correctness is the contract that makes deep links trustworthy. Running
+`ask kg verify` on every build is the mechanical check that generated slugs
+still match what Astro renders.
+</Callout>

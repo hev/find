@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "generatedAt": "2026-05-31T14:54:22.353Z",
-  "contentHash": "708cfaf64c82066aac3d7949e00b2dcdc62eeac3bfdf9bc15931e5413f102a63",
-  "context": "hev ask is an Astro 5 integration that adds a ⌘K command-palette search overlay to documentation sites whose content lives in Astro content collections. It offers two search paths from one endpoint: an instant, keyless keyword path that runs as the reader types, and an optional Claude-powered agentic path triggered by pressing Enter that streams a grounded answer with inline deep links. Both paths chunk documents by heading so links land on the exact section anchor rather than the top of a page. The agentic path reads from an offline-built, git-committed knowledge graph (kg.json) — a distilled \"shadow site\" of section nodes — built by the hev-ask-kg CLI and inlined into the build via a virtual module. The system is designed to degrade gracefully (no key, stale or missing graph) and to never hard-fail. This corpus documents the concepts, quick start, tradeoffs, limits, and the full API surface (integration config, SearchOverlay component, /api/ask endpoint, knowledge-graph format, and the CLI).",
+  "generatedAt": "2026-06-01T16:11:13.850Z",
+  "contentHash": "6a5fa030a2fa579245b221bf48c3581f7b42cce90780a82bf02e36b443b44b17",
+  "context": "hev ask is an Astro docs search integration with one committed knowledge graph shared by the browser overlay, HTTP read API, Go ask CLI, MCP server, and embeddable Go library. Authors build the graph offline with ask kg or the bundled Claude Code skill, commit it, and verify anchors so every result and answer links to rendered sections. Runtime search degrades from agentic SSE to keyword JSON when no server key is available.",
   "glossary": [
     {
       "term": "hev ask",
@@ -60,15 +60,6 @@
         "deep link"
       ],
       "definition": "The #id appended to a section URL, generated with github-slugger so it matches Astro's rendered heading id."
-    },
-    {
-      "term": "hev-ask-kg",
-      "aliases": [
-        "CLI",
-        "hev ask cli",
-        "kg cli"
-      ],
-      "definition": "The single binary shipping with @hev/ask, offering build and verify subcommands to generate and check the committed knowledge graph."
     },
     {
       "term": "hevAsk()",
@@ -164,36 +155,135 @@
         "CI gate"
       ],
       "definition": "The CLI subcommand that builds the site and checks anchors, coverage, and literal fidelity against the committed graph without calling the model."
+    },
+    {
+      "term": "read API",
+      "aliases": [
+        "knowledge graph reads",
+        "HTTP read API",
+        "graph read routes"
+      ],
+      "definition": "Keyless routes under the search endpoint that expose glossary terms, section nodes, and overview context from the committed graph."
+    },
+    {
+      "term": "OpenAPI spec",
+      "aliases": [
+        "openapi.yaml",
+        "client generation",
+        "API contract"
+      ],
+      "definition": "The published machine-readable contract for the search, answer, and knowledge-graph read endpoints."
+    },
+    {
+      "term": "pkg/ask",
+      "aliases": [
+        "Go library",
+        "embeddable library",
+        "ask library"
+      ],
+      "definition": "The reusable Go package behind the ask CLI, exposing graph read, endpoint client, and search helpers for other tools."
+    },
+    {
+      "term": "ask kg corpus",
+      "aliases": [
+        "kg corpus",
+        "corpus command",
+        "producer seam"
+      ],
+      "definition": "The Go ask command that deterministically emits section input for knowledge-graph distillation."
+    },
+    {
+      "term": "ask kg assemble",
+      "aliases": [
+        "kg assemble",
+        "assemble command"
+      ],
+      "definition": "The Go ask command that combines a distillation file with deterministic facts, overview, nodes, and content hash to write kg.json."
+    },
+    {
+      "term": "ask kg verify",
+      "aliases": [
+        "kg verify",
+        "anchor verification",
+        "CI gate"
+      ],
+      "definition": "The Go ask command that builds or reads dist output and checks rendered anchors, graph coverage, and literal fidelity."
+    },
+    {
+      "term": "ask kg build",
+      "aliases": [
+        "kg build",
+        "model-backed build",
+        "graph build"
+      ],
+      "definition": "The Go ask command that hash-gates the corpus and calls the KG model only when the committed graph is stale."
+    },
+    {
+      "term": "ask CLI",
+      "aliases": [
+        "ask",
+        "agent CLI",
+        "Go CLI",
+        "consumer CLI",
+        "hev-ask-kg"
+      ],
+      "definition": "The v3 command surface shipped by @hev/ask; it reads the committed graph, runs MCP, and owns ask kg producer commands."
+    },
+    {
+      "term": "ask kg",
+      "aliases": [
+        "kg commands",
+        "producer commands",
+        "graph builder"
+      ],
+      "definition": "The ask CLI command group that builds, assembles, and verifies the committed knowledge graph."
+    },
+    {
+      "term": "MCP server",
+      "aliases": [
+        "ask mcp",
+        "MCP tools",
+        "Model Context Protocol"
+      ],
+      "definition": "The stdio server that exposes hev ask glossary, section, overview, search, and answer operations as tools for coding agents."
+    },
+    {
+      "term": "npm launcher",
+      "aliases": [
+        "platform binary",
+        "HEV_ASK_BINARY",
+        "optional binary package"
+      ],
+      "definition": "The JavaScript bin wrapper in @hev/ask that resolves an explicit binary, platform binary package, or source checkout for the ask CLI."
+    },
+    {
+      "term": "CommandGroup",
+      "aliases": [
+        "embeddable command group",
+        "NewCommandGroup",
+        "embedded CLI"
+      ],
+      "definition": "The dependency-free Go command surface in pkg/ask that lets another CLI mount hev ask docs commands."
     }
   ],
-  "overview": "## API\n- CLI: hev-ask-kg — `api/cli`\n- assemble — `api/cli#assemble`\n- build — `api/cli#build`\n- Building with Claude Code (recommended) — `api/cli#building-with-claude-code-recommended`\n- corpus — `api/cli#corpus`\n- Flags — `api/cli#flags`\n- verify — `api/cli#verify`\n- Where it runs — `api/cli#where-it-runs`\n- Configuration — `api/configuration`\n- Options — `api/configuration#options`\n- Tuning notes — `api/configuration#tuning-notes`\n- TypeScript — `api/configuration#typescript`\n- What the integration does — `api/configuration#what-the-integration-does`\n- Search endpoint — `api/endpoint`\n- Agentic response (SSE) — `api/endpoint#agentic-response-sse`\n- Errors — `api/endpoint#errors`\n- Index lifecycle — `api/endpoint#index-lifecycle`\n- Keyword response (JSON) — `api/endpoint#keyword-response-json`\n- Mode selection — `api/endpoint#mode-selection`\n- Request — `api/endpoint#request`\n- Suggested questions (GET) — `api/endpoint#suggested-questions-get`\n- The API key — `api/endpoint#the-api-key`\n- Knowledge graph format — `api/knowledge-graph`\n- Degradation — `api/knowledge-graph#degradation`\n- Fields — `api/knowledge-graph#fields`\n- How each field is used — `api/knowledge-graph#how-each-field-is-used`\n- KnowledgeNode — `api/knowledge-graph#knowledgenode`\n- Regenerating — `api/knowledge-graph#regenerating`\n- Shape — `api/knowledge-graph#shape`\n- SearchOverlay component — `api/search-overlay`\n- Keyboard model — `api/search-overlay#keyboard-model`\n- Keyword results and deep links — `api/search-overlay#keyword-results-and-deep-links`\n- Opening the overlay — `api/search-overlay#opening-the-overlay`\n- Props — `api/search-overlay#props`\n- Suggested questions — `api/search-overlay#suggested-questions`\n- The mode toggle — `api/search-overlay#the-mode-toggle`\n- The streamed answer — `api/search-overlay#the-streamed-answer`\n- Theming — `api/search-overlay#theming`\n## Overview\n- Concepts — `concepts`\n- Asking is the default — `concepts#asking-is-the-default`\n- Chunks and anchors — `concepts#chunks-and-anchors`\n- Degradation, by design — `concepts#degradation-by-design`\n- Keyword search and the glossary — `concepts#keyword-search-and-the-glossary`\n- The agentic search loop — `concepts#the-agentic-search-loop`\n- The knowledge graph — `concepts#the-knowledge-graph`\n- The system prompt is cached — `concepts#the-system-prompt-is-cached`\n- Two ways to build it — `concepts#two-ways-to-build-it`\n- Introduction — `index`\n- How it fits an Astro site — `index#how-it-fits-an-astro-site`\n- Next steps — `index#next-steps`\n- Who this is for — `index#who-this-is-for`\n- Limits — `limits`\n- A server route is required — `limits#a-server-route-is-required`\n- Agentic search adds latency — `limits#agentic-search-adds-latency`\n- Anchors depend on Astro's slugger — `limits#anchors-depend-on-astros-slugger`\n- Frontmatter parsing is a flat-YAML subset — `limits#frontmatter-parsing-is-a-flat-yaml-subset`\n- Recall has a keyword ceiling — `limits#recall-has-a-keyword-ceiling`\n- Secrets live server-side — `limits#secrets-live-server-side`\n- The corpus is your content collection — `limits#the-corpus-is-your-content-collection`\n- The knowledge-graph build is a single model call — `limits#the-knowledge-graph-build-is-a-single-model-call`\n- Quick start — `quickstart`\n- 1. Install — `quickstart#1-install`\n- 2. Register the integration — `quickstart#2-register-the-integration`\n- 3. Add a server adapter — `quickstart#3-add-a-server-adapter`\n- 4. Render the overlay — `quickstart#4-render-the-overlay`\n- 5. Build the knowledge graph — `quickstart#5-build-the-knowledge-graph`\n- Install and wire it up — `quickstart#install-and-wire-it-up`\n- Prerequisites — `quickstart#prerequisites`\n- Turn on agentic search — `quickstart#turn-on-agentic-search`\n- Verify it works — `quickstart#verify-it-works`\n- Tradeoffs — `tradeoffs`\n- A committed knowledge graph — `tradeoffs#a-committed-knowledge-graph`\n- Cost and latency of agentic search — `tradeoffs#cost-and-latency-of-agentic-search`\n- How it compares — `tradeoffs#how-it-compares`\n- Keyword retrieval, not embeddings — `tradeoffs#keyword-retrieval-not-embeddings`\n- One dependency, deliberately — `tradeoffs#one-dependency-deliberately`\n- Two paths instead of one — `tradeoffs#two-paths-instead-of-one`",
+  "overview": "## API\n- CLI — `api/cli`\n- Building the graph — `api/cli#building-the-graph`\n- Claude Code skill — `api/cli#claude-code-skill`\n- Distribution — `api/cli#distribution`\n- Flags — `api/cli#flags`\n- Go library — `api/cli#go-library`\n- MCP — `api/cli#mcp`\n- Package scripts — `api/cli#package-scripts`\n- Reading the graph — `api/cli#reading-the-graph`\n- Where it runs — `api/cli#where-it-runs`\n- Configuration — `api/configuration`\n- Options — `api/configuration#options`\n- Tuning notes — `api/configuration#tuning-notes`\n- TypeScript — `api/configuration#typescript`\n- What the integration does — `api/configuration#what-the-integration-does`\n- Search endpoint — `api/endpoint`\n- Agentic response (SSE) — `api/endpoint#agentic-response-sse`\n- Errors — `api/endpoint#errors`\n- Index lifecycle — `api/endpoint#index-lifecycle`\n- Keyword response (JSON) — `api/endpoint#keyword-response-json`\n- Knowledge graph reads (GET) — `api/endpoint#knowledge-graph-reads-get`\n- Mode selection — `api/endpoint#mode-selection`\n- Request — `api/endpoint#request`\n- Suggested questions (GET) — `api/endpoint#suggested-questions-get`\n- The API key — `api/endpoint#the-api-key`\n- Knowledge graph format — `api/knowledge-graph`\n- Degradation — `api/knowledge-graph#degradation`\n- Fields — `api/knowledge-graph#fields`\n- How each field is used — `api/knowledge-graph#how-each-field-is-used`\n- KnowledgeNode — `api/knowledge-graph#knowledgenode`\n- Regenerating — `api/knowledge-graph#regenerating`\n- Shape — `api/knowledge-graph#shape`\n- MCP server — `api/mcp`\n- Configure — `api/mcp#configure`\n- Data sources — `api/mcp#data-sources`\n- Protocol surface — `api/mcp#protocol-surface`\n- Tools — `api/mcp#tools`\n- SearchOverlay component — `api/search-overlay`\n- Keyboard model — `api/search-overlay#keyboard-model`\n- Keyword results and deep links — `api/search-overlay#keyword-results-and-deep-links`\n- Opening the overlay — `api/search-overlay#opening-the-overlay`\n- Props — `api/search-overlay#props`\n- Suggested questions — `api/search-overlay#suggested-questions`\n- The mode toggle — `api/search-overlay#the-mode-toggle`\n- The streamed answer — `api/search-overlay#the-streamed-answer`\n- Theming — `api/search-overlay#theming`\n## Overview\n- Concepts — `concepts`\n- Asking is the default — `concepts#asking-is-the-default`\n- Chunks and anchors — `concepts#chunks-and-anchors`\n- Degradation, by design — `concepts#degradation-by-design`\n- Keyword search and the glossary — `concepts#keyword-search-and-the-glossary`\n- The agentic search loop — `concepts#the-agentic-search-loop`\n- The knowledge graph — `concepts#the-knowledge-graph`\n- The system prompt is cached — `concepts#the-system-prompt-is-cached`\n- Two ways to build it — `concepts#two-ways-to-build-it`\n- Introduction — `index`\n- How it fits an Astro site — `index#how-it-fits-an-astro-site`\n- Next steps — `index#next-steps`\n- Two surfaces, one graph — `index#two-surfaces-one-graph`\n- Who this is for — `index#who-this-is-for`\n- Limits — `limits`\n- A server route is required — `limits#a-server-route-is-required`\n- Agentic search adds latency — `limits#agentic-search-adds-latency`\n- Anchors depend on Astro's slugger — `limits#anchors-depend-on-astros-slugger`\n- Frontmatter parsing is a flat-YAML subset — `limits#frontmatter-parsing-is-a-flat-yaml-subset`\n- Recall has a keyword ceiling — `limits#recall-has-a-keyword-ceiling`\n- Secrets live server-side — `limits#secrets-live-server-side`\n- The corpus is your content collection — `limits#the-corpus-is-your-content-collection`\n- The knowledge-graph build is a single model call — `limits#the-knowledge-graph-build-is-a-single-model-call`\n- Quick start — `quickstart`\n- 1. Install — `quickstart#1-install`\n- 2. Register the integration — `quickstart#2-register-the-integration`\n- 3. Add a server adapter — `quickstart#3-add-a-server-adapter`\n- 4. Render the overlay — `quickstart#4-render-the-overlay`\n- 5. Build the knowledge graph — `quickstart#5-build-the-knowledge-graph`\n- Install and wire it up — `quickstart#install-and-wire-it-up`\n- Prerequisites — `quickstart#prerequisites`\n- Turn on agentic search — `quickstart#turn-on-agentic-search`\n- Verify it works — `quickstart#verify-it-works`\n- Tradeoffs — `tradeoffs`\n- A committed knowledge graph — `tradeoffs#a-committed-knowledge-graph`\n- Cost and latency of agentic search — `tradeoffs#cost-and-latency-of-agentic-search`\n- How it compares — `tradeoffs#how-it-compares`\n- Keyword retrieval, not embeddings — `tradeoffs#keyword-retrieval-not-embeddings`\n- One dependency, deliberately — `tradeoffs#one-dependency-deliberately`\n- Two paths instead of one — `tradeoffs#two-paths-instead-of-one`",
   "suggestions": [
-    "How does the knowledge graph stay fresh?",
-    "How do I build the knowledge graph without an API key?",
-    "What does keyword search fall back to without a graph?",
-    "How do I add hev ask to my Astro site?",
-    "When does the overlay switch to AI mode?"
+    "How can my coding agent query these docs locally?",
+    "How do I run hev ask as an MCP server?",
+    "How do I rebuild and verify the knowledge graph?",
+    "What read routes does /api/ask expose?",
+    "How do I embed hev ask docs commands in another Go CLI?"
   ],
   "nodes": [
     {
       "id": "api/cli",
       "kind": "section",
-      "title": "CLI: hev-ask-kg",
+      "title": "CLI",
       "heading": null,
       "group": "API",
       "url": "/docs/api/cli",
-      "summary": "The hev-ask-kg command: build the committed knowledge graph offline (hash-gated) and verify every heading anchor resolves in the built HTML, with all flags. @hev/ask ships one binary, hev-ask-kg, with two commands: bu…",
+      "summary": "@hev/ask ships the ask binary as the main CLI. Consumer commands read the committed graph for agents, while producer commands under ask kg build, assemble, and verify that graph; hev-ask-kg remains only as a deprecated forwarding alias.",
       "facts": [
-        {
-          "kind": "code",
-          "literal": "pnpm exec hev-ask-kg build      # one-shot build (needs ANTHROPIC_API_KEY)\npnpm exec hev-ask-kg corpus     # emit the sections to distil (keyless)\npnpm exec hev-ask-kg assemble   # assemble kg.json from a distillation (keyless)\npnpm exec hev-ask-kg verify     # verify anchors, coverage, fidelity",
-          "chunkId": "api/cli"
-        },
-        {
-          "kind": "code",
-          "literal": "{\n  \"scripts\": {\n    \"kg:build\": \"hev-ask-kg build\",\n    \"kg:verify\": \"hev-ask-kg verify\"\n  }\n}",
-          "chunkId": "api/cli"
-        },
         {
           "kind": "code",
           "literal": "@hev/ask",
@@ -201,7 +291,47 @@
         },
         {
           "kind": "code",
-          "literal": "hev-ask-kg",
+          "literal": "ask",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "sections",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "section get",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "overview",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "search",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "answer",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "mcp",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg",
           "chunkId": "api/cli"
         },
         {
@@ -226,7 +356,12 @@
         },
         {
           "kind": "code",
-          "literal": "package.json",
+          "literal": "hev-ask-kg",
+          "chunkId": "api/cli"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg ...",
           "chunkId": "api/cli"
         },
         {
@@ -244,467 +379,390 @@
       ],
       "mode": "source-primary",
       "terms": [
-        "command",
-        "build",
-        "committed",
-        "knowledge",
-        "graph",
-        "offline",
-        "hash",
-        "gated",
-        "verify",
-        "every",
-        "heading",
-        "anchor",
-        "resolves",
-        "built",
-        "html",
-        "flags",
         "ships",
         "binary",
+        "main",
+        "consumer",
         "commands",
-        "pnpm",
-        "exec",
-        "shot",
-        "needs",
-        "anthropic",
-        "corpus",
-        "emit",
-        "sections",
-        "distil",
-        "keyless",
+        "read",
+        "committed",
+        "graph",
+        "agents",
+        "while",
+        "producer",
+        "under",
+        "build",
         "assemble",
-        "json",
-        "distillation",
-        "anchors",
-        "coverage",
-        "fidelity",
-        "scripts",
-        "package",
+        "verify",
+        "remains",
+        "only",
+        "deprecated",
+        "forwarding",
+        "alias",
+        "glossary",
+        "sections",
+        "section",
+        "overview",
+        "search",
+        "answer",
+        "corpus",
         "callout",
         "astro",
-        "four"
-      ]
-    },
-    {
-      "id": "api/cli#assemble",
-      "kind": "section",
-      "title": "CLI: hev-ask-kg",
-      "heading": "assemble",
-      "group": "API",
-      "url": "/docs/api/cli#assemble",
-      "summary": "assemble Reads a distillation JSON from --input (default .hev-ask/kg-distill.json) — { context, glossary, summaries, suggestions } — re-chunks your content from disk, and writes kg.json with the deterministic parts (fac…",
-      "facts": [
-        {
-          "kind": "code",
-          "literal": "hev-ask-kg corpus --out .hev-ask/kg-input.json\n# …Claude writes .hev-ask/kg-distill.json…\nhev-ask-kg assemble --input .hev-ask/kg-distill.json",
-          "chunkId": "api/cli#assemble"
-        },
-        {
-          "kind": "code",
-          "literal": "assemble",
-          "chunkId": "api/cli#assemble"
-        },
-        {
-          "kind": "code",
-          "literal": "--input",
-          "chunkId": "api/cli#assemble"
-        },
-        {
-          "kind": "code",
-          "literal": ".hev-ask/kg-distill.json",
-          "chunkId": "api/cli#assemble"
-        },
-        {
-          "kind": "code",
-          "literal": "{ context, glossary, summaries, suggestions }",
-          "chunkId": "api/cli#assemble"
-        },
-        {
-          "kind": "code",
-          "literal": "kg.json",
-          "chunkId": "api/cli#assemble"
-        }
-      ],
-      "sources": [
-        {
-          "chunkId": "api/cli#assemble",
-          "url": "/docs/api/cli#assemble",
-          "anchor": "assemble"
-        }
-      ],
-      "mode": "source-primary",
-      "terms": [
-        "assemble",
         "reads",
-        "distillation",
-        "json",
-        "input",
-        "default",
-        "distill",
-        "context",
-        "glossary",
-        "summaries",
-        "suggestions",
-        "chunks",
-        "content",
-        "disk",
-        "writes",
-        "deterministic",
-        "parts",
-        "corpus",
-        "claude",
-        "facts",
-        "overview",
-        "nodes",
-        "hash",
-        "computed",
-        "code",
-        "model",
-        "never",
-        "authors",
-        "those",
-        "drift",
-        "keyless"
+        "builds",
+        "verifies",
+        "serves",
+        "knowledge",
+        "command",
+        "groups",
+        "live",
+        "kept",
+        "compatibility",
+        "minor"
       ]
     },
     {
-      "id": "api/cli#build",
+      "id": "api/cli#building-the-graph",
       "kind": "section",
-      "title": "CLI: hev-ask-kg",
-      "heading": "build",
+      "title": "CLI",
+      "heading": "Building the graph",
       "group": "API",
-      "url": "/docs/api/cli#build",
-      "summary": "build Builds the knowledge graph and writes it to kgPath (default .hev-ask/kg.json). It reads your content from disk, chunks it, and hashes the result. If a committed kg.json already matches that hash, it exits without…",
+      "url": "/docs/api/cli#building-the-graph",
+      "summary": "ask kg build, corpus, assemble, and verify run from the Astro site root. Build is hash-gated, corpus/assemble expose the deterministic distillation seam, and verify checks anchors, coverage, and literal fidelity.",
       "facts": [
         {
           "kind": "code",
-          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-ask-kg build\n# → [hev-ask] kg:written .hev-ask/kg.json (42 chunks)\n#   or kg:skipped when the hash already matches",
-          "chunkId": "api/cli#build"
+          "literal": "ask kg build        # one-shot build; needs ANTHROPIC_API_KEY only when stale\nask kg corpus       # emit sections for a keyless skill/model distillation\nask kg assemble     # assemble .hev-ask/kg.json from that distillation\nask kg verify       # build the site and verify anchors, coverage, fidelity",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "build",
-          "chunkId": "api/cli#build"
-        },
-        {
-          "kind": "code",
-          "literal": "kgPath",
-          "chunkId": "api/cli#build"
+          "literal": "ask kg build",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
           "literal": ".hev-ask/kg.json",
-          "chunkId": "api/cli#build"
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "kg.json",
-          "chunkId": "api/cli#build"
+          "literal": "ask kg corpus",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "--kg-model",
-          "chunkId": "api/cli#build"
+          "literal": ".hev-ask/kg-input.json",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "claude-opus-4-8",
-          "chunkId": "api/cli#build"
+          "literal": "ask kg assemble",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "context",
-          "chunkId": "api/cli#build"
-        },
-        {
-          "kind": "code",
-          "literal": "glossary",
-          "chunkId": "api/cli#build"
-        },
-        {
-          "kind": "code",
-          "literal": "suggestions",
-          "chunkId": "api/cli#build"
-        },
-        {
-          "kind": "code",
-          "literal": "ANTHROPIC_API_KEY",
-          "chunkId": "api/cli#build"
-        }
-      ],
-      "sources": [
-        {
-          "chunkId": "api/cli#build",
-          "url": "/docs/api/cli#build",
-          "anchor": "build"
-        }
-      ],
-      "mode": "source-primary",
-      "terms": [
-        "build",
-        "builds",
-        "knowledge",
-        "graph",
-        "writes",
-        "kgpath",
-        "default",
-        "json",
-        "reads",
-        "content",
-        "disk",
-        "chunks",
-        "hashes",
-        "result",
-        "committed",
-        "already",
-        "matches",
-        "hash",
-        "exits",
-        "without",
-        "export",
-        "anthropic",
-        "pnpm",
-        "exec",
-        "written",
-        "skipped",
-        "model",
-        "claude",
-        "opus",
-        "context",
-        "glossary",
-        "suggestions",
-        "calling",
-        "spend",
-        "change",
-        "otherwise",
-        "calls",
-        "once",
-        "produce",
-        "distillation"
-      ]
-    },
-    {
-      "id": "api/cli#building-with-claude-code-recommended",
-      "kind": "section",
-      "title": "CLI: hev-ask-kg",
-      "heading": "Building with Claude Code (recommended)",
-      "group": "API",
-      "url": "/docs/api/cli#building-with-claude-code-recommended",
-      "summary": "Building with Claude Code (recommended) The only part of the build that needs a model is the distillation: the context, glossary, per-section summaries, and suggestions. Everything else — chunking, fact extraction, the o…",
-      "facts": [
-        {
-          "kind": "code",
-          "literal": "hev-ask-kg corpus       → .hev-ask/kg-input.json   (sections + freshness flag)\n…reads that file, writes the distillation to .hev-ask/kg-distill.json…\nhev-ask-kg assemble     → .hev-ask/kg.json          (deterministic assembly)",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "literal": ".hev-ask/kg-distill.json",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
           "literal": "context",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
           "literal": "glossary",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
           "literal": "summaries",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
           "literal": "suggestions",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "corpus",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "literal": "ask kg verify",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "assemble",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "literal": "--skip-build",
+          "chunkId": "api/cli#building-the-graph"
         },
         {
           "kind": "code",
-          "literal": "ANTHROPIC_API_KEY",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
-        },
-        {
-          "kind": "code",
-          "literal": "@hev/ask",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
-        },
-        {
-          "kind": "code",
-          "literal": "build",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
-        },
-        {
-          "kind": "code",
-          "literal": "upToDate: true",
-          "chunkId": "api/cli#building-with-claude-code-recommended"
+          "literal": "--strict",
+          "chunkId": "api/cli#building-the-graph"
         }
       ],
       "sources": [
         {
-          "chunkId": "api/cli#building-with-claude-code-recommended",
-          "url": "/docs/api/cli#building-with-claude-code-recommended",
-          "anchor": "building-with-claude-code-recommended"
+          "chunkId": "api/cli#building-the-graph",
+          "url": "/docs/api/cli#building-the-graph",
+          "anchor": "building-the-graph"
         }
       ],
       "mode": "source-primary",
       "terms": [
         "building",
-        "claude",
-        "code",
-        "recommended",
-        "only",
-        "part",
+        "graph",
         "build",
-        "needs",
-        "model",
+        "corpus",
+        "assemble",
+        "verify",
+        "astro",
+        "site",
+        "root",
+        "hash",
+        "gated",
+        "expose",
+        "deterministic",
         "distillation",
+        "seam",
+        "checks",
+        "anchors",
+        "coverage",
+        "literal",
+        "fidelity",
+        "shot",
+        "needs",
+        "anthropic",
+        "only",
+        "stale",
+        "emit",
+        "sections",
+        "keyless",
+        "skill",
+        "model",
+        "json",
+        "input",
+        "distill",
         "context",
         "glossary",
-        "section",
         "summaries",
         "suggestions",
-        "everything",
-        "else",
-        "chunking",
-        "fact",
-        "extraction",
-        "corpus",
-        "input",
-        "json",
-        "sections",
-        "freshness",
-        "flag",
-        "reads",
-        "file",
-        "writes",
-        "distill",
-        "assemble",
-        "deterministic",
-        "assembly",
-        "anthropic",
-        "uptodate",
-        "true",
-        "overview",
-        "content",
-        "hash",
-        "commands"
+        "skip",
+        "strict",
+        "producer"
       ]
     },
     {
-      "id": "api/cli#corpus",
+      "id": "api/cli#claude-code-skill",
       "kind": "section",
-      "title": "CLI: hev-ask-kg",
-      "heading": "corpus",
+      "title": "CLI",
+      "heading": "Claude Code skill",
       "group": "API",
-      "url": "/docs/api/cli#corpus",
-      "summary": "corpus Chunks your content and writes the model input to --out (default .hev-ask/kg-input.json): the content hash, an upToDate flag (true when the committed kg.json already matches), and one entry per section (id, url,…",
+      "url": "/docs/api/cli#claude-code-skill",
+      "summary": "The bundled build-kg skill runs ask kg corpus, writes the model distillation, and runs ask kg assemble. Because the model step happens in Claude Code, it does not spend the user's ANTHROPIC_API_KEY and still produces the same kg.json shape.",
       "facts": [
         {
           "kind": "code",
-          "literal": "corpus",
-          "chunkId": "api/cli#corpus"
+          "literal": "ask kg corpus       -\u003e .hev-ask/kg-input.json\n...writes .hev-ask/kg-distill.json...\nask kg assemble     -\u003e .hev-ask/kg.json",
+          "chunkId": "api/cli#claude-code-skill"
         },
         {
           "kind": "code",
-          "literal": "--out",
-          "chunkId": "api/cli#corpus"
+          "literal": "build-kg",
+          "chunkId": "api/cli#claude-code-skill"
         },
         {
           "kind": "code",
-          "literal": ".hev-ask/kg-input.json",
-          "chunkId": "api/cli#corpus"
-        },
-        {
-          "kind": "code",
-          "literal": "upToDate",
-          "chunkId": "api/cli#corpus"
+          "literal": "ANTHROPIC_API_KEY",
+          "chunkId": "api/cli#claude-code-skill"
         },
         {
           "kind": "code",
           "literal": "kg.json",
-          "chunkId": "api/cli#corpus"
+          "chunkId": "api/cli#claude-code-skill"
         },
         {
           "kind": "code",
-          "literal": "id",
-          "chunkId": "api/cli#corpus"
-        },
-        {
-          "kind": "code",
-          "literal": "url",
-          "chunkId": "api/cli#corpus"
-        },
-        {
-          "kind": "code",
-          "literal": "title",
-          "chunkId": "api/cli#corpus"
-        },
-        {
-          "kind": "code",
-          "literal": "text",
-          "chunkId": "api/cli#corpus"
+          "literal": "ask kg build",
+          "chunkId": "api/cli#claude-code-skill"
         }
       ],
       "sources": [
         {
-          "chunkId": "api/cli#corpus",
-          "url": "/docs/api/cli#corpus",
-          "anchor": "corpus"
+          "chunkId": "api/cli#claude-code-skill",
+          "url": "/docs/api/cli#claude-code-skill",
+          "anchor": "claude-code-skill"
         }
       ],
       "mode": "source-primary",
       "terms": [
+        "claude",
+        "code",
+        "skill",
+        "bundled",
+        "build",
+        "runs",
         "corpus",
-        "chunks",
-        "content",
         "writes",
         "model",
-        "input",
-        "default",
+        "distillation",
+        "assemble",
+        "because",
+        "step",
+        "happens",
+        "does",
+        "spend",
+        "user",
+        "anthropic",
+        "still",
+        "produces",
+        "same",
         "json",
-        "hash",
-        "uptodate",
-        "flag",
-        "true",
-        "committed",
-        "already",
-        "matches",
-        "entry",
-        "section",
-        "title",
-        "text",
-        "fully",
+        "shape",
+        "input",
+        "distill",
+        "graph",
+        "without",
+        "anthropicapikey",
         "deterministic",
-        "keyless"
+        "producer",
+        "seam",
+        "inside",
+        "subscription",
+        "costs",
+        "tokens",
+        "resulting",
+        "output",
+        "hash",
+        "gate",
+        "applies"
+      ]
+    },
+    {
+      "id": "api/cli#distribution",
+      "kind": "section",
+      "title": "CLI",
+      "heading": "Distribution",
+      "group": "API",
+      "url": "/docs/api/cli#distribution",
+      "summary": "@hev/ask exposes ask as the main bin and hev-ask-kg as a deprecated alias. The launcher checks HEV_ASK_BINARY, platform optional binary packages, and finally a source checkout fallback used for local development.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ask",
+          "chunkId": "api/cli#distribution"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-ask-kg",
+          "chunkId": "api/cli#distribution"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg ...",
+          "chunkId": "api/cli#distribution"
+        },
+        {
+          "kind": "code",
+          "literal": "HEV_ASK_BINARY",
+          "chunkId": "api/cli#distribution"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#distribution",
+          "url": "/docs/api/cli#distribution",
+          "anchor": "distribution"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "distribution",
+        "exposes",
+        "main",
+        "deprecated",
+        "alias",
+        "launcher",
+        "checks",
+        "binary",
+        "platform",
+        "optional",
+        "packages",
+        "finally",
+        "source",
+        "checkout",
+        "fallback",
+        "local",
+        "development",
+        "package",
+        "bins",
+        "purpose",
+        "forwards",
+        "resolves",
+        "hevaskbinary",
+        "first",
+        "specific",
+        "installed",
+        "checked",
+        "monorepo",
+        "published",
+        "installs",
+        "packaged",
+        "path"
       ]
     },
     {
       "id": "api/cli#flags",
       "kind": "section",
-      "title": "CLI: hev-ask-kg",
+      "title": "CLI",
       "heading": "Flags",
       "group": "API",
       "url": "/docs/api/cli#flags",
-      "summary": "Flags Both commands accept the same content-shaping flags as the integration options; defaults match the integration. Flag Applies to Default Description --collection both docs Collection to read. Repeat for multiple. --…",
+      "summary": "The CLI flags cover local graph paths, remote endpoints, JSON output, local search limits, producer corpus settings, the KG build model, corpus/assemble scratch paths, and verify behavior such as --skip-build and --strict.",
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-ask-kg build --collection docs --collection guides --chunk-heading-depth 2\nhev-ask-kg verify --skip-build",
+          "literal": "ask --kg-path .hev-ask/kg.json --json search \"openapi\"\nask --endpoint https://askhev.com/api/ask mcp\nask kg build --collection docs --collection guides --chunk-heading-depth 2\nask kg verify --skip-build",
           "chunkId": "api/cli#flags"
         },
         {
           "kind": "code",
-          "literal": "--collection <name>",
+          "literal": "--kg-path \u003cpath\u003e",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": ".hev-ask/kg.json",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--endpoint \u003curl\u003e",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "/api/ask",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "answer",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--json",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--max-results \u003cn\u003e",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--collection \u003cname\u003e",
           "chunkId": "api/cli#flags"
         },
         {
@@ -714,7 +772,7 @@
         },
         {
           "kind": "code",
-          "literal": "--base-path <path>",
+          "literal": "--base-path \u003cpath\u003e",
           "chunkId": "api/cli#flags"
         },
         {
@@ -724,42 +782,17 @@
         },
         {
           "kind": "code",
-          "literal": "--kg-path <path>",
+          "literal": "--content-glob \u003cglob\u003e",
           "chunkId": "api/cli#flags"
         },
         {
           "kind": "code",
-          "literal": ".hev-ask/kg.json",
+          "literal": "--chunk-heading-depth \u003cn\u003e",
           "chunkId": "api/cli#flags"
         },
         {
           "kind": "code",
-          "literal": "build",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "assemble",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "verify",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "--content-glob <glob>",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "--chunk-heading-depth <n>",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "--kg-model <model>",
+          "literal": "--kg-model \u003cmodel\u003e",
           "chunkId": "api/cli#flags"
         },
         {
@@ -769,12 +802,12 @@
         },
         {
           "kind": "code",
-          "literal": "--out <path>",
+          "literal": "ask kg build",
           "chunkId": "api/cli#flags"
         },
         {
           "kind": "code",
-          "literal": "corpus",
+          "literal": "--out \u003cpath\u003e",
           "chunkId": "api/cli#flags"
         },
         {
@@ -784,7 +817,12 @@
         },
         {
           "kind": "code",
-          "literal": "--input <path>",
+          "literal": "ask kg corpus",
+          "chunkId": "api/cli#flags"
+        },
+        {
+          "kind": "code",
+          "literal": "--input \u003cpath\u003e",
           "chunkId": "api/cli#flags"
         },
         {
@@ -794,27 +832,12 @@
         },
         {
           "kind": "code",
-          "literal": "kg.json",
+          "literal": "ask kg assemble",
           "chunkId": "api/cli#flags"
         },
         {
           "kind": "code",
-          "literal": "--build-command <cmd>",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "--skip-build",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "dist/",
-          "chunkId": "api/cli#flags"
-        },
-        {
-          "kind": "code",
-          "literal": "--strict",
+          "literal": "--build-command \u003ccmd\u003e",
           "chunkId": "api/cli#flags"
         }
       ],
@@ -828,175 +851,454 @@
       "mode": "source-primary",
       "terms": [
         "flags",
-        "both",
-        "commands",
-        "accept",
-        "same",
-        "content",
-        "shaping",
-        "integration",
-        "options",
-        "defaults",
-        "match",
-        "flag",
-        "applies",
-        "default",
-        "description",
+        "cover",
+        "local",
+        "graph",
+        "paths",
+        "remote",
+        "endpoints",
+        "json",
+        "output",
+        "search",
+        "limits",
+        "producer",
+        "corpus",
+        "settings",
+        "build",
+        "model",
+        "assemble",
+        "scratch",
+        "verify",
+        "behavior",
+        "such",
+        "skip",
+        "strict",
+        "path",
+        "openapi",
+        "endpoint",
+        "https",
         "collection",
         "docs",
-        "read",
-        "repeat",
-        "multiple",
-        "build",
         "guides",
         "chunk",
         "heading",
         "depth",
-        "verify",
-        "skip",
+        "answer",
+        "results",
         "name",
         "base",
-        "path",
-        "json",
-        "assemble",
+        "content",
         "glob",
-        "model",
-        "claude",
-        "opus",
-        "corpus",
-        "input",
-        "distill",
-        "command"
+        "claude"
       ]
     },
     {
-      "id": "api/cli#verify",
+      "id": "api/cli#go-library",
       "kind": "section",
-      "title": "CLI: hev-ask-kg",
-      "heading": "verify",
+      "title": "CLI",
+      "heading": "Go library",
       "group": "API",
-      "url": "/docs/api/cli#verify",
-      "summary": "verify Builds the site, then checks the committed graph against the corpus. It reads only committed files — it never calls the model — so it is a clean CI gate. Three checks: Anchors (always fatal). Every chunk's #anchor…",
+      "url": "/docs/api/cli#go-library",
+      "summary": "pkg/ask exposes both low-level graph helpers and a dependency-free CommandGroup for embedding docs commands in another Go CLI. The same package also provides endpoint clients, graph building, verification, and ServeMCP.",
       "facts": [
         {
           "kind": "code",
-          "literal": "pnpm exec hev-ask-kg verify\n# → [hev-ask] verified 128 anchors",
-          "chunkId": "api/cli#verify"
+          "literal": "group := ask.NewCommandGroup(ask.CommandOptions{\n\tKGPath: \".hev-ask/kg.json\",\n})\nerr := group.Run(ctx, []string{\"search\", \"read endpoints\"}, os.Stdin, os.Stdout, os.Stderr)",
+          "chunkId": "api/cli#go-library"
         },
         {
           "kind": "code",
-          "literal": "[hev-ask] missing anchor old-name for /docs/concepts#old-name in dist/docs/concepts/index.html",
-          "chunkId": "api/cli#verify"
+          "literal": "pkg/ask",
+          "chunkId": "api/cli#go-library"
         },
         {
           "kind": "code",
-          "literal": "verify",
-          "chunkId": "api/cli#verify"
+          "literal": "LoadGraph",
+          "chunkId": "api/cli#go-library"
         },
         {
           "kind": "code",
-          "literal": "#anchor",
-          "chunkId": "api/cli#verify"
+          "literal": "ListGlossary",
+          "chunkId": "api/cli#go-library"
         },
         {
           "kind": "code",
-          "literal": "id",
-          "chunkId": "api/cli#verify"
+          "literal": "GetSection",
+          "chunkId": "api/cli#go-library"
         },
         {
           "kind": "code",
-          "literal": "--strict",
-          "chunkId": "api/cli#verify"
+          "literal": "SearchGraph",
+          "chunkId": "api/cli#go-library"
         },
         {
           "kind": "code",
-          "literal": "facts",
-          "chunkId": "api/cli#verify"
+          "literal": "NewEndpointClient",
+          "chunkId": "api/cli#go-library"
         },
         {
           "kind": "code",
-          "literal": "source-primary",
-          "chunkId": "api/cli#verify"
+          "literal": "BuildKnowledgeGraph",
+          "chunkId": "api/cli#go-library"
+        },
+        {
+          "kind": "code",
+          "literal": "VerifyAnchors",
+          "chunkId": "api/cli#go-library"
+        },
+        {
+          "kind": "code",
+          "literal": "ServeMCP",
+          "chunkId": "api/cli#go-library"
         }
       ],
       "sources": [
         {
-          "chunkId": "api/cli#verify",
-          "url": "/docs/api/cli#verify",
-          "anchor": "verify"
+          "chunkId": "api/cli#go-library",
+          "url": "/docs/api/cli#go-library",
+          "anchor": "go-library"
         }
       ],
       "mode": "source-primary",
       "terms": [
-        "verify",
-        "builds",
-        "site",
-        "checks",
-        "committed",
+        "library",
+        "exposes",
+        "both",
+        "level",
         "graph",
-        "against",
-        "corpus",
-        "reads",
-        "only",
-        "files",
-        "never",
-        "calls",
-        "model",
-        "clean",
-        "gate",
-        "three",
-        "anchors",
-        "always",
-        "fatal",
-        "every",
-        "chunk",
-        "anchor",
-        "pnpm",
-        "exec",
-        "verified",
-        "missing",
-        "name",
+        "helpers",
+        "dependency",
+        "free",
+        "commandgroup",
+        "embedding",
         "docs",
-        "concepts",
-        "dist",
-        "index",
-        "html",
-        "strict",
-        "facts",
-        "source",
-        "primary",
-        "must",
+        "commands",
+        "another",
+        "same",
+        "package",
+        "also",
+        "provides",
+        "endpoint",
+        "clients",
+        "building",
+        "verification",
+        "servemcp",
+        "group",
+        "newcommandgroup",
+        "commandoptions",
+        "kgpath",
+        "json",
+        "string",
+        "search",
+        "read",
+        "endpoints",
+        "stdin",
+        "stdout",
+        "stderr",
+        "loadgraph",
+        "listglossary",
+        "getsection",
+        "searchgraph",
+        "newendpointclient",
+        "buildknowledgegraph"
+      ]
+    },
+    {
+      "id": "api/cli#mcp",
+      "kind": "section",
+      "title": "CLI",
+      "heading": "MCP",
+      "group": "API",
+      "url": "/docs/api/cli#mcp",
+      "summary": "ask mcp starts a stdio MCP server exposing the same glossary, section, overview, search, and answer surface as the CLI. Use --kg-path for local offline tools or --endpoint when an agent needs the deployed graph or answer tool.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "{\n  \"mcpServers\": {\n    \"docs\": {\n      \"command\": \"ask\",\n      \"args\": [\"--kg-path\", \".hev-ask/kg.json\", \"mcp\"]\n    }\n  }\n}",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "{\n  \"mcpServers\": {\n    \"askhev\": {\n      \"command\": \"ask\",\n      \"args\": [\"--endpoint\", \"https://askhev.com/api/ask\", \"mcp\"]\n    }\n  }\n}",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "ask mcp",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary_list",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary_get",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "sections_list",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "section_get",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "overview",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "search",
+          "chunkId": "api/cli#mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "answer",
+          "chunkId": "api/cli#mcp"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#mcp",
+          "url": "/docs/api/cli#mcp",
+          "anchor": "mcp"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "starts",
+        "stdio",
+        "server",
+        "exposing",
+        "same",
+        "glossary",
+        "section",
+        "overview",
+        "search",
+        "answer",
+        "surface",
+        "path",
+        "local",
+        "offline",
+        "tools",
+        "endpoint",
+        "agent",
+        "needs",
+        "deployed",
+        "graph",
+        "tool",
+        "mcpservers",
+        "docs",
+        "command",
+        "args",
+        "json",
+        "https",
+        "list",
+        "sections",
+        "runs",
+        "read",
+        "glossarylist",
+        "glossaryget",
+        "sectionslist",
+        "sectionget",
+        "reads",
+        "checked",
+        "repos",
+        "remote",
+        "page"
+      ]
+    },
+    {
+      "id": "api/cli#package-scripts",
+      "kind": "section",
+      "title": "CLI",
+      "heading": "Package scripts",
+      "group": "API",
+      "url": "/docs/api/cli#package-scripts",
+      "summary": "Site package scripts should use ask kg build and ask kg verify. Existing hev-ask-kg scripts continue working through the deprecated alias, but new integrations should call ask kg directly.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "{\n  \"scripts\": {\n    \"kg:build\": \"ask kg build\",\n    \"kg:verify\": \"ask kg verify\"\n  }\n}",
+          "chunkId": "api/cli#package-scripts"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg",
+          "chunkId": "api/cli#package-scripts"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-ask-kg build",
+          "chunkId": "api/cli#package-scripts"
+        },
+        {
+          "kind": "code",
+          "literal": "hev-ask-kg verify",
+          "chunkId": "api/cli#package-scripts"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#package-scripts",
+          "url": "/docs/api/cli#package-scripts",
+          "anchor": "package-scripts"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "package",
+        "scripts",
+        "site",
+        "should",
+        "build",
+        "verify",
+        "existing",
+        "continue",
+        "working",
+        "through",
+        "deprecated",
+        "alias",
+        "integrations",
+        "call",
+        "directly",
+        "keep"
+      ]
+    },
+    {
+      "id": "api/cli#reading-the-graph",
+      "kind": "section",
+      "title": "CLI",
+      "heading": "Reading the graph",
+      "group": "API",
+      "url": "/docs/api/cli#reading-the-graph",
+      "summary": "The ask read commands load .hev-ask/kg.json by default and can switch to a deployed /api/ask endpoint with --endpoint. Local search is keyless, while ask answer requires the endpoint because it streams through the remote agentic SSE path.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ask glossary list\nask glossary get \"knowledge graph\"\nask sections list --group API\nask section get api/endpoint#knowledge-graph-reads-get\nask overview\nask search \"read endpoints\"\nask --endpoint https://askhev.com/api/ask answer \"what read routes exist?\"\nask mcp",
+          "chunkId": "api/cli#reading-the-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "ask",
+          "chunkId": "api/cli#reading-the-graph"
+        },
+        {
+          "kind": "code",
+          "literal": ".hev-ask/kg.json",
+          "chunkId": "api/cli#reading-the-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "--endpoint \u003curl\u003e",
+          "chunkId": "api/cli#reading-the-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "ask answer",
+          "chunkId": "api/cli#reading-the-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "--endpoint",
+          "chunkId": "api/cli#reading-the-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "ask search",
+          "chunkId": "api/cli#reading-the-graph"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/cli#reading-the-graph",
+          "url": "/docs/api/cli#reading-the-graph",
+          "anchor": "reading-the-graph"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "reading",
+        "graph",
+        "read",
+        "commands",
+        "load",
+        "json",
+        "default",
+        "switch",
+        "deployed",
+        "endpoint",
+        "local",
+        "search",
+        "keyless",
+        "while",
+        "answer",
+        "requires",
+        "because",
+        "streams",
+        "through",
+        "remote",
+        "agentic",
+        "path",
+        "glossary",
+        "list",
+        "knowledge",
+        "sections",
+        "group",
+        "section",
+        "reads",
+        "overview",
+        "endpoints",
+        "https",
+        "routes",
         "exist",
-        "rendered"
+        "current",
+        "repo",
+        "pass",
+        "site",
+        "http",
+        "instead"
       ]
     },
     {
       "id": "api/cli#where-it-runs",
       "kind": "section",
-      "title": "CLI: hev-ask-kg",
+      "title": "CLI",
       "heading": "Where it runs",
       "group": "API",
       "url": "/docs/api/cli#where-it-runs",
-      "summary": "Where it runs build and verify run in Node with filesystem access — locally or in CI, not on the edge. The committed kg.json they produce is what the running site reads through the virtual:hev-ask/kg module. See the kno…",
+      "summary": "Producer commands run locally or in CI with filesystem access, while the deployed site reads the committed graph through virtual:hev-ask/kg. The Astro build hook invokes ask kg build when ANTHROPIC_API_KEY is available and falls back to the committed graph on failure.",
       "facts": [
         {
           "kind": "code",
-          "literal": "build",
+          "literal": "ask kg build",
           "chunkId": "api/cli#where-it-runs"
         },
         {
           "kind": "code",
-          "literal": "verify",
+          "literal": "astro build",
           "chunkId": "api/cli#where-it-runs"
         },
         {
           "kind": "code",
-          "literal": "kg.json",
+          "literal": "ANTHROPIC_API_KEY",
           "chunkId": "api/cli#where-it-runs"
         },
         {
           "kind": "code",
           "literal": "virtual:hev-ask/kg",
+          "chunkId": "api/cli#where-it-runs"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg verify",
           "chunkId": "api/cli#where-it-runs"
         }
       ],
@@ -1010,25 +1312,45 @@
       "mode": "source-primary",
       "terms": [
         "runs",
-        "build",
-        "verify",
-        "node",
+        "producer",
+        "commands",
+        "locally",
         "filesystem",
         "access",
-        "locally",
-        "edge",
-        "committed",
-        "json",
-        "produce",
-        "running",
+        "while",
+        "deployed",
         "site",
         "reads",
+        "committed",
+        "graph",
         "through",
         "virtual",
-        "module",
-        "knowledge",
-        "graph",
-        "format"
+        "astro",
+        "build",
+        "hook",
+        "invokes",
+        "anthropic",
+        "available",
+        "falls",
+        "back",
+        "failure",
+        "verify",
+        "integration",
+        "also",
+        "during",
+        "anthropicapikey",
+        "present",
+        "artifact",
+        "command",
+        "cannot",
+        "does",
+        "need",
+        "anchor",
+        "correctness",
+        "contract",
+        "makes",
+        "deep",
+        "links"
       ]
     },
     {
@@ -1535,7 +1857,7 @@
       "heading": null,
       "group": "API",
       "url": "/docs/api/endpoint",
-      "summary": "The /api/ask route contract: the POST request body, the keyword JSON response, the agentic SSE event stream, mode selection, and error responses. The integration injects one on-demand route (default /api/ask). The over…",
+      "summary": "Documents the route tree: the base route serves suggestions, keyword JSON, and agentic SSE, while read subroutes expose glossary entries, section nodes, and overview context from the committed graph without an API key.",
       "facts": [
         {
           "kind": "code",
@@ -1549,12 +1871,22 @@
         },
         {
           "kind": "code",
-          "literal": "GET",
+          "literal": "/openapi.yaml",
           "chunkId": "api/endpoint"
         },
         {
           "kind": "value",
           "literal": "Callout.astro",
+          "chunkId": "api/endpoint"
+        },
+        {
+          "kind": "value",
+          "literal": "3.1",
+          "chunkId": "api/endpoint"
+        },
+        {
+          "kind": "value",
+          "literal": "openapi.yaml",
           "chunkId": "api/endpoint"
         }
       ],
@@ -1567,42 +1899,46 @@
       ],
       "mode": "source-primary",
       "terms": [
+        "documents",
         "route",
-        "contract",
-        "post",
-        "request",
-        "body",
+        "tree",
+        "base",
+        "serves",
+        "suggestions",
         "keyword",
         "json",
-        "response",
         "agentic",
+        "while",
+        "read",
+        "subroutes",
+        "expose",
+        "glossary",
+        "entries",
+        "section",
+        "nodes",
+        "overview",
+        "context",
+        "committed",
+        "graph",
+        "without",
+        "text",
         "event",
         "stream",
+        "openapi",
+        "yaml",
+        "callout",
+        "astro",
+        "contract",
+        "keyless",
+        "knowledge",
+        "reads",
         "mode",
         "selection",
         "error",
         "responses",
         "integration",
         "injects",
-        "demand",
-        "default",
-        "text",
-        "callout",
-        "astro",
-        "overlay",
-        "posts",
-        "returns",
-        "streams",
-        "grounded",
-        "answer",
-        "server",
-        "sent",
-        "events",
-        "same",
-        "suggested",
-        "questions",
-        "shows",
-        "open"
+        "demand"
       ]
     },
     {
@@ -1763,7 +2099,7 @@
       "heading": "Errors",
       "group": "API",
       "url": "/docs/api/endpoint#errors",
-      "summary": "Errors Status Body Cause 400 { \"error\": \"Invalid JSON body.\" } The request body wasn't valid JSON. 500 { \"error\": \"…\" } The chunk index failed to build (e.g. a misconfigured collection). — event: error A failure during t…",
+      "summary": "Lists JSON and SSE error shapes, including invalid request bodies, missing read resources, index build failures, and failures that happen after an agentic stream has already started.",
       "facts": [
         {
           "kind": "code",
@@ -1777,12 +2113,17 @@
         },
         {
           "kind": "code",
-          "literal": "500",
+          "literal": "404",
           "chunkId": "api/endpoint#errors"
         },
         {
           "kind": "code",
           "literal": "{ \"error\": \"…\" }",
+          "chunkId": "api/endpoint#errors"
+        },
+        {
+          "kind": "code",
+          "literal": "500",
           "chunkId": "api/endpoint#errors"
         },
         {
@@ -1816,32 +2157,45 @@
       "mode": "source-primary",
       "terms": [
         "errors",
-        "status",
-        "body",
-        "cause",
-        "error",
-        "invalid",
+        "lists",
         "json",
+        "error",
+        "shapes",
+        "including",
+        "invalid",
         "request",
-        "wasn",
-        "valid",
-        "chunk",
+        "bodies",
+        "missing",
+        "read",
+        "resources",
         "index",
-        "failed",
         "build",
-        "misconfigured",
-        "collection",
-        "event",
-        "failure",
-        "during",
+        "failures",
+        "happen",
+        "after",
         "agentic",
         "stream",
-        "http",
         "already",
-        "arrive",
-        "final",
-        "rather",
-        "code"
+        "started",
+        "body",
+        "event",
+        "status",
+        "cause",
+        "wasn",
+        "valid",
+        "knowledge",
+        "graph",
+        "route",
+        "glossary",
+        "term",
+        "section",
+        "found",
+        "chunk",
+        "failed",
+        "misconfigured",
+        "collection",
+        "failure",
+        "during"
       ]
     },
     {
@@ -1851,11 +2205,11 @@
       "heading": "Index lifecycle",
       "group": "API",
       "url": "/docs/api/endpoint#index-lifecycle",
-      "summary": "Index lifecycle The chunk index is built once per server instance on the first request and cached for the process lifetime. On the first request the endpoint also compares the live content hash against the knowledge grap…",
+      "summary": "The endpoint builds and caches its chunk index on first request, then compares the live content hash against the committed graph hash. A mismatch logs a one-time warning telling maintainers to run ask kg build.",
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-ask-kg build",
+          "literal": "ask kg build",
           "chunkId": "api/endpoint#index-lifecycle"
         }
       ],
@@ -1870,30 +2224,35 @@
       "terms": [
         "index",
         "lifecycle",
+        "endpoint",
+        "builds",
+        "caches",
         "chunk",
-        "built",
-        "once",
-        "server",
-        "instance",
         "first",
         "request",
-        "cached",
-        "process",
-        "lifetime",
-        "endpoint",
-        "also",
         "compares",
         "live",
         "content",
         "hash",
         "against",
-        "knowledge",
-        "grap",
-        "build",
+        "committed",
         "graph",
+        "mismatch",
         "logs",
         "time",
         "warning",
+        "telling",
+        "maintainers",
+        "build",
+        "built",
+        "once",
+        "server",
+        "instance",
+        "cached",
+        "process",
+        "lifetime",
+        "also",
+        "knowledge",
         "differ"
       ]
     },
@@ -2044,6 +2403,152 @@
       ]
     },
     {
+      "id": "api/endpoint#knowledge-graph-reads-get",
+      "kind": "section",
+      "title": "Search endpoint",
+      "heading": "Knowledge graph reads (GET)",
+      "group": "API",
+      "url": "/docs/api/endpoint#knowledge-graph-reads-get",
+      "summary": "Documents the keyless graph-read routes for listing glossary terms, resolving a glossary term or section, listing sections by group, and retrieving overview context. It defines the lightweight section summary shape and the URL-encoding rule for section IDs.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "{ \"error\": \"Not found.\" }",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "virtual:hev-ask/kg",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "GET /api/ask/glossary",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "{ \"terms\": GlossaryEntry[] }",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "GET /api/ask/glossary/{term}",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "GlossaryEntry",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "GET /api/ask/sections",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "{ \"sections\": SectionSummary[] }",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "GET /api/ask/sections?group=API",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "GET /api/ask/sections/{id}",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "KnowledgeNode",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "GET /api/ask/overview",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "{ \"overview\": string, \"context\": string }",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "SectionSummary",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "{ id, title, heading, group, url }",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "/api/ask/sections/api%2Fcli%23flags",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        },
+        {
+          "kind": "code",
+          "literal": "404",
+          "chunkId": "api/endpoint#knowledge-graph-reads-get"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/endpoint#knowledge-graph-reads-get",
+          "url": "/docs/api/endpoint#knowledge-graph-reads-get",
+          "anchor": "knowledge-graph-reads-get"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "knowledge",
+        "graph",
+        "reads",
+        "documents",
+        "keyless",
+        "read",
+        "routes",
+        "listing",
+        "glossary",
+        "terms",
+        "resolving",
+        "term",
+        "section",
+        "sections",
+        "group",
+        "retrieving",
+        "overview",
+        "context",
+        "defines",
+        "lightweight",
+        "summary",
+        "shape",
+        "encoding",
+        "rule",
+        "error",
+        "found",
+        "virtual",
+        "glossaryentry",
+        "sectionsummary",
+        "knowledgenode",
+        "string",
+        "title",
+        "heading",
+        "2fcli",
+        "23flags",
+        "these",
+        "never",
+        "call",
+        "model",
+        "require"
+      ]
+    },
+    {
       "id": "api/endpoint#mode-selection",
       "kind": "section",
       "title": "Search endpoint",
@@ -2054,7 +2559,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "{ results: [], query: \"\", model }",
+          "literal": "{ results: [], query: \"\", model, mode: \"keyword\" }",
           "chunkId": "api/endpoint#mode-selection"
         },
         {
@@ -2361,7 +2866,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-ask-kg build",
+          "literal": "ask kg build",
           "chunkId": "api/knowledge-graph"
         },
         {
@@ -2907,16 +3412,11 @@
       "heading": "Regenerating",
       "group": "API",
       "url": "/docs/api/knowledge-graph#regenerating",
-      "summary": "Regenerating Run hev-ask-kg build after content changes and commit the result. The hash gate makes this safe to run on every build — it only spends a model call when the content actually changed. The integration also ru…",
+      "summary": "After docs changes, regenerate and commit kg.json with the Claude Code skill or ask kg build. The Astro build hook also invokes ask kg build when a key is present, and ask kg verify gates anchors, coverage, and literal fidelity.",
       "facts": [
         {
           "kind": "code",
-          "literal": "hev-ask-kg build",
-          "chunkId": "api/knowledge-graph#regenerating"
-        },
-        {
-          "kind": "code",
-          "literal": "build",
+          "literal": "ask kg build",
           "chunkId": "api/knowledge-graph#regenerating"
         },
         {
@@ -2926,7 +3426,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-ask-kg verify",
+          "literal": "ask kg verify",
           "chunkId": "api/knowledge-graph#regenerating"
         }
       ],
@@ -2940,11 +3440,29 @@
       "mode": "source-primary",
       "terms": [
         "regenerating",
-        "build",
         "after",
-        "content",
+        "docs",
         "changes",
+        "regenerate",
         "commit",
+        "json",
+        "claude",
+        "code",
+        "skill",
+        "build",
+        "astro",
+        "hook",
+        "also",
+        "invokes",
+        "present",
+        "verify",
+        "gates",
+        "anchors",
+        "coverage",
+        "literal",
+        "fidelity",
+        "rebuild",
+        "content",
         "result",
         "hash",
         "gate",
@@ -2954,26 +3472,13 @@
         "only",
         "spends",
         "model",
-        "call",
+        "work",
         "actually",
         "changed",
-        "integration",
-        "also",
-        "astro",
-        "verify",
-        "rebuild",
-        "work",
         "bundled",
-        "claude",
-        "code",
-        "skill",
-        "runs",
-        "during",
-        "present",
-        "anchors",
-        "coverage",
-        "literal",
-        "fidelity"
+        "call",
+        "integration",
+        "runs"
       ]
     },
     {
@@ -3037,6 +3542,476 @@
       ]
     },
     {
+      "id": "api/mcp",
+      "kind": "section",
+      "title": "MCP server",
+      "heading": null,
+      "group": "API",
+      "url": "/docs/api/mcp",
+      "summary": "ask mcp turns the committed knowledge graph into stdio MCP tools for coding agents. It can serve a local .hev-ask/kg.json offline or proxy a deployed /api/ask endpoint for fresh graph reads and answer streaming.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ask mcp",
+          "chunkId": "api/mcp"
+        },
+        {
+          "kind": "code",
+          "literal": ".hev-ask/kg.json",
+          "chunkId": "api/mcp"
+        },
+        {
+          "kind": "code",
+          "literal": "/api/ask",
+          "chunkId": "api/mcp"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/mcp",
+          "url": "/docs/api/mcp",
+          "anchor": null
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "turns",
+        "committed",
+        "knowledge",
+        "graph",
+        "stdio",
+        "tools",
+        "coding",
+        "agents",
+        "serve",
+        "local",
+        "json",
+        "offline",
+        "proxy",
+        "deployed",
+        "endpoint",
+        "fresh",
+        "reads",
+        "answer",
+        "streaming",
+        "expose",
+        "runs",
+        "model",
+        "context",
+        "protocol",
+        "server",
+        "same",
+        "http",
+        "zero",
+        "glue",
+        "path",
+        "point",
+        "agent",
+        "checked",
+        "repo",
+        "gets",
+        "structured",
+        "docs"
+      ]
+    },
+    {
+      "id": "api/mcp#configure",
+      "kind": "section",
+      "title": "MCP server",
+      "heading": "Configure",
+      "group": "API",
+      "url": "/docs/api/mcp#configure",
+      "summary": "MCP clients configure ask as the command and pass either --kg-path .hev-ask/kg.json mcp for local reads or --endpoint \u003curl\u003e mcp for a deployed site. The endpoint form is required for the answer tool.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "{\n  \"mcpServers\": {\n    \"docs\": {\n      \"command\": \"ask\",\n      \"args\": [\"--kg-path\", \".hev-ask/kg.json\", \"mcp\"]\n    }\n  }\n}",
+          "chunkId": "api/mcp#configure"
+        },
+        {
+          "kind": "code",
+          "literal": "{\n  \"mcpServers\": {\n    \"askhev\": {\n      \"command\": \"ask\",\n      \"args\": [\"--endpoint\", \"https://askhev.com/api/ask\", \"mcp\"]\n    }\n  }\n}",
+          "chunkId": "api/mcp#configure"
+        },
+        {
+          "kind": "code",
+          "literal": "answer",
+          "chunkId": "api/mcp#configure"
+        },
+        {
+          "kind": "code",
+          "literal": "--endpoint",
+          "chunkId": "api/mcp#configure"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/mcp#configure",
+          "url": "/docs/api/mcp#configure",
+          "anchor": "configure"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "configure",
+        "clients",
+        "command",
+        "pass",
+        "either",
+        "path",
+        "json",
+        "local",
+        "reads",
+        "endpoint",
+        "deployed",
+        "site",
+        "form",
+        "required",
+        "answer",
+        "tool",
+        "mcpservers",
+        "docs",
+        "args",
+        "https",
+        "keyless",
+        "graph",
+        "want",
+        "freshest",
+        "mode",
+        "fully",
+        "offline",
+        "returns",
+        "error",
+        "unless"
+      ]
+    },
+    {
+      "id": "api/mcp#data-sources",
+      "kind": "section",
+      "title": "MCP server",
+      "heading": "Data sources",
+      "group": "API",
+      "url": "/docs/api/mcp#data-sources",
+      "summary": "The MCP server follows the CLI data-source rules: --endpoint uses the HTTP read API and POST /api/ask answer path, otherwise --kg-path reads from disk. Local graph reads reload the file on each call so fresh kg.json changes are visible.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ask mcp",
+          "chunkId": "api/mcp#data-sources"
+        },
+        {
+          "kind": "code",
+          "literal": "--endpoint \u003curl\u003e",
+          "chunkId": "api/mcp#data-sources"
+        },
+        {
+          "kind": "code",
+          "literal": "answer",
+          "chunkId": "api/mcp#data-sources"
+        },
+        {
+          "kind": "code",
+          "literal": "POST /api/ask",
+          "chunkId": "api/mcp#data-sources"
+        },
+        {
+          "kind": "code",
+          "literal": "--kg-path",
+          "chunkId": "api/mcp#data-sources"
+        },
+        {
+          "kind": "code",
+          "literal": ".hev-ask/kg.json",
+          "chunkId": "api/mcp#data-sources"
+        },
+        {
+          "kind": "code",
+          "literal": "kg.json",
+          "chunkId": "api/mcp#data-sources"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/mcp#data-sources",
+          "url": "/docs/api/mcp#data-sources",
+          "anchor": "data-sources"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "data",
+        "sources",
+        "server",
+        "follows",
+        "source",
+        "rules",
+        "endpoint",
+        "uses",
+        "http",
+        "read",
+        "post",
+        "answer",
+        "path",
+        "otherwise",
+        "reads",
+        "disk",
+        "local",
+        "graph",
+        "reload",
+        "file",
+        "call",
+        "fresh",
+        "json",
+        "changes",
+        "visible",
+        "same",
+        "resolution",
+        "calls",
+        "deployed",
+        "streams",
+        "through",
+        "defaulting",
+        "load",
+        "tool",
+        "just",
+        "rebuilt",
+        "without",
+        "restarting"
+      ]
+    },
+    {
+      "id": "api/mcp#protocol-surface",
+      "kind": "section",
+      "title": "MCP server",
+      "heading": "Protocol surface",
+      "group": "API",
+      "url": "/docs/api/mcp#protocol-surface",
+      "summary": "The MCP implementation speaks newline-delimited JSON-RPC over stdio and handles initialize, tools/list, tools/call, and the initialized notification. Protocol errors return JSON-RPC errors; tool failures return MCP tool results with isError.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "initialize",
+          "chunkId": "api/mcp#protocol-surface"
+        },
+        {
+          "kind": "code",
+          "literal": "tools/list",
+          "chunkId": "api/mcp#protocol-surface"
+        },
+        {
+          "kind": "code",
+          "literal": "tools/call",
+          "chunkId": "api/mcp#protocol-surface"
+        },
+        {
+          "kind": "code",
+          "literal": "isError: true",
+          "chunkId": "api/mcp#protocol-surface"
+        },
+        {
+          "kind": "code",
+          "literal": "pkg/ask",
+          "chunkId": "api/mcp#protocol-surface"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/mcp#protocol-surface",
+          "url": "/docs/api/mcp#protocol-surface",
+          "anchor": "protocol-surface"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "protocol",
+        "surface",
+        "implementation",
+        "speaks",
+        "newline",
+        "delimited",
+        "json",
+        "stdio",
+        "handles",
+        "initialize",
+        "tools",
+        "list",
+        "call",
+        "initialized",
+        "notification",
+        "errors",
+        "return",
+        "tool",
+        "failures",
+        "results",
+        "iserror",
+        "true",
+        "server",
+        "plus",
+        "unknown",
+        "methods",
+        "error",
+        "level",
+        "result",
+        "keeps",
+        "small",
+        "substantive",
+        "behavior",
+        "lives",
+        "standalone",
+        "embeddable",
+        "command",
+        "group",
+        "share",
+        "same"
+      ]
+    },
+    {
+      "id": "api/mcp#tools",
+      "kind": "section",
+      "title": "MCP server",
+      "heading": "Tools",
+      "group": "API",
+      "url": "/docs/api/mcp#tools",
+      "summary": "The MCP server exposes glossary_list, glossary_get, sections_list, section_get, overview, search, and answer. Tool results include readable text plus structuredContent so agents can inspect the original response shape.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "glossary_list",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ terms: GlossaryEntry[] }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary_get",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ term }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "sections_list",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ group? }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ sections: SectionSummary[] }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "section_get",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ id }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "overview",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ overview, context }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "search",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ query, maxResults? }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "answer",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "{ query }",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "content",
+          "chunkId": "api/mcp#tools"
+        },
+        {
+          "kind": "code",
+          "literal": "structuredContent",
+          "chunkId": "api/mcp#tools"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "api/mcp#tools",
+          "url": "/docs/api/mcp#tools",
+          "anchor": "tools"
+        }
+      ],
+      "mode": "source-primary",
+      "terms": [
+        "tools",
+        "server",
+        "exposes",
+        "glossary",
+        "list",
+        "sections",
+        "section",
+        "overview",
+        "search",
+        "answer",
+        "tool",
+        "results",
+        "include",
+        "readable",
+        "text",
+        "plus",
+        "structuredcontent",
+        "agents",
+        "inspect",
+        "original",
+        "response",
+        "shape",
+        "terms",
+        "glossaryentry",
+        "term",
+        "group",
+        "sectionsummary",
+        "context",
+        "query",
+        "maxresults",
+        "content",
+        "arguments",
+        "returns",
+        "glossarylist",
+        "none",
+        "glossaryget",
+        "entry",
+        "matched",
+        "alias",
+        "sectionslist"
+      ]
+    },
+    {
       "id": "api/search-overlay",
       "kind": "section",
       "title": "SearchOverlay component",
@@ -3047,7 +4022,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "---\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n<SearchOverlay />",
+          "literal": "---\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n\u003cSearchOverlay /\u003e",
           "chunkId": "api/search-overlay"
         },
         {
@@ -3062,7 +4037,7 @@
         },
         {
           "kind": "code",
-          "literal": "<dialog>",
+          "literal": "\u003cdialog\u003e",
           "chunkId": "api/search-overlay"
         },
         {
@@ -3249,7 +4224,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "<button type=\"button\" data-hev-ask-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<a href=\"#\" data-hev-ask-open>Search the docs</a>",
+          "literal": "\u003cbutton type=\"button\" data-hev-ask-open\u003e\n  Search \u003ckbd\u003e⌘K\u003c/kbd\u003e\n\u003c/button\u003e\n\n\u003ca href=\"#\" data-hev-ask-open\u003eSearch the docs\u003c/a\u003e",
           "chunkId": "api/search-overlay#opening-the-overlay"
         },
         {
@@ -3320,7 +4295,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "<SearchOverlay\n  endpoint=\"/api/ask\"\n  placeholder=\"Search hev ask…\"\n  debounce={400}\n/>",
+          "literal": "\u003cSearchOverlay\n  endpoint=\"/api/ask\"\n  placeholder=\"Search hev ask…\"\n  debounce={400}\n/\u003e",
           "chunkId": "api/search-overlay#props"
         },
         {
@@ -4333,7 +5308,7 @@
       "heading": "Two ways to build it",
       "group": "Overview",
       "url": "/docs/concepts#two-ways-to-build-it",
-      "summary": "Two ways to build it The model step can run two ways, and both feed the same deterministic assembler: Claude Code skill (recommended). A skill walks Claude through reading the corpus and writing the distillation, then as…",
+      "summary": "The graph distillation can be produced by the Claude Code skill or by ask kg build with ANTHROPIC_API_KEY. Both paths feed the same deterministic assembler and are hash-gated to avoid model work when content is unchanged.",
       "facts": [
         {
           "kind": "code",
@@ -4347,7 +5322,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-ask-kg build",
+          "literal": "ask kg build",
           "chunkId": "concepts#two-ways-to-build-it"
         },
         {
@@ -4367,25 +5342,34 @@
       "terms": [
         "ways",
         "build",
-        "model",
-        "step",
+        "graph",
+        "distillation",
+        "produced",
+        "claude",
+        "code",
+        "skill",
+        "anthropic",
         "both",
+        "paths",
         "feed",
         "same",
         "deterministic",
         "assembler",
-        "claude",
-        "code",
-        "skill",
+        "hash",
+        "gated",
+        "avoid",
+        "model",
+        "work",
+        "content",
+        "unchanged",
+        "json",
+        "step",
         "recommended",
         "walks",
         "through",
         "reading",
         "corpus",
         "writing",
-        "distillation",
-        "json",
-        "anthropic",
         "assembles",
         "locally",
         "runs",
@@ -4395,16 +5379,7 @@
         "anthropicapikey",
         "token",
         "spend",
-        "fits",
-        "editor",
-        "workflow",
-        "most",
-        "authors",
-        "already",
-        "fallback",
-        "call",
-        "opus",
-        "default"
+        "fits"
       ]
     },
     {
@@ -4414,7 +5389,7 @@
       "heading": null,
       "group": "Overview",
       "url": "/docs",
-      "summary": "hev ask is an Astro integration that adds a ⌘K search overlay to a docs site: instant keyword search anchored to headings, plus an optional Claude-powered search loop on Enter. hev ask is a search overlay for Astro doc…",
+      "summary": "hev ask turns Astro docs into a committed, section-level knowledge graph that powers both a reader overlay and agent-facing tooling. The graph is built offline, reviewed in git, and used as the shared source for keyword search, grounded answers, and docs-aware integrations.",
       "facts": [
         {
           "kind": "code",
@@ -4423,7 +5398,47 @@
         },
         {
           "kind": "code",
-          "literal": "/docs/page#section",
+          "literal": ".hev-ask/kg.json",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg build",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask glossary get",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask sections list",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask section get",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask search",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask answer",
+          "chunkId": "index"
+        },
+        {
+          "kind": "code",
+          "literal": "ask mcp",
           "chunkId": "index"
         },
         {
@@ -4451,46 +5466,46 @@
       ],
       "mode": "agent-primary",
       "terms": [
+        "turns",
         "astro",
-        "integration",
-        "adds",
-        "search",
-        "overlay",
         "docs",
-        "site",
-        "instant",
-        "keyword",
-        "anchored",
-        "headings",
-        "plus",
-        "optional",
-        "claude",
-        "powered",
-        "loop",
-        "enter",
-        "page",
+        "committed",
         "section",
+        "level",
+        "knowledge",
+        "graph",
+        "powers",
+        "both",
+        "reader",
+        "overlay",
+        "agent",
+        "facing",
+        "tooling",
+        "built",
+        "offline",
+        "reviewed",
+        "shared",
+        "source",
+        "keyword",
+        "search",
+        "grounded",
+        "answers",
+        "aware",
+        "integrations",
+        "json",
+        "build",
+        "glossary",
+        "sections",
+        "list",
+        "answer",
         "diagram",
         "callout",
-        "build",
-        "first",
-        "documentation",
-        "sites",
-        "drop",
-        "component",
-        "layout",
+        "builds",
+        "serves",
+        "ways",
         "readers",
-        "command",
-        "palette",
-        "content",
-        "collection",
-        "leans",
-        "toward",
-        "answering",
-        "question",
-        "actually",
-        "type",
-        "more"
+        "server",
+        "coding"
       ]
     },
     {
@@ -4500,7 +5515,7 @@
       "heading": "How it fits an Astro site",
       "group": "Overview",
       "url": "/docs#how-it-fits-an-astro-site",
-      "summary": "How it fits an Astro site hev ask ships as a single package, @hev/ask, exposing an Astro integration as its default export: The integration injects an on-demand /api/ask route, exposes resolved config and the knowledg…",
+      "summary": "Describes the package pieces: the integration injects search, answer, and read routes; the overlay handles the command palette; the CLI builds, verifies, and reads the graph; and every path degrades when keys or artifacts are missing.",
       "facts": [
         {
           "kind": "code",
@@ -4509,7 +5524,27 @@
         },
         {
           "kind": "code",
+          "literal": "ask",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
           "literal": "/api/ask",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "glossary",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "sections",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "overview",
           "chunkId": "index#how-it-fits-an-astro-site"
         },
         {
@@ -4534,12 +5569,52 @@
         },
         {
           "kind": "code",
-          "literal": "ANTHROPIC_API_KEY",
+          "literal": "ask kg …",
           "chunkId": "index#how-it-fits-an-astro-site"
         },
         {
           "kind": "code",
-          "literal": "hev-ask-kg",
+          "literal": "ask glossary",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "ask sections",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "ask search",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "ask answer",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "ask mcp",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "kg.json",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "--endpoint",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg build",
+          "chunkId": "index#how-it-fits-an-astro-site"
+        },
+        {
+          "kind": "code",
+          "literal": "ask kg verify",
           "chunkId": "index#how-it-fits-an-astro-site"
         }
       ],
@@ -4555,43 +5630,43 @@
         "fits",
         "astro",
         "site",
-        "ships",
-        "single",
+        "describes",
         "package",
-        "exposing",
+        "pieces",
         "integration",
-        "default",
-        "export",
         "injects",
-        "demand",
-        "route",
-        "exposes",
-        "resolved",
-        "config",
-        "knowledg",
+        "search",
+        "answer",
+        "read",
+        "routes",
+        "overlay",
+        "handles",
+        "command",
+        "palette",
+        "builds",
+        "verifies",
+        "reads",
+        "graph",
+        "every",
+        "path",
+        "degrades",
+        "keys",
+        "artifacts",
+        "missing",
+        "glossary",
+        "sections",
+        "overview",
         "build",
         "searchoverlay",
         "data",
         "open",
-        "anthropic",
-        "knowledge",
-        "graph",
-        "through",
-        "virtual",
-        "modules",
-        "runs",
-        "during",
-        "component",
-        "renders",
-        "palette",
-        "element",
-        "attribute",
-        "opens",
-        "wired",
-        "automatically",
+        "json",
         "endpoint",
-        "answers",
-        "queries"
+        "verify",
+        "ships",
+        "exposing",
+        "default",
+        "export"
       ]
     },
     {
@@ -4602,7 +5677,13 @@
       "group": "Overview",
       "url": "/docs#next-steps",
       "summary": "Next steps Quick start — add search to your site in five minutes. Concepts — chunks, anchors, the agentic loop, and the knowledge graph. Tradeoffs and Limits — what you're choosing, and what hev ask deliberately doesn't…",
-      "facts": [],
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "ask",
+          "chunkId": "index#next-steps"
+        }
+      ],
       "sources": [
         {
           "chunkId": "index#next-steps",
@@ -4632,6 +5713,9 @@
         "choosing",
         "deliberately",
         "doesn",
+        "build",
+        "verify",
+        "query",
         "reference",
         "every",
         "option",
@@ -4639,6 +5723,87 @@
         "props",
         "endpoint",
         "contract"
+      ]
+    },
+    {
+      "id": "index#two-surfaces-one-graph",
+      "kind": "section",
+      "title": "Introduction",
+      "heading": "Two surfaces, one graph",
+      "group": "Overview",
+      "url": "/docs#two-surfaces-one-graph",
+      "summary": "Explains the two consumers of the same committed graph: browser readers use the overlay for keyword results and streamed answers, while coding agents use command, MCP, or client surfaces to inspect terms, sections, and grounded answers without scraping rendered HTML.",
+      "facts": [
+        {
+          "kind": "code",
+          "literal": "kg.json",
+          "chunkId": "index#two-surfaces-one-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "SearchOverlay.astro",
+          "chunkId": "index#two-surfaces-one-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "/docs/page#section",
+          "chunkId": "index#two-surfaces-one-graph"
+        },
+        {
+          "kind": "code",
+          "literal": "ask",
+          "chunkId": "index#two-surfaces-one-graph"
+        }
+      ],
+      "sources": [
+        {
+          "chunkId": "index#two-surfaces-one-graph",
+          "url": "/docs#two-surfaces-one-graph",
+          "anchor": "two-surfaces-one-graph"
+        }
+      ],
+      "mode": "agent-primary",
+      "terms": [
+        "surfaces",
+        "graph",
+        "explains",
+        "consumers",
+        "same",
+        "committed",
+        "browser",
+        "readers",
+        "overlay",
+        "keyword",
+        "results",
+        "streamed",
+        "answers",
+        "while",
+        "coding",
+        "agents",
+        "command",
+        "client",
+        "inspect",
+        "terms",
+        "sections",
+        "grounded",
+        "without",
+        "scraping",
+        "rendered",
+        "html",
+        "json",
+        "searchoverlay",
+        "astro",
+        "docs",
+        "page",
+        "section",
+        "powers",
+        "human",
+        "surface",
+        "agent",
+        "drop",
+        "layout",
+        "palette",
+        "content"
       ]
     },
     {
@@ -4688,9 +5853,12 @@
         "running",
         "build",
         "pagefind",
+        "whose",
+        "answers",
+        "work",
         "crawler",
         "deep",
-        "links",
+        "link",
         "right",
         "section",
         "instead",
@@ -4705,11 +5873,8 @@
         "just",
         "match",
         "keywords",
-        "only",
-        "need",
-        "keyword",
-        "static",
-        "never"
+        "queryable",
+        "coding"
       ]
     },
     {
@@ -4879,7 +6044,7 @@
       "heading": "Anchors depend on Astro's slugger",
       "group": "Overview",
       "url": "/docs/limits#anchors-depend-on-astros-slugger",
-      "summary": "Anchors depend on Astro's slugger Deep links are only correct as long as the heading slugs hev ask generates match Astro's rendered id attributes. hev ask uses the same github-slugger to stay aligned, and ships a hev-f…",
+      "summary": "Deep links depend on github-slugger matching Astro heading ids. ask kg verify is the CI guard that catches missing rendered anchors before broken section links ship.",
       "facts": [
         {
           "kind": "code",
@@ -4893,7 +6058,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-ask-kg verify",
+          "literal": "ask kg verify",
           "chunkId": "limits#anchors-depend-on-astros-slugger"
         },
         {
@@ -4917,38 +6082,40 @@
         "slugger",
         "deep",
         "links",
+        "github",
+        "matching",
+        "heading",
+        "verify",
+        "guard",
+        "catches",
+        "missing",
+        "rendered",
+        "before",
+        "broken",
+        "section",
+        "ship",
         "only",
         "correct",
         "long",
-        "heading",
         "slugs",
         "generates",
         "match",
-        "rendered",
         "attributes",
         "uses",
         "same",
-        "github",
         "stay",
         "aligned",
         "ships",
-        "verify",
         "command",
         "fails",
         "chunk",
         "anchor",
-        "missing",
         "built",
         "html",
         "wire",
         "ever",
         "changes",
-        "slugging",
-        "verifier",
-        "catches",
-        "before",
-        "broken",
-        "link"
+        "slugging"
       ]
     },
     {
@@ -5327,7 +6494,7 @@
       "heading": "1. Install",
       "group": "Overview",
       "url": "/docs/quickstart#1-install",
-      "summary": "1. Install Once published, install from npm: pnpm add @hev/ask Until then, consume the latest version straight from the package subdirectory on GitHub: pnpm add \"git+ssh://git@github.com/hev/ask.git#main&path:/packages…",
+      "summary": "1. Install Once published, install from npm: pnpm add @hev/ask Until then, consume the latest version straight from the package subdirectory on GitHub: pnpm add \"git+ssh://git@github.com/hev/ask.git#main\u0026path:/packages…",
       "facts": [
         {
           "kind": "code",
@@ -5336,7 +6503,7 @@
         },
         {
           "kind": "code",
-          "literal": "pnpm add \"git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui\"",
+          "literal": "pnpm add \"git+ssh://git@github.com/hev/ask.git#main\u0026path:/packages/ui\"",
           "chunkId": "quickstart#1-install"
         }
       ],
@@ -5493,7 +6660,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "---\n// src/layouts/Base.astro\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n<button type=\"button\" data-hev-ask-open>\n  Search <kbd>⌘K</kbd>\n</button>\n\n<slot />\n\n<SearchOverlay />",
+          "literal": "---\n// src/layouts/Base.astro\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n\u003cbutton type=\"button\" data-hev-ask-open\u003e\n  Search \u003ckbd\u003e⌘K\u003c/kbd\u003e\n\u003c/button\u003e\n\n\u003cslot /\u003e\n\n\u003cSearchOverlay /\u003e",
           "chunkId": "quickstart#4-render-the-overlay"
         },
         {
@@ -5561,21 +6728,21 @@
       "heading": "5. Build the knowledge graph",
       "group": "Overview",
       "url": "/docs/quickstart#5-build-the-knowledge-graph",
-      "summary": "5. Build the knowledge graph The knowledge graph is an offline-built JSON file committed to your repo. It gives the agentic loop domain context and a glossary (so k8s finds kubernetes). Build it once, then whenever conte…",
+      "summary": "The quickstart recommends building the graph with the Claude Code skill, which runs ask kg corpus and ask kg assemble without spending the user's API key. The fallback is pnpm exec ask kg build, followed by ask kg verify and committing kg.json.",
       "facts": [
         {
           "kind": "code",
-          "literal": "You: build the hev ask knowledge graph\n\nClaude runs:\n  hev-ask-kg corpus            # emits the sections to distil\n  …writes context/glossary/summaries/suggestions…\n  hev-ask-kg assemble          # writes .hev-ask/kg.json (deterministically)",
+          "literal": "You: build the hev ask knowledge graph\n\nClaude runs:\n  ask kg corpus                # emits the sections to distil\n  …writes context/glossary/summaries/suggestions…\n  ask kg assemble              # writes .hev-ask/kg.json (deterministically)",
           "chunkId": "quickstart#5-build-the-knowledge-graph"
         },
         {
           "kind": "code",
-          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec hev-ask-kg build      # writes .hev-ask/kg.json",
+          "literal": "export ANTHROPIC_API_KEY=sk-ant-...\npnpm exec ask kg build          # writes .hev-ask/kg.json",
           "chunkId": "quickstart#5-build-the-knowledge-graph"
         },
         {
           "kind": "code",
-          "literal": "pnpm exec hev-ask-kg verify     # builds the site, checks every anchor resolves\ngit add .hev-ask/kg.json",
+          "literal": "pnpm exec ask kg verify         # builds the site, checks every anchor resolves\ngit add .hev-ask/kg.json",
           "chunkId": "quickstart#5-build-the-knowledge-graph"
         },
         {
@@ -5616,43 +6783,43 @@
         "build",
         "knowledge",
         "graph",
-        "offline",
-        "built",
-        "json",
-        "file",
-        "committed",
-        "repo",
-        "gives",
-        "agentic",
-        "loop",
-        "domain",
-        "context",
-        "glossary",
-        "finds",
-        "kubernetes",
-        "once",
-        "whenever",
-        "conte",
+        "quickstart",
+        "recommends",
+        "building",
         "claude",
+        "code",
+        "skill",
         "runs",
         "corpus",
+        "assemble",
+        "without",
+        "spending",
+        "user",
+        "fallback",
+        "pnpm",
+        "exec",
+        "followed",
+        "verify",
+        "committing",
+        "json",
         "emits",
         "sections",
         "distil",
         "writes",
+        "context",
+        "glossary",
         "summaries",
         "suggestions",
-        "assemble",
         "deterministically",
         "export",
         "anthropic",
-        "pnpm",
-        "exec",
-        "verify",
         "builds",
         "site",
         "checks",
-        "every"
+        "every",
+        "anchor",
+        "resolves",
+        "kubernetes"
       ]
     },
     {
@@ -5811,7 +6978,7 @@
       "heading": "Verify it works",
       "group": "Overview",
       "url": "/docs/quickstart#verify-it-works",
-      "summary": "Verify it works Keyword: type a word from a heading; the top result should deep-link to that section (/docs/page#heading). Agentic: press Enter on a question; the footer shows the sub-queries the model ran, and a grounde…",
+      "summary": "Verification checks keyword deep links, the agentic answer stream, and anchor correctness. ask kg verify exits non-zero when generated chunk anchors are missing from the built HTML.",
       "facts": [
         {
           "kind": "code",
@@ -5820,7 +6987,7 @@
         },
         {
           "kind": "code",
-          "literal": "hev-ask-kg verify",
+          "literal": "ask kg verify",
           "chunkId": "quickstart#verify-it-works"
         }
       ],
@@ -5835,44 +7002,44 @@
       "terms": [
         "verify",
         "works",
+        "verification",
+        "checks",
         "keyword",
-        "type",
-        "word",
-        "heading",
-        "result",
-        "should",
         "deep",
-        "link",
-        "section",
+        "links",
+        "agentic",
+        "answer",
+        "stream",
+        "anchor",
+        "correctness",
+        "exits",
+        "zero",
+        "generated",
+        "chunk",
+        "anchors",
+        "missing",
+        "built",
+        "html",
         "docs",
         "page",
-        "agentic",
+        "heading",
+        "type",
+        "single",
+        "word",
+        "result",
+        "should",
+        "link",
+        "section",
+        "multi",
+        "question",
+        "click",
+        "suggested",
         "press",
         "enter",
-        "question",
         "footer",
         "shows",
         "queries",
-        "model",
-        "grounde",
-        "single",
-        "multi",
-        "click",
-        "suggested",
-        "grounded",
-        "answer",
-        "streams",
-        "inline",
-        "links",
-        "anchors",
-        "exits",
-        "zero",
-        "chunk",
-        "anchor",
-        "doesn",
-        "exist",
-        "built",
-        "html"
+        "model"
       ]
     },
     {

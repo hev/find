@@ -67,8 +67,8 @@ or move the selection with arrows/hover and press `Enter` to open a keyword hit.
 ## Knowledge Graph
 
 ```sh
-hev-ask-kg build
-hev-ask-kg verify
+ask kg build
+ask kg verify
 ```
 
 The builder writes `.hev-ask/kg.json`, which should be committed. Builds are

@@ -80,11 +80,11 @@ try {
     if (result.uncovered.length) {
       const sample = result.uncovered.slice(0, 5).join(', ');
       const more = result.uncovered.length > 5 ? `, …(+${result.uncovered.length - 5})` : '';
-      console.warn(`[hev-ask] ${result.uncovered.length} section(s) missing from the graph: ${sample}${more} — run \`hev-ask-kg build\`.`);
+      console.warn(`[hev-ask] ${result.uncovered.length} section(s) missing from the graph: ${sample}${more} — run \`ask kg build\`.`);
       if (flags.strict) failed = true;
     }
     if (result.dropped.length) {
-      console.warn(`[hev-ask] ${result.dropped.length} source literal(s) dropped from agent-primary nodes — run \`hev-ask-kg build\`:`);
+      console.warn(`[hev-ask] ${result.dropped.length} source literal(s) dropped from agent-primary nodes — run \`ask kg build\`:`);
       for (const drop of result.dropped.slice(0, 8)) console.warn(`  - ${drop.id}: ${drop.literal}`);
       if (flags.strict) failed = true;
     }
@@ -97,7 +97,7 @@ try {
     }
   } else {
     console.error(
-      'Usage: hev-ask-kg build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--out path] [--input path] [--strict]',
+      'Usage: ask kg build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--out path] [--input path] [--strict]',
     );
     process.exitCode = 1;
   }

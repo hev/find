@@ -25,7 +25,7 @@ keyword index, knowledge-graph builder, and anchor verification CLI.
 - Opener attribute: `data-hev-ask-open`.
 - Mode storage key: `hev-ask:mode`.
 - Virtual modules: `virtual:hev-ask/config` and `virtual:hev-ask/kg`.
-- CLI: `hev-ask-kg build` and `hev-ask-kg verify`.
+- CLI: `ask` with `ask kg build` / `ask kg verify`; `hev-ask-kg` is a deprecated alias.
 - Knowledge-graph artifact path: `.hev-ask/kg.json`.
 
 Any change to these names or contracts needs the package code and the docs in
@@ -52,7 +52,7 @@ filesystem access.
 ## Anchor Correctness
 
 Heading anchors are generated with `github-slugger` so chunk URLs match Astro's
-rendered heading IDs. `hev-ask-kg verify` builds the consumer site and checks
+rendered heading IDs. `ask kg verify` builds the consumer site and checks
 that every generated chunk anchor exists in the rendered HTML.
 
 Keep this verification green after changes to chunking, slug generation,
@@ -64,6 +64,6 @@ The docs site is configured for Cloudflare Pages project `hev-ask` under account
 `ce0c7a0a6b9935ddf1a641fd32f596b5`. The live AI path requires
 `ANTHROPIC_API_KEY` as a server secret.
 
-Deploying or moving the `ask.hev.dev` custom domain requires Cloudflare Pages
+Deploying or moving the `askhev.com` custom domain requires Cloudflare Pages
 credentials with access to that account. Local builds and package verification
 do not require those credentials unless a fresh remote deploy is being made.

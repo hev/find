@@ -20,7 +20,7 @@ The package source is ready under `packages/ui` as `@hev/ask`. It is not yet
 published to npm, so consumers should use the GitHub package path until the
 first npm release is cut.
 
-The docs site is configured for `ask.hev.dev` on Cloudflare Pages project
+The docs site is configured for `askhev.com` on Cloudflare Pages project
 `hev-ask`. A live deploy and custom-domain move still require Cloudflare
 credentials with access to the configured account.
 
@@ -30,7 +30,7 @@ credentials with access to the configured account.
 .
 ├─ packages/ui                    # the publishable package: @hev/ask
 ├─ playground                     # a minimal Astro docs site for fast local dev
-├─ site                           # docs + showcase site (ask.hev.dev)
+├─ site                           # docs + showcase site (askhev.com)
 └─ tpuff-docs-local/turbopuffer   # larger local docs corpus for scale checks
 ```
 
@@ -115,8 +115,8 @@ The optional knowledge graph is generated offline and committed into the
 consumer site:
 
 ```sh
-pnpm exec hev-ask-kg build
-pnpm exec hev-ask-kg verify
+pnpm exec ask kg build
+pnpm exec ask kg verify
 ```
 
 `build` writes `.hev-ask/kg.json` and skips the model call when the current
@@ -126,7 +126,7 @@ heading chunk URL points at a real rendered anchor.
 ## Publishing
 
 The package is structured for npm distribution as `@hev/ask`, with `src`
-exports for Astro/Vite consumers and a plain JavaScript `hev-ask-kg` bin for
+exports for Astro/Vite consumers plus `ask` and deprecated `hev-ask-kg` bins for
 CLI use from `node_modules`.
 
 Current consumers can pin the GitHub package while the API settles. Once
@@ -136,7 +136,8 @@ range instead of a Git SHA.
 Before publishing:
 
 1. Set the intended semver in `packages/ui/package.json`.
-2. Run `pnpm test`, `pnpm typecheck`, `pnpm build`, and `pnpm kg:verify`.
-3. Dry-run the package with `pnpm --filter @hev/ask pack --dry-run`.
+2. Run `pnpm build:npm-binaries` to populate the optional platform packages.
+3. Run `pnpm test`, `pnpm typecheck`, `pnpm build`, and `pnpm kg:verify`.
+4. Dry-run the package with `pnpm --filter @hev/ask pack --dry-run`.
 4. Publish from `packages/ui` with `pnpm publish --access public`.
 5. Move consumers from the Git dependency to `@hev/ask@<version>`.

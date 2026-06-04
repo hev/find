@@ -1,0 +1,15 @@
+{
+  "name": "@hev/ask-darwin-x64",
+  "version": "0.0.1",
+  "description": "Darwin x64 binary for the @hev/ask CLI.",
+  "license": "MIT",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/ask"
+  ]
+}

@@ -256,7 +256,7 @@ export async function assembleFromDistillation(options: {
   try {
     raw = JSON.parse(await readFile(inputPath, 'utf8'));
   } catch {
-    throw new Error(`Could not read distillation JSON at ${options.inputPath}. Run \`hev-ask-kg corpus\` first.`);
+    throw new Error(`Could not read distillation JSON at ${options.inputPath}. Run \`ask kg corpus\` first.`);
   }
   const corpus = await buildCorpus(options);
   const graph = assembleGraph(parseEmittedGraph(raw), corpus);
