@@ -60,9 +60,12 @@ func BuildKnowledgeGraph(options BuildKnowledgeGraphOptions) (BuildResult, error
 
 func callKnowledgeGraphModel(options BuildKnowledgeGraphOptions, apiKey string, corpus CorpusBuild) (EmittedDistillation, error) {
 	corpusText := renderCorpusText(CorpusSections(corpus))
+	// One summary per section makes the output scale with corpus size; a tight
+	// cap starves the trailing schema keys (the model emits suggestions last
+	// and returns [] when it runs low), so give it generous headroom.
 	body := map[string]any{
 		"model":      options.KGModel,
-		"max_tokens": 8192,
+		"max_tokens": 32000,
 		"system": []map[string]any{
 			{
 				"type": "text",
@@ -118,7 +121,8 @@ func callKnowledgeGraphModel(options BuildKnowledgeGraphOptions, apiKey string, 
 	}
 
 	var payload struct {
-		Content []struct {
+		StopReason string `json:"stop_reason"`
+		Content    []struct {
 			Type  string          `json:"type"`
 			Name  string          `json:"name"`
 			Input json.RawMessage `json:"input"`
@@ -126,6 +130,9 @@ func callKnowledgeGraphModel(options BuildKnowledgeGraphOptions, apiKey string, 
 	}
 	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
 		return EmittedDistillation{}, fmt.Errorf("decode Anthropic response: %w", err)
+	}
+	if payload.StopReason == "max_tokens" {
+		return EmittedDistillation{}, fmt.Errorf("knowledge graph emission hit the max_tokens cap; the corpus may be too large for one pass")
 	}
 	for _, block := range payload.Content {
 		if block.Type != "tool_use" || block.Name != "emit_knowledge_graph" {
