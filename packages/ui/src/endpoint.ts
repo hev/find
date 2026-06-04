@@ -9,6 +9,7 @@ import {
   listGlossary,
   listSectionSummaries,
 } from './kg/read.ts';
+import { makeTelemetry, telemetryFromEnv } from './observability';
 import { hashableChunkText } from './search/chunk';
 import { buildIndex, prefilter, type Candidate, type Chunk } from './search/index';
 import { runAgenticAnswerLoop, type AgenticEvent } from './search/loop';
@@ -23,12 +24,28 @@ function getIndex(): Promise<Chunk[]> {
   return indexPromise;
 }
 
+// Merge the runtime environments the endpoint may run under: Cloudflare's
+// per-request `locals.runtime.env` wins over `process.env` (Node adapters),
+// which wins over build-time `import.meta.env`.
+function resolveEnv(locals: unknown): Record<string, string | undefined> {
+  const fromRuntime = (locals as { runtime?: { env?: Record<string, string> } })?.runtime?.env ?? {};
+  const fromProcess = (typeof process !== 'undefined' ? process.env : undefined) ?? {};
+  const fromImportMeta = (import.meta as { env?: Record<string, string> }).env ?? {};
+  return { ...fromImportMeta, ...fromProcess, ...fromRuntime };
+}
+
 function resolveApiKey(locals: unknown): string | undefined {
-  const fromRuntime = (locals as { runtime?: { env?: Record<string, string> } })?.runtime?.env
-    ?.ANTHROPIC_API_KEY;
-  const fromProcess = typeof process !== 'undefined' ? process.env?.ANTHROPIC_API_KEY : undefined;
-  const fromImportMeta = (import.meta as { env?: Record<string, string> }).env?.ANTHROPIC_API_KEY;
-  return fromRuntime ?? fromProcess ?? fromImportMeta;
+  return resolveEnv(locals).ANTHROPIC_API_KEY;
+}
+
+// PostHog LLM tracing for the answer loop. On Cloudflare, capture promises
+// must be handed to `ctx.waitUntil` or they are cancelled when the SSE stream
+// closes. No POSTHOG_KEY in the environment → no-op sink.
+function resolveTelemetry(locals: unknown) {
+  const ctx = (locals as { runtime?: { ctx?: { waitUntil?: (promise: Promise<unknown>) => void } } })
+    ?.runtime?.ctx;
+  const waitUntil = ctx?.waitUntil ? (promise: Promise<unknown>) => ctx.waitUntil!(promise) : undefined;
+  return makeTelemetry(telemetryFromEnv(resolveEnv(locals), { waitUntil }));
 }
 
 // The overlay fetches suggested questions from the base route. Sub-routes expose
@@ -103,6 +120,7 @@ export const POST: APIRoute = async ({ request, locals, params }) => {
           query: query as string,
           chunks,
           kg,
+          telemetry: resolveTelemetry(locals),
           config: {
             model: config.model,
             maxIterations: config.maxIterations,

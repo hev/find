@@ -171,6 +171,15 @@ env (`locals.runtime.env`, e.g. Cloudflare), `process.env`, then
 `import.meta.env`. Set it wherever your host injects server secrets; it is never
 sent to the browser.
 
+## LLM tracing
+
+Set `POSTHOG_KEY` (or `POSTHOG_API_KEY`) in the same environment and every
+agentic answer emits a PostHog `$ai_generation` trace — model, tokens, latency,
+and the loop's tool calls. `POSTHOG_HOST` overrides the US-cloud ingestion host,
+and `POSTHOG_CAPTURE_CONTENT` (`off` | `redacted` | `full`, default `full`)
+controls how much prompt and answer text ships with each event. No key → no-op;
+the answer path never depends on telemetry.
+
 ## Index lifecycle
 
 The chunk index is built once per server instance on the first request and
