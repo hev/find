@@ -11,3 +11,10 @@ dist/
 packages/ask-*/bin/ask
 packages/ask-*/bin/ask.exe
 !packages/ask-*/bin/.gitkeep
+
+# local-only working files (kept on disk, not on GitHub)
+tpuff-docs-local/
+PLAN.md
+PLAN-v3-cli.md
+.gastown-ignore
+.claude/traces/

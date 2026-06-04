@@ -18,7 +18,7 @@ paths over its content collection:
   (SSE) with inline deep links to the doc sections it drew from.
 
 A committed, offline-built **knowledge graph** (`.hev-ask/kg.json`) gives the
-loop domain context and a glossary. Read `PLAN.md` for the full v2 design.
+loop domain context and a glossary.
 
 ## Repo layout
 
@@ -116,4 +116,4 @@ pnpm exec ask kg verify              # (from a site dir) verify anchors
 3. `pnpm test && pnpm typecheck && pnpm --filter hev-ask-site check`.
 4. If anchors or chunking changed, run `ask kg verify` on `site/`.
 5. Public/breaking changes need a version bump in `packages/ui/package.json`
-   (see `PLAN.md` for architecture notes and `README.md` for publishing notes).
+   (see `README.md` for publishing notes).
