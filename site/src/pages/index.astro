@@ -2,25 +2,26 @@
 import Base from "../layouts/Base.astro";
 
 const facts = [
-	{ k: "type", v: "instant keyword search — keyless, runs on the server" },
-	{ k: "enter", v: "Claude searches and streams a grounded answer" },
-	{ k: "result", v: "a deep link to the exact heading: /docs/page#section" },
+	{ k: "readers", v: "⌘K — instant keyword search; Enter streams a grounded Claude answer" },
+	{ k: "agents", v: "ask search / section get / overview — keyless reads over the same digest, from any shell" },
+	{ k: "cited", v: "every answer deep-links to the exact heading — anchors verified in CI" },
 ];
 ---
 
 <Base
-	title="hev ask - search for Astro docs sites"
-	description="A ⌘K search overlay for Astro docs sites, built on an ask digest — a token-efficient distillation of your docs. Instant keyword search anchored to headings, a grounded Claude answer on Enter. One integration, one component."
+	title="hev ask - agent-ready search for Astro docs sites"
+	description="Make your Astro docs agent-ready: a ⌘K overlay for readers and a keyless CLI their coding agents can run, both grounded in an ask digest — a committed, CI-verified distillation of your docs."
 	current="product"
 >
 	<main>
 		<section class="hero">
-			<p class="kicker">// search for astro docs sites</p>
-			<h1>The AI search cheat code<br />for your docs.</h1>
+			<p class="kicker">// agent-ready docs for astro sites</p>
+			<h1>Docs your agents<br />can run.</h1>
 			<p class="lede">
-				A <span class="mono">⌘K</span> overlay for Astro, built on an
-				<strong>ask digest</strong> — a token-efficient distillation of your
-				docs, read progressively by agents and searched instantly by readers.
+				One Astro integration, two surfaces: a <span class="mono">⌘K</span>
+				overlay for your readers, and a keyless CLI their coding agents drive —
+				search, read, cite — over an <strong>ask digest</strong>, a
+				token-efficient distillation of your docs.
 			</p>
 			<div class="cta-row">
 				<a href="/docs" class="btn">Read the docs</a>
@@ -60,6 +61,27 @@ integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
 			<p class="caption">
 				That's the whole integration. This site runs on it — keyword search needs
 				no API key. <a href="/docs/quickstart">Full quick start →</a>
+			</p>
+		</section>
+
+		<section class="install agents" aria-label="What their agents get">
+			<p class="kicker">// and for their agents</p>
+			<ol class="steps">
+				<li>
+					<span class="step-label">install the CLI — no MCP server, no config</span>
+					<pre><code>go install github.com/hev/ask/cmd/ask@latest</code></pre>
+				</li>
+				<li>
+					<span class="step-label">point it at any hev-ask site</span>
+					<pre><code>ask --endpoint https://yourdocs.com/api/ask search "how do I…"</code></pre>
+				</li>
+			</ol>
+			<p class="caption">
+				Your docs become a tool any agent can call from a shell: ranked search,
+				per-section reads, a glossary that resolves your product's vocabulary —
+				every read keyless, every citation a CI-verified anchor. A one-file
+				skill teaches the agent when to reach for it.
+				<a href="/docs/api/cli">CLI reference →</a>
 			</p>
 		</section>
 
@@ -302,6 +324,18 @@ integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
 
 	.facts li:first-child .fk::before {
 		content: "⌨ ";
+	}
+
+	.facts li:nth-child(2) .fk::before {
+		content: "$ ";
+	}
+
+	.install.agents {
+		margin-top: 2.75rem;
+	}
+
+	.install.agents .kicker {
+		margin-bottom: 1.25rem;
 	}
 
 	.fv {
