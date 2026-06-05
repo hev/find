@@ -1,7 +1,7 @@
 {
-  "name": "@hev/ask-linux-x64",
+  "name": "@hevmind/ask-linux-x64",
   "version": "0.1.0",
-  "description": "Linux x64 binary for the @hev/ask CLI.",
+  "description": "Linux x64 binary for the @hevmind/ask CLI.",
   "license": "MIT",
   "os": [
     "linux"

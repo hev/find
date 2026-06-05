@@ -1,12 +1,12 @@
 # hev ask — Agent Guide
 
 hev ask is a `⌘K` search overlay for **Astro docs sites**, shipped as the npm
-package `@hev/ask`. This file is for agents doing engineering, docs, and
+package `@hevmind/ask`. This file is for agents doing engineering, docs, and
 release work in this repo. Keep it practical and current.
 
 ## What this is
 
-`@hev/ask` is an Astro integration. A consumer site adds `hevAsk()` to
+`@hevmind/ask` is an Astro integration. A consumer site adds `hevAsk()` to
 `astro.config`, drops `SearchOverlay.astro` in a layout, and gets two search
 paths over its content collection:
 
@@ -27,9 +27,9 @@ aliases and old-URL redirects are the only places it remains on purpose).
 ## Repo layout
 
 ```
-packages/ui    # the package @hev/ask — integration, endpoint, search, digest/, CLI
+packages/ui    # the package @hevmind/ask — integration, endpoint, search, digest/, CLI
 playground     # minimal Astro site for fast local dev of the package
-site           # the public docs + showcase site (askhev.com); dogfoods @hev/ask
+site           # the public docs + showcase site (askhev.com); dogfoods @hevmind/ask
 ```
 
 It's a pnpm workspace. `packages/ui` is the only published artifact; `playground`
@@ -69,10 +69,10 @@ docs are also the search corpus, so doc edits are product edits.
 
 - Default export `hevAsk(options)` — options in `packages/ui/src/types.ts`,
   documented in `site/.../api/configuration.mdx`.
-- `@hev/ask/components/SearchOverlay.astro` — props `endpoint`, `placeholder`,
+- `@hevmind/ask/components/SearchOverlay.astro` — props `endpoint`, `placeholder`,
   `debounce`; opener attribute `data-hev-ask-open`; localStorage key
   `hev-ask:mode`.
-- `@hev/ask/endpoint` — `POST /api/ask`: keyword mode returns JSON, agentic
+- `@hevmind/ask/endpoint` — `POST /api/ask`: keyword mode returns JSON, agentic
   mode streams SSE (`text/event-stream`). Contract in `api/endpoint.mdx`.
 - `ask` bin — read verbs, `mcp`, and `digest build` / `digest verify`. Flags in
   `api/cli.mdx`.

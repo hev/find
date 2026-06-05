@@ -38,25 +38,25 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
     optionalDependencies:
-      '@hev/ask-darwin-arm64':
+      '@hevmind/ask-darwin-arm64':
         specifier: workspace:*
         version: link:../ask-darwin-arm64
-      '@hev/ask-darwin-x64':
+      '@hevmind/ask-darwin-x64':
         specifier: workspace:*
         version: link:../ask-darwin-x64
-      '@hev/ask-linux-arm64':
+      '@hevmind/ask-linux-arm64':
         specifier: workspace:*
         version: link:../ask-linux-arm64
-      '@hev/ask-linux-x64':
+      '@hevmind/ask-linux-x64':
         specifier: workspace:*
         version: link:../ask-linux-x64
-      '@hev/ask-win32-x64':
+      '@hevmind/ask-win32-x64':
         specifier: workspace:*
         version: link:../ask-win32-x64
 
   playground:
     dependencies:
-      '@hev/ask':
+      '@hevmind/ask':
         specifier: workspace:*
         version: link:../packages/ui
       astro:
@@ -81,7 +81,7 @@ importers:
       '@astrojs/mdx':
         specifier: ^5.0.6
         version: 5.0.6(astro@5.18.2(@types/node@22.19.19)(rollup@4.60.4)(typescript@6.0.3)(yaml@2.9.0))
-      '@hev/ask':
+      '@hevmind/ask':
         specifier: workspace:*
         version: link:../packages/ui
       astro:
@@ -103,7 +103,7 @@ importers:
       '@astrojs/node':
         specifier: ^9.0.0
         version: 9.5.5(astro@5.18.2(@types/node@22.19.19)(rollup@4.60.4)(typescript@6.0.3)(yaml@2.9.0))
-      '@hev/ask':
+      '@hevmind/ask':
         specifier: workspace:*
         version: link:../../packages/ui
       astro:

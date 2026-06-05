@@ -2,9 +2,9 @@ openapi: 3.1.0
 info:
   title: hev ask API
   version: 3.0.0
-  summary: Search, answer, and digest read API exposed by the @hev/ask Astro integration.
+  summary: Search, answer, and digest read API exposed by the @hevmind/ask Astro integration.
   description: |
-    `@hev/ask` mounts these routes on a consuming Astro site (default base `/api/ask`,
+    `@hevmind/ask` mounts these routes on a consuming Astro site (default base `/api/ask`,
     configurable via the integration's `endpoint` option). Two paths existed in v2:
     keyword + agentic **search** (`POST /api/ask`) and **suggestions** (`GET /api/ask`).
     v3 adds keyless **read** routes over the committed ask digest
@@ -19,7 +19,7 @@ info:
     name: MIT
 servers:
   - url: https://askhev.com
-    description: The hev ask docs site (dogfoods @hev/ask).
+    description: The hev ask docs site (dogfoods @hevmind/ask).
   - url: "{origin}"
     description: Any site running the integration.
     variables:

@@ -9,7 +9,7 @@
     "digest:build": "pnpm --filter playground digest:build",
     "digest:verify": "pnpm --filter playground digest:verify",
     "build:npm-binaries": "node scripts/build-npm-binaries.mjs",
-    "test": "pnpm --filter @hev/ask test",
+    "test": "pnpm --filter @hevmind/ask test",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

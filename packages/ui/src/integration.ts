@@ -35,7 +35,7 @@ export default function hevAsk(options: HevAskOptions = {}): AstroIntegration {
   let siteRoot = process.cwd();
 
   return {
-    name: '@hev/ask',
+    name: '@hevmind/ask',
     hooks: {
       'astro:config:setup': ({ config: astroConfig, injectRoute, updateConfig, logger, addWatchFile }) => {
         siteRoot = fileURLToPath(astroConfig.root);
@@ -45,7 +45,7 @@ export default function hevAsk(options: HevAskOptions = {}): AstroIntegration {
 
         injectRoute({
           pattern: resourceRoutePattern(config.endpoint),
-          entrypoint: '@hev/ask/endpoint',
+          entrypoint: '@hevmind/ask/endpoint',
           prerender: false,
         });
 

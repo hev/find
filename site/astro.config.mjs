@@ -1,7 +1,7 @@
 import { defineConfig } from "astro/config";
 import mdx from "@astrojs/mdx";
 import cloudflare from "@astrojs/cloudflare";
-import hevAsk from "@hev/ask";
+import hevAsk from "@hevmind/ask";
 
 // This site documents hev ask and searches itself with hev ask — the docs
 // are the product's own test corpus. Static pages stay prerendered; only the

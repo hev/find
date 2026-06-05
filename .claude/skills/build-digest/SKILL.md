@@ -1,7 +1,7 @@
 ---
 name: build-digest
 description: >-
-  Build the @hev/ask ask digest (.hev-ask/digest.json) for an Astro docs site
+  Build the @hevmind/ask ask digest (.hev-ask/digest.json) for an Astro docs site
   using your Claude Code subscription instead of an ANTHROPIC_API_KEY. Use when
   the user asks to build, rebuild, or refresh the hev ask digest, knowledge
   graph, KG, or search index, or after docs content changes. Runs `ask digest
@@ -11,7 +11,7 @@ description: >-
 
 # Build the hev ask digest
 
-`@hev/ask` searches an Astro docs site. Its agentic loop, keyword ranking, and
+`@hevmind/ask` searches an Astro docs site. Its agentic loop, keyword ranking, and
 suggested questions are powered by a committed ask digest at
 `.hev-ask/digest.json`. Only the **distillation** needs a model — the node
 structure, verbatim facts, overview map, and content hash are computed
@@ -27,7 +27,7 @@ shards whose content changed need re-distilling.
 
 Run every command from the **site root** (the directory whose `astro.config.*`
 registers `hevAsk()`). Prefer `pnpm exec ask digest …`; fall back to
-`npx -p @hev/ask ask digest …` if pnpm isn't used. Pass the same content flags
+`npx -p @hevmind/ask ask digest …` if pnpm isn't used. Pass the same content flags
 the site's integration uses if they differ from the defaults (`--collection`,
 `--base-path`, `--chunk-heading-depth`, `--content-glob`, `--digest-path`);
 they must match across `corpus` and `assemble`.

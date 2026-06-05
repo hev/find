@@ -11,7 +11,7 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@hev/ask": "workspace:*",
+    "@hevmind/ask": "workspace:*",
     "astro": "^5.0.0"
   },
   "devDependencies": {

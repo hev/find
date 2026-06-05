@@ -2,16 +2,16 @@
 
 A `⌘K` search overlay for Astro docs sites: instant keyword search with
 heading-anchor deep links, plus an optional Claude-powered answer loop on
-`Enter`. Shipped as the npm package `@hev/ask`.
+`Enter`. Shipped as the npm package `@hevmind/ask`.
 
 **Docs, quick start, and live demo: [askhev.com](https://askhev.com)** — the
-site searches itself with `@hev/ask`; press `⌘K` to see it work.
+site searches itself with `@hevmind/ask`; press `⌘K` to see it work.
 
 ## Repo layout
 
 ```
 .
-├─ packages/ui   # the publishable package: @hev/ask
+├─ packages/ui   # the publishable package: @hevmind/ask
 ├─ playground    # a minimal Astro docs site for fast local dev
 └─ site          # docs + showcase site (askhev.com)
 ```
@@ -44,7 +44,7 @@ pnpm digest:verify
 
 ## Publishing
 
-The package is structured for npm distribution as `@hev/ask`, with `src`
+The package is structured for npm distribution as `@hevmind/ask`, with `src`
 exports for Astro/Vite consumers plus the `ask` bin for
 CLI use from `node_modules`. Until it's published, consume it from the package
 subdirectory on GitHub:
@@ -58,6 +58,6 @@ Before publishing:
 1. Set the intended semver in `packages/ui/package.json`.
 2. Run `pnpm build:npm-binaries` to populate the optional platform packages.
 3. Run `pnpm test`, `pnpm typecheck`, `pnpm build`, and `pnpm digest:verify`.
-4. Dry-run the package with `pnpm --filter @hev/ask pack --dry-run`.
+4. Dry-run the package with `pnpm --filter @hevmind/ask pack --dry-run`.
 5. Publish from `packages/ui` with `pnpm publish --access public`.
-6. Move consumers from the Git dependency to `@hev/ask@<version>`.
+6. Move consumers from the Git dependency to `@hevmind/ask@<version>`.

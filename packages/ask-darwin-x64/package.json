@@ -1,7 +1,7 @@
 {
-  "name": "@hev/ask-darwin-x64",
+  "name": "@hevmind/ask-darwin-x64",
   "version": "0.1.0",
-  "description": "Darwin x64 binary for the @hev/ask CLI.",
+  "description": "Darwin x64 binary for the @hevmind/ask CLI.",
   "license": "MIT",
   "os": [
     "darwin"

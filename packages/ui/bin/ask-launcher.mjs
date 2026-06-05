@@ -12,7 +12,7 @@ export async function runAsk(args, options = {}) {
     const platform = `${process.platform}/${process.arch}`;
     console.error(
       `[hev-ask] No ask binary is available for ${platform}. ` +
-        'Install a package with @hev/ask optional binaries, set HEV_ASK_BINARY, or run from a source checkout with Go installed.',
+        'Install a package with @hevmind/ask optional binaries, set HEV_ASK_BINARY, or run from a source checkout with Go installed.',
     );
     return 1;
   }
@@ -51,11 +51,11 @@ function resolvePackagedBinary() {
 function platformPackageName() {
   const platform = process.platform;
   const arch = process.arch;
-  if (platform === 'darwin' && arch === 'arm64') return '@hev/ask-darwin-arm64';
-  if (platform === 'darwin' && arch === 'x64') return '@hev/ask-darwin-x64';
-  if (platform === 'linux' && arch === 'arm64') return '@hev/ask-linux-arm64';
-  if (platform === 'linux' && arch === 'x64') return '@hev/ask-linux-x64';
-  if (platform === 'win32' && arch === 'x64') return '@hev/ask-win32-x64';
+  if (platform === 'darwin' && arch === 'arm64') return '@hevmind/ask-darwin-arm64';
+  if (platform === 'darwin' && arch === 'x64') return '@hevmind/ask-darwin-x64';
+  if (platform === 'linux' && arch === 'arm64') return '@hevmind/ask-linux-arm64';
+  if (platform === 'linux' && arch === 'x64') return '@hevmind/ask-linux-x64';
+  if (platform === 'win32' && arch === 'x64') return '@hevmind/ask-win32-x64';
   return null;
 }
 

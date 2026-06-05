@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "generatedAt": "2026-06-05T12:43:15.308Z",
-  "contentHash": "c832c2d7241ecaa04ddc02348a17b179cebb244bdac0d763026c855c0b0d9fba",
+  "generatedAt": "2026-06-05T13:43:27.532Z",
+  "contentHash": "662977d92a33b3e01fe436d20ece1f43e74a7a109fa98635872d4aba7c228311",
   "context": "## hev ask\n\nhev ask (`@hev/ask`) is a `⌘K` search overlay for **Astro docs sites**, shipped as an Astro integration. A site adds `hevAsk()` to its config, drops the `SearchOverlay` component in a layout, and gets two search paths over its content collections:\n\n- **Keyword search** — instant and keyless: token-overlap matching over heading-level chunks, widened by a glossary, deep-linking to `/docs/page#anchor`.\n- **Agentic search** — on Enter, with an `ANTHROPIC_API_KEY`: a bounded Claude tool-use loop that reads the committed **ask digest** progressively and streams a grounded answer (SSE) with inline deep links to real doc sections.\n\nThe **ask digest** (`.hev-ask/digest.json`) is the core artifact: a committed, offline-built, reviewable JSON distillation of the docs — section summaries, verbatim facts, a glossary, and an overview map. It was called the knowledge graph (kg) in earlier versions, and users may still use that name. It is built with the `ask` CLI (`ask digest build`, or the keyless sharded skill flow: `corpus` → distil → `assemble`) and gated by a content hash so unchanged docs never spend model work. `ask digest verify` checks every anchor, coverage, and literal fidelity in CI.\n\nAnchors come from `github-slugger`, matching Astro's rendered heading ids exactly — that is why deep links stay trustworthy. Everything degrades instead of failing: no API key → keyword mode; no digest → raw keyword search. The endpoint (`POST /api/ask`) renders on demand, so sites need a server or hybrid adapter. The `ask` CLI and a stdio MCP server expose the same read surface (glossary, sections, overview, search, answer) to agents and CI.\n\nReaders are typically Astro docs-site authors evaluating hev ask against Pagefind, Algolia, or Orama, asking: how does it work, what does it cost, what are the limits and tradeoffs, and how do I add it in five minutes.",
   "glossary": [
     {
@@ -108,7 +108,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "@hev/ask",
+          "literal": "@hevmind/ask",
           "chunkId": "api/cli"
         },
         {
@@ -220,6 +220,7 @@
         "verifying",
         "reporting",
         "status",
+        "hevmind",
         "overview",
         "glossary",
         "search",
@@ -234,8 +235,7 @@
         "ships",
         "binary",
         "command",
-        "groups",
-        "progressive"
+        "groups"
       ]
     },
     {
@@ -1276,7 +1276,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "// astro.config.mjs\nimport hevAsk from \"@hev/ask\";\n\nexport default defineConfig({\n  integrations: [\n    hevAsk({\n      collections: [\"docs\"],\n      basePath: \"/docs/\",\n      model: \"claude-haiku-4-5\",\n      maxResults: 6,\n    }),\n  ],\n});",
+          "literal": "// astro.config.mjs\nimport hevAsk from \"@hevmind/ask\";\n\nexport default defineConfig({\n  integrations: [\n    hevAsk({\n      collections: [\"docs\"],\n      basePath: \"/docs/\",\n      model: \"claude-haiku-4-5\",\n      maxResults: 6,\n    }),\n  ],\n});",
           "chunkId": "api/configuration"
         },
         {
@@ -1286,7 +1286,7 @@
         },
         {
           "kind": "code",
-          "literal": "@hev/ask",
+          "literal": "@hevmind/ask",
           "chunkId": "api/configuration"
         },
         {
@@ -1336,6 +1336,7 @@
         "astro",
         "config",
         "import",
+        "hevmind",
         "defineconfig",
         "integrations",
         "docs",
@@ -1628,7 +1629,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "import type { HevAskOptions } from \"@hev/ask\";",
+          "literal": "import type { HevAskOptions } from \"@hevmind/ask\";",
           "chunkId": "api/configuration#typescript"
         }
       ],
@@ -1653,6 +1654,7 @@
         "typing",
         "import",
         "hevaskoptions",
+        "hevmind",
         "help"
       ]
     },
@@ -1677,7 +1679,7 @@
         },
         {
           "kind": "code",
-          "literal": "@hev/ask/endpoint",
+          "literal": "@hevmind/ask/endpoint",
           "chunkId": "api/configuration#what-the-integration-does"
         },
         {
@@ -1756,6 +1758,7 @@
         "failing",
         "missing",
         "astro",
+        "hevmind",
         "prerender",
         "false",
         "digestpath",
@@ -1763,8 +1766,7 @@
         "starts",
         "pointing",
         "renders",
-        "resolved",
-        "options"
+        "resolved"
       ]
     },
     {
@@ -4056,7 +4058,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "---\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n\u003cSearchOverlay /\u003e",
+          "literal": "---\nimport SearchOverlay from \"@hevmind/ask/components/SearchOverlay.astro\";\n---\n\u003cSearchOverlay /\u003e",
           "chunkId": "api/search-overlay"
         },
         {
@@ -4105,6 +4107,7 @@
         "until",
         "opened",
         "import",
+        "hevmind",
         "components",
         "astro",
         "dialog",
@@ -6394,7 +6397,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "pnpm add @hev/ask",
+          "literal": "pnpm add @hevmind/ask",
           "chunkId": "quickstart#1-install"
         },
         {
@@ -6422,6 +6425,7 @@
         "subdirectory",
         "github",
         "pnpm",
+        "hevmind",
         "main",
         "path",
         "packages",
@@ -6439,7 +6443,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "// astro.config.mjs\nimport { defineConfig } from \"astro/config\";\nimport hevAsk from \"@hev/ask\";\n\nexport default defineConfig({\n  integrations: [\n    hevAsk({\n      collections: [\"docs\"],   // your content collection name(s)\n      basePath: \"/docs/\",      // slug → URL prefix: basePath + slug\n    }),\n  ],\n});",
+          "literal": "// astro.config.mjs\nimport { defineConfig } from \"astro/config\";\nimport hevAsk from \"@hevmind/ask\";\n\nexport default defineConfig({\n  integrations: [\n    hevAsk({\n      collections: [\"docs\"],   // your content collection name(s)\n      basePath: \"/docs/\",      // slug → URL prefix: basePath + slug\n    }),\n  ],\n});",
           "chunkId": "quickstart#2-register-the-integration"
         },
         {
@@ -6478,6 +6482,7 @@
         "import",
         "defineconfig",
         "hevask",
+        "hevmind",
         "export",
         "integrations",
         "docs",
@@ -6563,7 +6568,7 @@
       "facts": [
         {
           "kind": "code",
-          "literal": "---\n// src/layouts/Base.astro\nimport SearchOverlay from \"@hev/ask/components/SearchOverlay.astro\";\n---\n\u003cbutton type=\"button\" data-hev-ask-open\u003e\n  Search \u003ckbd\u003e⌘K\u003c/kbd\u003e\n\u003c/button\u003e\n\n\u003cslot /\u003e\n\n\u003cSearchOverlay /\u003e",
+          "literal": "---\n// src/layouts/Base.astro\nimport SearchOverlay from \"@hevmind/ask/components/SearchOverlay.astro\";\n---\n\u003cbutton type=\"button\" data-hev-ask-open\u003e\n  Search \u003ckbd\u003e⌘K\u003c/kbd\u003e\n\u003c/button\u003e\n\n\u003cslot /\u003e\n\n\u003cSearchOverlay /\u003e",
           "chunkId": "quickstart#4-render-the-overlay"
         },
         {
@@ -6617,6 +6622,7 @@
         "astro",
         "import",
         "searchoverlay",
+        "hevmind",
         "components",
         "button",
         "type",

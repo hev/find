@@ -1,5 +1,5 @@
 import { defineConfig } from 'astro/config';
-import hevAsk from '@hev/ask';
+import hevAsk from '@hevmind/ask';
 import node from '@astrojs/node';
 
 // https://astro.build/config

@@ -1,4 +1,4 @@
-# @hev/ask
+# @hevmind/ask
 
 hev ask is a heading-anchored search overlay for Astro docs sites. Typing runs
 instant keyword search; pressing `Enter` runs an optional Claude search loop that
@@ -7,7 +7,7 @@ chooses sub-queries and ranks section results.
 ## Install
 
 ```sh
-pnpm add @hev/ask
+pnpm add @hevmind/ask
 ```
 
 For the current GitHub-hosted monorepo package before npm publication:
@@ -21,7 +21,7 @@ pnpm add "git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui"
 ```js
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
-import hevAsk from '@hev/ask';
+import hevAsk from '@hevmind/ask';
 
 export default defineConfig({
   integrations: [
@@ -52,7 +52,7 @@ export default defineConfig({
 
 ```astro
 ---
-import SearchOverlay from '@hev/ask/components/SearchOverlay.astro';
+import SearchOverlay from '@hevmind/ask/components/SearchOverlay.astro';
 ---
 <button data-hev-ask-open>Search <kbd>⌘K</kbd></button>
 
@@ -88,8 +88,8 @@ pnpm digest:verify
 
 ## Publishing
 
-This package is intended to publish as `@hev/ask`. Before publishing, bump the
-version, run the verification gates, inspect `pnpm --filter @hev/ask pack
+This package is intended to publish as `@hevmind/ask`. Before publishing, bump the
+version, run the verification gates, inspect `pnpm --filter @hevmind/ask pack
 --dry-run`, then publish from this package directory with:
 
 ```sh

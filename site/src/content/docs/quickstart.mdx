@@ -30,7 +30,7 @@ search UI and skip the key.
 ## Set up keyword search
 
 <Steps items={[
-  { title: "Install the package", body: "Add @hev/ask with your package manager." },
+  { title: "Install the package", body: "Add @hevmind/ask with your package manager." },
   { title: "Register the integration", body: "Add hevAsk() to astro.config.mjs and point it at your collection." },
   { title: "Add an adapter", body: "Install a server/hybrid adapter so /api/ask can render on demand." },
   { title: "Drop in the overlay", body: "Render SearchOverlay.astro once in your layout and add an opener." },
@@ -42,7 +42,7 @@ search UI and skip the key.
 Once published, install from npm:
 
 ```sh
-pnpm add @hev/ask
+pnpm add @hevmind/ask
 ```
 
 Until then, consume it straight from the package subdirectory on GitHub:
@@ -56,7 +56,7 @@ pnpm add "git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui"
 ```js
 // astro.config.mjs
 import { defineConfig } from "astro/config";
-import hevAsk from "@hev/ask";
+import hevAsk from "@hevmind/ask";
 
 export default defineConfig({
   integrations: [
@@ -95,7 +95,7 @@ with `data-hev-ask-open` opens the palette**, and `⌘K` is bound automatically.
 ```astro
 ---
 // src/layouts/Base.astro
-import SearchOverlay from "@hev/ask/components/SearchOverlay.astro";
+import SearchOverlay from "@hevmind/ask/components/SearchOverlay.astro";
 ---
 <button type="button" data-hev-ask-open>
   Search <kbd>⌘K</kbd>

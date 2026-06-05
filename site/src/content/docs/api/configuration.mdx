@@ -7,13 +7,13 @@ order: 0
 
 import Callout from "../../../components/docs/Callout.astro";
 
-The `hevAsk()` integration is the default export of `@hev/ask`. It takes one
+The `hevAsk()` integration is the default export of `@hevmind/ask`. It takes one
 options object. Only `collections` is effectively required; everything else has
 a default.
 
 ```js
 // astro.config.mjs
-import hevAsk from "@hev/ask";
+import hevAsk from "@hevmind/ask";
 
 export default defineConfig({
   integrations: [
@@ -55,7 +55,7 @@ right route. See the [component reference](/docs/api/search-overlay).
 
 When Astro starts up (`astro:config:setup`) the integration:
 
-- injects the `endpoint` route, pointing at `@hev/ask/endpoint`, with
+- injects the `endpoint` route, pointing at `@hevmind/ask/endpoint`, with
   `prerender: false` so it renders on demand;
 - registers two virtual modules — `virtual:hev-ask/config` (the resolved
   options) and `virtual:hev-ask/digest` (the committed digest, inlined);
@@ -72,7 +72,7 @@ lack of a key.**
 The options type is exported for editor help and config typing:
 
 ```ts
-import type { HevAskOptions } from "@hev/ask";
+import type { HevAskOptions } from "@hevmind/ask";
 ```
 
 ## Tuning notes

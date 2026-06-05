@@ -1,5 +1,5 @@
 {
-  "name": "@hev/ask",
+  "name": "@hevmind/ask",
   "version": "0.1.0",
   "type": "module",
   "description": "hev ask: a heading-anchored, agentic search overlay for Astro docs sites.",
@@ -28,11 +28,11 @@
     "ask": "./bin/ask.mjs"
   },
   "optionalDependencies": {
-    "@hev/ask-darwin-arm64": "workspace:*",
-    "@hev/ask-darwin-x64": "workspace:*",
-    "@hev/ask-linux-arm64": "workspace:*",
-    "@hev/ask-linux-x64": "workspace:*",
-    "@hev/ask-win32-x64": "workspace:*"
+    "@hevmind/ask-darwin-arm64": "workspace:*",
+    "@hevmind/ask-darwin-x64": "workspace:*",
+    "@hevmind/ask-linux-arm64": "workspace:*",
+    "@hevmind/ask-linux-x64": "workspace:*",
+    "@hevmind/ask-win32-x64": "workspace:*"
   },
   "exports": {
     ".": "./src/index.ts",
