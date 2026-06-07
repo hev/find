@@ -106,6 +106,20 @@ const tocHeadings = headings.filter((heading) => heading.depth === 2);
 	</main>
 
 	<script is:inline>
+		// Keep the active page visible in the scrollable nav rail
+		// (.docs-sidebar on desktop, .docs-nav on mobile).
+		for (const rail of document.querySelectorAll(".docs-sidebar, .docs-nav")) {
+			if (rail.scrollHeight <= rail.clientHeight) continue;
+			const active = rail.querySelector('a[aria-current="page"]');
+			if (!active) continue;
+			const railRect = rail.getBoundingClientRect();
+			const activeRect = active.getBoundingClientRect();
+			if (activeRect.bottom > railRect.bottom || activeRect.top < railRect.top) {
+				rail.scrollTop += activeRect.top - railRect.top - rail.clientHeight / 2;
+			}
+			break;
+		}
+
 		document.querySelector("[data-copy-page]")?.addEventListener("click", async (event) => {
 			const button = event.currentTarget;
 			try {
@@ -164,6 +178,47 @@ const tocHeadings = headings.filter((heading) => heading.depth === 2);
 	.docs-toc {
 		position: sticky;
 		top: 5rem;
+		max-height: calc(100vh - 6rem);
+		overflow-y: auto;
+		overflow-x: hidden;
+		overscroll-behavior: contain;
+		scrollbar-width: thin;
+		scrollbar-color: var(--rule-strong) transparent;
+	}
+
+	.docs-sidebar {
+		padding-right: 0.75rem;
+		padding-bottom: 1.5rem;
+	}
+
+	.docs-toc {
+		padding-bottom: 1.5rem;
+	}
+
+	.docs-sidebar::-webkit-scrollbar,
+	.docs-toc::-webkit-scrollbar,
+	.docs-nav::-webkit-scrollbar {
+		width: 6px;
+		height: 6px;
+	}
+
+	.docs-sidebar::-webkit-scrollbar-track,
+	.docs-toc::-webkit-scrollbar-track,
+	.docs-nav::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.docs-sidebar::-webkit-scrollbar-thumb,
+	.docs-toc::-webkit-scrollbar-thumb,
+	.docs-nav::-webkit-scrollbar-thumb {
+		background: var(--rule-strong);
+		border-radius: 999px;
+	}
+
+	.docs-sidebar::-webkit-scrollbar-thumb:hover,
+	.docs-toc::-webkit-scrollbar-thumb:hover,
+	.docs-nav::-webkit-scrollbar-thumb:hover {
+		background: var(--muted);
 	}
 
 	.docs-nav h2,
@@ -605,6 +660,10 @@ const tocHeadings = headings.filter((heading) => heading.depth === 2);
 		.docs-sidebar {
 			position: relative;
 			top: auto;
+			max-height: none;
+			overflow: visible;
+			padding-right: 0;
+			padding-bottom: 0;
 			margin-bottom: 2rem;
 		}
 
@@ -614,6 +673,9 @@ const tocHeadings = headings.filter((heading) => heading.depth === 2);
 			padding: 1rem;
 			max-height: 17rem;
 			overflow: auto;
+			overscroll-behavior: contain;
+			scrollbar-width: thin;
+			scrollbar-color: var(--rule-strong) transparent;
 		}
 
 		.doc-header {
