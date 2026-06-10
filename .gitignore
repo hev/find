@@ -8,6 +8,7 @@ dist/
 .wrangler/
 *.log
 .DS_Store
+/bin/
 packages/ask-*/bin/ask
 packages/ask-*/bin/ask.exe
 !packages/ask-*/bin/.gitkeep
