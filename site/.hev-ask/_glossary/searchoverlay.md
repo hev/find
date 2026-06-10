@@ -1,6 +1,6 @@
 ---
 term: "SearchOverlay"
-aliases: ["overlay","command palette"]
+aliases: ["overlay","command palette","cmd-k","ask overlay"]
 ---
 
-The Cmd-K Astro component that renders the search palette over a page.
+The ⌘K palette component — SearchOverlay.astro on Astro, or a drop-in script-tag web component on any other site — that runs both search paths.

@@ -3,14 +3,14 @@ id: "limits#frontmatter-parsing-is-a-flat-yaml-subset"
 title: "Limits"
 heading: "Frontmatter parsing is a flat-YAML subset"
 group: "Overview"
-order: 68
+order: 83
 url: "/docs/limits#frontmatter-parsing-is-a-flat-yaml-subset"
 anchor: "frontmatter-parsing-is-a-flat-yaml-subset"
-terms: ["frontmatter","parsing","flat","yaml","subset","offline","build","parses","small","splitter","full","parser","handles","common","docs","schema","string","number","fields","getcollection","nested","structures","aren","supported","time","only","affects","digest","reading","files","disk","runtime","index","uses","astro","honors","real"]
-hash: "ad94e8cec0de984e67679f6174c98ae3cba180e7fcfa0bce13a45be1d75647be"
+terms: ["frontmatter","parsing","flat","yaml","subset","offline","build","parses","small","splitter","handling","string","number","fields","nested","structures","aren","supported","only","affects","file","reading","astro","runtime","index","uses","collection","honors","real","schema","getcollection","full","parser","handles","common","docs","time","files","disk"]
+hash: "da3ebf7a72c862c9bb94804726792203ebd2dad95887c4c094bf492223e719b8"
 mode: "agent-primary"
 facts: [{"kind":"code","literal":"getCollection","chunkId":"limits#frontmatter-parsing-is-a-flat-yaml-subset"}]
 sources: [{"chunkId":"limits#frontmatter-parsing-is-a-flat-yaml-subset","url":"/docs/limits#frontmatter-parsing-is-a-flat-yaml-subset","anchor":"frontmatter-parsing-is-a-flat-yaml-subset"}]
 ---
 
-Frontmatter parsing is a flat-YAML subset The offline build parses frontmatter with a small flat-YAML splitter, not a full YAML parser. It handles the common docs schema (string and number fields)....
+The offline build parses frontmatter with a small flat-YAML splitter handling string and number fields; nested structures aren't supported. This only affects the offline file-reading build — the Astro runtime index uses the collection API, which honors the real schema.

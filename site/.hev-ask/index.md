@@ -3,14 +3,14 @@ id: "index"
 title: "Introduction"
 heading: null
 group: "Overview"
-order: 60
+order: 76
 url: "/docs"
 anchor: null
-terms: ["distills","astro","docs","committed","directory","tree","markdown","coding","agent","grep","plus","overlay","answers","readers","same","artifact","three","surfaces","diagram","callout","build","site","digest","small","file","section","distilled","mirror","navigates","offline","bundled","skill","claude","code","subscription","commit","become","readable","ways","perfect"]
-hash: "e3db30a92cdf1066606d557850e3481e0ef3f60efe4b3a9b1b72ba13f08e6d97"
+terms: ["distills","docs","site","compact","directory","markdown","small","file","section","coding","agent","navigate","tools","overlay","answers","readers","host","neutral","built","renderer","ships","turnkey","astro","integration","adds","same","other","framework","script","fits","technical","internal","wikis","medium","sized","corpora","diagram","callout","build","tree"]
+hash: "5a94ae0b351ff3ceebfccf626431a5b0d5420c9f81c900ff454f69e5b3646c92"
 mode: "agent-primary"
 facts: [{"kind":"code","literal":"⌘K","chunkId":"index"},{"kind":"value","literal":"Diagram.astro","chunkId":"index"},{"kind":"value","literal":"Callout.astro","chunkId":"index"},{"kind":"value","literal":"astro.build","chunkId":"index"}]
 sources: [{"chunkId":"index","url":"/docs","anchor":null}]
 ---
 
-hev ask distills your Astro docs into a committed directory — a tree of markdown your coding agent can tree, cat, and grep, plus a ⌘K overlay that answers your readers. Same artifact, three surfaces....
+hev ask distills a docs site into a compact directory of markdown — one small file per section — that a coding agent can navigate with file tools and a ⌘K overlay answers readers from. It's host-neutral (built from markdown, not a renderer), ships a turnkey Astro integration, adds the same overlay to any other framework with one script, and fits technical docs, internal wikis, and medium-sized corpora.

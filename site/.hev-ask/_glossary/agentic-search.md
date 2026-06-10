@@ -1,6 +1,6 @@
 ---
 term: "agentic search"
-aliases: ["ask mode","ask ai","agentic loop"]
+aliases: ["ask mode","AI answers","agentic loop","ask ai"]
 ---
 
-The bounded Claude tool-use loop that gathers sections then streams a grounded, deep-linked answer on Enter.
+The on-Enter path: a bounded tool-use loop that opens digest sections, then streams a grounded, deep-linked answer over SSE; requires a provider API key server-side.

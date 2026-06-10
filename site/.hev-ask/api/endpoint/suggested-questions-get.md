@@ -3,14 +3,14 @@ id: "api/endpoint#suggested-questions-get"
 title: "Search endpoint"
 heading: "Suggested questions (GET)"
 group: "API"
-order: 32
+order: 33
 url: "/docs/api/endpoint#suggested-questions-get"
 anchor: "suggested-questions-get"
-terms: ["suggested","questions","returns","digest","baked","suggestions","loop","model","query","call","does","stay","fresh","claude","haiku","overlay","fetches","once","first","open","populate","empty","array","graph","without","just","means","shows","none"]
-hash: "365b4f536408592ba0f2e389bafa8fbc2827905bc3787ca00efcb19eafd919ba"
+terms: ["suggested","questions","base","route","returns","digest","baked","loop","model","call","overlay","fetches","once","first","open","empty","list","simply","renders","nothing","suggestions","does","stay","fresh","claude","haiku","query","populate","array","without","just","means","shows","none"]
+hash: "09b11b93e36f83adbf3806b64893ae0d6e67036b50132a6ffb096ad9e279489b"
 mode: "source-primary"
 facts: [{"kind":"code","literal":"{\n  \"suggestions\": [\"How does the digest stay fresh?\"],\n  \"model\": \"claude-haiku-4-5\"\n}","chunkId":"api/endpoint#suggested-questions-get"},{"kind":"code","literal":"GET /api/ask","chunkId":"api/endpoint#suggested-questions-get"},{"kind":"code","literal":"suggestions","chunkId":"api/endpoint#suggested-questions-get"}]
 sources: [{"chunkId":"api/endpoint#suggested-questions-get","url":"/docs/api/endpoint#suggested-questions-get","anchor":"suggested-questions-get"}]
 ---
 
-Suggested questions (GET) GET /api/ask returns the digest's baked-in suggestions and the loop model — no query, no model call: { "suggestions": ["How does the digest stay fresh?"], "model": "claude-haiku-4-5" } The overlay fetches this once on first open (when...
+A GET on the base route returns the digest's baked-in suggested questions and the loop model with no model call; the overlay fetches it once on first open when AI is on, and an empty list simply renders nothing.

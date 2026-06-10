@@ -1,13 +1,13 @@
 ---
 version: 2
-generatedAt: "2026-06-09T12:33:33.990Z"
-contentHash: "03dd6f09c9146cd785f9a521fd82bb61efe3b6e151968824ad0c380384f253af"
-suggestions: ["How do I add hev ask to my Astro site?","How does the agentic answer loop work?","Why keyword search instead of embeddings?","How do I build and refresh the ask digest?","What can't hev ask do?"]
+generatedAt: "2026-06-10T13:16:20.949Z"
+contentHash: "b5a2206dfc5d222323bf61b77864f51b2831accb09b2b1b73cece2ff89058bd6"
+suggestions: ["How do I add hev ask to my Astro site?","Can I use hev ask on Docusaurus or MkDocs?","How does the agentic answer loop work?","How do I build and refresh the ask digest?","What can't hev ask do?"]
 ---
 
 ## Context
 
-**hev ask** (`@hevmind/ask`) is a `⌘K` search overlay for Astro docs sites, documented at hevask.com — a site that searches itself with the package. Three moving parts: a heading-level chunk index with real rendered anchors (via github-slugger, gated by `ask digest verify`), a committed offline-built **ask digest** (`.hev-ask/`) stored as a markdown tree with glossary, section summaries, hashes, facts, and source anchors, and a bounded Claude tool-use loop. Two retrieval paths: instant keyless **keyword** search (token overlap widened by the digest glossary, deep-linking to `/docs/page#anchor`) and an **agentic** answer on Enter (needs `ANTHROPIC_API_KEY`, streams SSE with inline citations). The digest is hash-gated — rebuilds skip model work when content is unchanged — and buildable three ways: a Claude Code skill (subscription, sharded), the one-shot CLI, or the sharded flow for big sites. Everything degrades instead of hard-failing: no key → keyword mode; no digest tree → plain excerpts. The corpus is only the configured content collection(s) — no crawler. The `POST /api/ask` endpoint renders on demand (keyword JSON vs. agentic SSE; keyless GET read routes for glossary/sections/overview), so a server or hybrid adapter is required. The `ask` CLI exposes `tree`, `ls`, `head`, `cat`, `facts`, `grep`, `answer`, `mcp`, and `digest build`/`verify`. Users compare it against Pagefind, Algolia DocSearch, and Orama; the Tradeoffs and Limits pages answer that directly.
+**hev ask** (`@hevmind/ask`) is a `⌘K` search overlay and agent-readable docs distillation, documented at hevask.com, a site that searches itself with the package. The central artifact is the **ask digest**: a committed, offline-built markdown tree (`.hev-ask/`, one small file per section) holding section summaries, verbatim facts, source anchors, a glossary, and a site overview. The same tree serves three readers: the `⌘K` overlay for humans, the `ask` CLI read verbs (`tree`, `ls`, `head`, `cat`, `facts`, `grep`) for agents, and the `ask mcp` server, which hydrates the tree to local disk so an agent reads it with its own file tools. The digest is host-neutral (built from markdown, not a renderer); Astro gets the turnkey `hevAsk()` integration, while Docusaurus, VitePress, MkDocs, and plain static sites use the drop-in static overlay plus an optional hostable endpoint. Two retrieval paths: instant keyless **keyword** search (token overlap widened by the digest glossary, deep-linking to `/docs/page#anchor` with anchors from github-slugger, gated in CI by `ask digest verify`) and an **agentic** answer on Enter (needs a server-side provider API key — `ANTHROPIC_API_KEY` by default; OpenAI and OpenRouter are supported via the `provider` option, with `providerBaseUrl` for any OpenAI-compatible endpoint — and streams SSE with inline citations to opened sections). The digest is hash-gated and incremental: rebuilds skip model work for unchanged sections, and it's buildable via the Claude Code skill (subscription, sharded), the one-shot CLI `ask digest build`, or the sharded flow for big sites. Everything degrades instead of hard-failing: no key means keyword mode, no tree means plain excerpts. The corpus is only the configured content collection(s) or globs, with no crawler. The `POST /api/ask` endpoint renders on demand, so the agentic path needs a server or hybrid adapter. The digest was formerly called the knowledge graph (kg) and was a digest.json; both are legacy names. Users compare hev ask against Pagefind, Algolia DocSearch, and Orama; the Tradeoffs and Limits pages answer that directly.
 ## Overview
 
 ## API
@@ -22,6 +22,7 @@ suggestions: ["How do I add hev ask to my Astro site?","How does the agentic ans
 - Sharded builds for large sites — `api/cli#sharded-builds-for-large-sites`
 - Where it runs — `api/cli#where-it-runs`
 - Configuration — `api/configuration`
+- Choosing a provider — `api/configuration#choosing-a-provider`
 - Options — `api/configuration#options`
 - Tuning notes — `api/configuration#tuning-notes`
 - TypeScript — `api/configuration#typescript`
@@ -53,37 +54,52 @@ suggestions: ["How do I add hev ask to my Astro site?","How does the agentic ans
 - The instructions — `api/mcp#the-instructions`
 - The tool — `api/mcp#the-tool`
 - SearchOverlay component — `api/search-overlay`
+- Any static site — `api/search-overlay#any-static-site`
+- Bundling the static assets — `api/search-overlay#bundling-the-static-assets`
+- Docusaurus — `api/search-overlay#docusaurus`
 - Keyboard model — `api/search-overlay#keyboard-model`
 - Keyword results and deep links — `api/search-overlay#keyword-results-and-deep-links`
+- MkDocs — `api/search-overlay#mkdocs`
 - Opening the overlay — `api/search-overlay#opening-the-overlay`
 - Props — `api/search-overlay#props`
 - Suggested questions — `api/search-overlay#suggested-questions`
+- Support at a glance — `api/search-overlay#support-at-a-glance`
+- The hostable endpoint — `api/search-overlay#the-hostable-endpoint`
 - The mode toggle — `api/search-overlay#the-mode-toggle`
+- The overlay on other frameworks — `api/search-overlay#the-overlay-on-other-frameworks`
 - The streamed answer — `api/search-overlay#the-streamed-answer`
 - Theming — `api/search-overlay#theming`
+- VitePress — `api/search-overlay#vitepress`
 ## Overview
 - Concepts — `concepts`
 - Asking is the default — `concepts#asking-is-the-default`
 - Chunks and anchors — `concepts#chunks-and-anchors`
 - Degradation, by design — `concepts#degradation-by-design`
+- Host-neutral: one digest, any framework — `concepts#host-neutral-one-digest-any-framework`
 - Keyword search and the glossary — `concepts#keyword-search-and-the-glossary`
 - Progressive disclosure as a directory — `concepts#progressive-disclosure-as-a-directory`
 - The agentic search loop — `concepts#the-agentic-search-loop`
 - The ask digest directory — `concepts#the-ask-digest-directory`
 - The system prompt is cached — `concepts#the-system-prompt-is-cached`
 - Two ways to build the tree — `concepts#two-ways-to-build-the-tree`
+- Digest creation — `digest-creation`
+- Built from markdown, not from a renderer — `digest-creation#built-from-markdown-not-from-a-renderer`
+- Incremental by hash — `digest-creation#incremental-by-hash`
+- Two ways to run the build — `digest-creation#two-ways-to-run-the-build`
+- Verify, review, commit — `digest-creation#verify-review-commit`
+- What the model writes — `digest-creation#what-the-model-writes`
 - Introduction — `index`
 - Next steps — `index#next-steps`
-- One artifact, three surfaces — `index#one-artifact-three-surfaces`
+- One artifact, three readers — `index#one-artifact-three-readers`
 - Who this is for — `index#who-this-is-for`
 - Limits — `limits`
-- A server route is required — `limits#a-server-route-is-required`
 - Agentic search adds latency — `limits#agentic-search-adds-latency`
-- Anchors depend on Astro's slugger — `limits#anchors-depend-on-astros-slugger`
+- Anchors depend on the renderer's slugger — `limits#anchors-depend-on-the-renderers-slugger`
 - Frontmatter parsing is a flat-YAML subset — `limits#frontmatter-parsing-is-a-flat-yaml-subset`
 - Recall has a keyword ceiling — `limits#recall-has-a-keyword-ceiling`
 - Secrets live server-side — `limits#secrets-live-server-side`
-- The corpus is your content collection — `limits#the-corpus-is-your-content-collection`
+- The agentic path needs a server somewhere — `limits#the-agentic-path-needs-a-server-somewhere`
+- The corpus is the content you configure — `limits#the-corpus-is-the-content-you-configure`
 - The one-shot digest build is bounded; sharded builds are not — `limits#the-one-shot-digest-build-is-bounded-sharded-builds-are-not`
 - Quick start — `quickstart`
 - 1. Install — `quickstart#1-install`
@@ -97,6 +113,7 @@ suggestions: ["How do I add hev ask to my Astro site?","How does the agentic ans
 - Verify it works — `quickstart#verify-it-works`
 - Tradeoffs — `tradeoffs`
 - A committed digest — `tradeoffs#a-committed-digest`
+- A flagship adapter, primitives for the rest — `tradeoffs#a-flagship-adapter-primitives-for-the-rest`
 - Cost and latency of agentic search — `tradeoffs#cost-and-latency-of-agentic-search`
 - How it compares — `tradeoffs#how-it-compares`
 - Keyword retrieval, not embeddings — `tradeoffs#keyword-retrieval-not-embeddings`

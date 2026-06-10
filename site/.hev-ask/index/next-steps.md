@@ -3,14 +3,14 @@ id: "index#next-steps"
 title: "Introduction"
 heading: "Next steps"
 group: "Overview"
-order: 61
+order: 77
 url: "/docs#next-steps"
 anchor: "next-steps"
-terms: ["next","steps","quick","start","search","site","five","minutes","concepts","chunks","anchors","disclosure","ladder","agentic","loop","digest","directory","tradeoffs","limits","choosing","deliberately","doesn","tree","grep","browse","reference","every","option","component","props","endpoint","contract"]
-hash: "e94d1aec0f7a590fa0dd02a48ed83e3de50bacd62d5e945439fb13f6c925d697"
+terms: ["next","steps","navigation","pointing","quick","start","digest","creation","concepts","tradeoffs","limits","pages","reference","full","tree","grep","search","astro","site","five","minutes","built","kept","fresh","verified","chunks","anchors","disclosure","ladder","agentic","loop","directory","choosing","deliberately","doesn","browse","every","option","component","props"]
+hash: "292d13fd4cc150850f930dbe0b306b79ccebb4ecad52afd02797d107a94aaf57"
 mode: "agent-primary"
 facts: [{"kind":"code","literal":"ask","chunkId":"index#next-steps"},{"kind":"code","literal":"tree","chunkId":"index#next-steps"},{"kind":"code","literal":"cat","chunkId":"index#next-steps"},{"kind":"code","literal":"grep","chunkId":"index#next-steps"}]
 sources: [{"chunkId":"index#next-steps","url":"/docs#next-steps","anchor":"next-steps"}]
 ---
 
-Next steps Quick start — add search to your site in five minutes. Concepts — chunks, anchors, the disclosure ladder, the agentic loop, and the ask digest directory. Tradeoffs and Limits — what you're choosing, and what hev ask deliberately doesn't do....
+Navigation hub pointing to the quick start, digest creation, concepts, the tradeoffs and limits pages, the CLI reference, and the full API reference.

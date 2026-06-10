@@ -3,14 +3,14 @@ id: "concepts"
 title: "Concepts"
 heading: null
 group: "Overview"
-order: 50
+order: 59
 url: "/docs/concepts"
 anchor: null
-terms: ["works","heading","chunk","indexing","real","anchors","committed","digest","directory","read","four","rung","disclosure","ladder","keyword","retrieval","widened","glossary","bounded","agentic","loop","synthesizes","grounded","answers","diagram","astro","callout","rests","idea","just","docs","distilled","tree","markdown","files","section","ways","coding","agent","navigates"]
-hash: "827a5e4693c3bebd6259ade518ddacdb9ec809c749d692a245871788c28beb06"
+terms: ["core","idea","digest","just","directory","docs","distilled","committed","tree","markdown","files","section","read","ways","coding","agent","navigates","existing","file","tools","overlay","reads","server","side","synthesize","grounded","answers","humans","built","offline","strong","model","readers","demand","durable","state","running","site","diagram","astro"]
+hash: "f0a685967c67732cf07a30f2bd53d177317ecfad71a2882f464985695010891d"
 mode: "agent-primary"
 facts: [{"kind":"code","literal":"⌘K","chunkId":"concepts"},{"kind":"value","literal":"Diagram.astro","chunkId":"concepts"},{"kind":"value","literal":"Callout.astro","chunkId":"concepts"}]
 sources: [{"chunkId":"concepts","url":"/docs/concepts","anchor":null}]
 ---
 
-How hev ask works: heading-chunk indexing with real anchors, a committed ask digest directory read as a four-rung disclosure ladder, keyword retrieval widened by a glossary, and the bounded agentic loop that synthesizes grounded answers....
+The core idea: the digest is just a directory — docs distilled into a committed tree of markdown files, one per section, read two ways: a coding agent navigates it with its existing file tools, and the ⌘K overlay reads it server-side to synthesize grounded answers for humans. The tree is built offline with a strong model and committed to git; the readers run on demand with no durable state in the running site.

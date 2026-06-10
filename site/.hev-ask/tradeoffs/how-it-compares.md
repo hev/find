@@ -3,14 +3,14 @@ id: "tradeoffs#how-it-compares"
 title: "Tradeoffs"
 heading: "How it compares"
 group: "Overview"
-order: 86
+order: 103
 url: "/docs/tradeoffs#how-it-compares"
 anchor: "how-it-compares"
-terms: ["compares","tool","retrieval","ranking","deep","links","hosting","keyword","glossary","enter","heading","anchors","adapter","optional","pagefind","static","index","page","anchor","none","algolia","docsearch","hosted","classic","service","crawler","orama","vector","search","only","configurable","client","short","version","choose","want","excellent","site","zero","services"]
-hash: "7341ba15d199d191d7280b24fb8c4d42555f14bdd4cad39c15435ee638d0695c"
+terms: ["compares","comparison","table","guidance","pagefind","excellent","keyless","static","keyword","search","algolia","managed","crawler","backed","service","orama","client","side","vector","self","embeddings","docs","folder","markdown","framework","want","heading","level","deep","links","plus","answers","questions","phrased","reader","words","tool","retrieval","ranking","hosting"]
+hash: "f7153362862908034c56b96908a7bca0f733e311dfba14d3d4681b1c72e1fe12"
 mode: "agent-primary"
 facts: []
 sources: [{"chunkId":"tradeoffs#how-it-compares","url":"/docs/tradeoffs#how-it-compares","anchor":"how-it-compares"}]
 ---
 
-How it compares Tool Retrieval AI ranking Deep links Hosting hev ask keyword + glossary yes, on Enter heading anchors your adapter + optional API key Pagefind keyword (static index) no page / anchor static, none Algolia DocSearch keyword (hosted) no (classic)...
+Comparison table and guidance: Pagefind for excellent keyless static keyword search, Algolia for a managed crawler-backed service, Orama for client-side vector search with self-managed embeddings, and hev ask when docs are a folder of markdown on any framework and you want heading-level deep links plus answers to questions phrased in the reader's words.

@@ -3,14 +3,14 @@ id: "api/endpoint#the-api-key"
 title: "Search endpoint"
 heading: "The API key"
 group: "API"
-order: 33
+order: 34
 url: "/docs/api/endpoint#the-api-key"
 anchor: "the-api-key"
-terms: ["endpoint","resolves","anthropicapikey","order","adapter","runtime","locals","cloudflare","process","import","meta","wherever","host","injects","server","secrets","never","sent","browser","anthropic"]
-hash: "58add94e9c0749c8e4375c9547959baeef1548db0d57c8e5c99ecb5392a54247"
+terms: ["endpoint","reads","named","configured","provider","order","adapter","runtime","environment","such","cloudflare","process","build","time","wherever","host","injects","server","secrets","never","reaches","browser","anthropic","openai","openrouter","locals","import","meta","anthropicapikey","default","openaiapikey","openrouterapikey","option","sent"]
+hash: "6b9f401de0da470a422dab86c8b67ba6461101611461a5f6ad508bcf0c854ece"
 mode: "source-primary"
-facts: [{"kind":"code","literal":"ANTHROPIC_API_KEY","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"locals.runtime.env","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"process.env","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"import.meta.env","chunkId":"api/endpoint#the-api-key"},{"kind":"value","literal":"e.g","chunkId":"api/endpoint#the-api-key"}]
+facts: [{"kind":"code","literal":"ANTHROPIC_API_KEY","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"OPENAI_API_KEY","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"OPENROUTER_API_KEY","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"provider","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"locals.runtime.env","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"process.env","chunkId":"api/endpoint#the-api-key"},{"kind":"code","literal":"import.meta.env","chunkId":"api/endpoint#the-api-key"},{"kind":"value","literal":"e.g","chunkId":"api/endpoint#the-api-key"}]
 sources: [{"chunkId":"api/endpoint#the-api-key","url":"/docs/api/endpoint#the-api-key","anchor":"the-api-key"}]
 ---
 
-The API key The endpoint resolves ANTHROPICAPIKEY from, in order: the adapter runtime env (locals.runtime.env, e.g. Cloudflare), process.env, then import.meta.env. Set it wherever your host injects server secrets; it is never sent to the browser.
+The endpoint reads the key named by the configured provider from, in order, the adapter runtime environment (such as Cloudflare's), the process environment, then the build-time env. It is set wherever the host injects server secrets and never reaches the browser.

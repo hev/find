@@ -3,14 +3,14 @@ id: "quickstart"
 title: "Quick start"
 heading: null
 group: "Overview"
-order: 73
+order: 89
 url: "/docs/quickstart"
 anchor: null
-terms: ["astro","docs","site","install","integration","drop","overlay","keyword","search","build","digest","enable","agentic","content","anthropic","searchoverlay","steps","callout","existing","whose","lives","collection","about","five","minutes","working","first","anthropicapikey","turn","claude","powered","answers","gives","instant","keyless","runs","anywhere","server","same","also"]
-hash: "76c35ba1056d03aecb684e02d974f769d0624531903d90142c8cd650c4f4c53b"
+terms: ["search","existing","astro","docs","site","content","collection","about","five","minutes","keyword","first","nothing","host","server","side","enables","agentic","answer","loop","enter","other","frameworks","drop","same","overlay","script","point","hosted","endpoint","anthropic","callout","codetabs","install","integration","build","digest","enable","whose","lives"]
+hash: "54831061153def336afcc7a27a41a77ca77fa55d4ade8329bf0326e8fc6c19de"
 mode: "agent-primary"
-facts: [{"kind":"code","literal":"src/content/docs","chunkId":"quickstart"},{"kind":"code","literal":"ANTHROPIC_API_KEY","chunkId":"quickstart"},{"kind":"code","literal":"SearchOverlay.astro","chunkId":"quickstart"},{"kind":"value","literal":"Steps.astro","chunkId":"quickstart"},{"kind":"value","literal":"Callout.astro","chunkId":"quickstart"}]
+facts: [{"kind":"code","literal":"src/content/docs","chunkId":"quickstart"},{"kind":"code","literal":"ANTHROPIC_API_KEY","chunkId":"quickstart"},{"kind":"code","literal":"\u003cscript\u003e","chunkId":"quickstart"},{"kind":"value","literal":"Callout.astro","chunkId":"quickstart"},{"kind":"value","literal":"CodeTabs.astro","chunkId":"quickstart"}]
 sources: [{"chunkId":"quickstart","url":"/docs/quickstart","anchor":null}]
 ---
 
-Add hev ask to an Astro docs site: install the integration and drop in the overlay for keyword search, build the digest, then add an API key to enable agentic search....
+Add search to an existing Astro 5 docs site with a content collection in about five minutes: keyword search first with no key and nothing to host, then a server-side key enables the agentic answer loop on Enter. Other frameworks drop in the same overlay as a script tag and point it at a hosted endpoint.
