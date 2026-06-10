@@ -1,26 +1,35 @@
 ---
 import Base from "../layouts/Base.astro";
 
+// Shared hev-mind-workspace Loops form (one form per workspace); userGroup
+// keeps ask signups filterable from mind/layer ones.
+const LOOPS_FORM_ID = "cmgjf63rked6g3d0i3n0hyrai";
+const LOOPS_USER_GROUP = "hev ask";
+const loopsAction = `https://app.loops.so/api/newsletter-form/${LOOPS_FORM_ID}`;
+
 const facts = [
 	{ k: "readers", v: "⌘K — instant keyword search; Enter streams a grounded Claude answer" },
-	{ k: "agents", v: "ask search / section get / overview — keyless reads over the same digest, from any shell" },
+	{ k: "agents", v: "ask tree · cat · grep — your docs as a directory, keyless, from any shell" },
 	{ k: "cited", v: "every answer deep-links to the exact heading — anchors verified in CI" },
 ];
 ---
 
 <Base
-	title="hev ask - agent-ready search for Astro docs sites"
-	description="Make your Astro docs agent-ready: a ⌘K overlay for readers and a keyless CLI their coding agents can run, both grounded in an ask digest — a committed, CI-verified distillation of your docs."
+	title="hev ask - your docs as a directory your agent can read"
+	description="hev ask distills your docs into a compact directory — a tree of markdown your coding agent can tree, cat, and grep, plus a ⌘K overlay that answers your readers. Astro integration, one-script drop-in everywhere else. Every citation a CI-verified anchor."
 	current="product"
 >
 	<main>
 		<section class="hero">
-			<p class="kicker">// agent-ready docs for astro sites</p>
+			<p class="kicker">// your docs as a directory your agent can read</p>
 			<h1>Your docs,<br />agent ready.</h1>
 			<p class="lede">
-				Create a distilled <strong>digest</strong> for your Astro
-				documentation, access it through a CLI for your agent or
-				<span class="mono">⌘K</span> for humans.
+				Distill your docs into a tree of markdown files your coding
+				agent can intuitively <span class="mono">cat</span> and
+				<span class="mono">grep</span> — and a
+				<span class="mono">⌘K</span> overlay that searches your
+				docs site. Framework-neutral core, first-class Astro
+				integration. No pay-by-the-token.
 			</p>
 			<div class="cta-row">
 				<a href="/docs" class="btn">Read the docs</a>
@@ -34,32 +43,34 @@ const facts = [
 					src="/digest.png"
 					width="1376"
 					height="768"
-					alt="A stack of documentation pages distilled into a compact digest.json index card on warm paper; an orange ⌘K beam reads it progressively — skims the index, lifts one summary line, and unfolds it into a full section anchored at #api/endpoints/create."
+					alt="A stack of documentation pages distilled into a directory tree of markdown section files on warm paper, read two equal ways: an orange ⌘K beam for readers and an `ask` terminal running tree, cat, and grep for agents — both unfolding the same section, anchored at #api/endpoints/create."
 					loading="eager"
 				/>
 			</figure>
 		</section>
 
-		<section class="install" aria-label="The whole integration">
+		<section class="install" aria-label="The whole setup">
 			<ol class="steps">
 				<li>
-					<span class="step-label">install</span>
-					<pre><code>pnpm add @hevmind/ask</code></pre>
+					<span class="step-label">build the digest</span>
+					<pre><code><span class="cmt">// offline — distils your markdown into the .hev-ask/ tree</span>
+ask digest build</code></pre>
 				</li>
 				<li>
-					<span class="step-label">register the integration</span>
-					<pre><code><span class="cmt">// astro.config.mjs</span>
-integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
-				</li>
-				<li>
-					<span class="step-label">drop in the overlay</span>
-					<pre><code><span class="cmt">// any layout</span>
+					<span class="step-label">add the overlay</span>
+					<pre><code><span class="cmt">// any layout — the Astro integration, or one script elsewhere</span>
 &lt;SearchOverlay /&gt;</code></pre>
+				</li>
+				<li>
+					<span class="step-label">optional — single-turn Q&amp;A</span>
+					<pre><code><span class="cmt">// add a key to stream a grounded answer on Enter</span>
+ANTHROPIC_API_KEY=sk-…</code></pre>
 				</li>
 			</ol>
 			<p class="caption">
-				That's the whole integration. This site runs on it — keyword search needs
-				no API key. <a href="/docs/quickstart">Full quick start →</a>
+				That's the whole setup, the same on any framework — this site runs on it.
+				Keyword search needs no API key; add one only for single-turn Q&amp;A.
+				<a href="/docs/quickstart">Quick start →</a>
 			</p>
 		</section>
 
@@ -67,19 +78,22 @@ integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
 			<p class="kicker">// and for their agents</p>
 			<ol class="steps">
 				<li>
-					<span class="step-label">install the CLI — no MCP server, no config</span>
+					<span class="step-label">install the CLI — no config</span>
 					<pre><code>go install github.com/hev/ask/cmd/ask@latest</code></pre>
 				</li>
 				<li>
-					<span class="step-label">point it at any hev-ask site</span>
-					<pre><code>ask --endpoint https://yourdocs.com/api/ask search "how do I…"</code></pre>
+					<span class="step-label">browse any hev-ask site as a directory</span>
+					<pre><code>ask --endpoint https://yourdocs.com/api/ask tree
+ask --endpoint https://yourdocs.com/api/ask cat overview/quick-start</code></pre>
 				</li>
 			</ol>
 			<p class="caption">
-				Your docs become a tool any agent can call from a shell: ranked search,
-				per-section reads, a glossary that resolves your product's vocabulary —
-				every read keyless, every citation a CI-verified anchor. A one-file
-				skill teaches the agent when to reach for it.
+				Your docs become a directory any agent can navigate:
+				<span class="mono">tree</span> the map, <span class="mono">cat</span>
+				a section, <span class="mono">grep</span> for a string — every read
+				keyless, every citation a CI-verified anchor. Or wire up MCP: one tool
+				hydrates the whole tree to disk and the agent reads it with the
+				file tools it already has.
 				<a href="/docs/api/cli">CLI reference →</a>
 			</p>
 		</section>
@@ -100,8 +114,9 @@ integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
 				<span class="digest-peek-label">// show, don't tell</span>
 				<strong>See what the agent sees →</strong>
 				<span class="digest-peek-note">
-					The rendered ask digest for this site — the distilled summaries and
-					verbatim facts Claude reasons over. Injected, committed, reviewable.
+					The ask digest for this site, rendered — the tree of distilled
+					section files, with the summaries and verbatim facts your agent
+					reads. Committed, per-section, reviewable.
 				</span>
 			</a>
 
@@ -112,7 +127,80 @@ integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
 				<a href="https://github.com/hev/ask">source</a>
 			</p>
 		</section>
+
+		<section class="pitch" aria-label="The pitch, second">
+			<p class="kicker">// the pitch, second</p>
+			<p class="pitch-line">
+				ask is free and open source, built by
+				<a href="https://hevmind.com">hev mind</a> — Adam Hevenor's search
+				engineering practice. If you want to go deeper than your docs —
+				training your team on agent-ready design, hands-on search
+				engineering, or taking a retrieval workload to production:
+			</p>
+			<p class="more pitch-links">
+				<a href="https://hevmind.com/agent-ready">
+					training — make your product agent-ready
+				</a>
+				<a href="https://hevmind.com/services">work with the practice</a>
+				<a href="https://hevlayer.com">production retrieval — hev layer</a>
+			</p>
+
+			<form
+				class="loops-form"
+				action={loopsAction}
+				method="POST"
+				data-form="ask-loop"
+			>
+				<input type="hidden" name="userGroup" value={LOOPS_USER_GROUP} />
+				<label for="loop-email">
+					New adapters, new patterns, no noise — stay in the loop.
+				</label>
+				<div class="loop-row">
+					<input
+						id="loop-email"
+						name="email"
+						type="email"
+						required
+						autocomplete="email"
+						placeholder="you@company.com"
+					/>
+					<button type="submit">stay in the loop</button>
+				</div>
+				<p class="loop-note" data-role="status" aria-live="polite"></p>
+			</form>
+		</section>
 	</main>
+
+	<script is:inline>
+		(function () {
+			const form = document.querySelector("form.loops-form");
+			if (!form) return;
+			const status = form.querySelector('[data-role="status"]');
+			form.addEventListener("submit", async (e) => {
+				e.preventDefault();
+				const data = new FormData(form);
+				const email = String(data.get("email") || "").trim();
+				const userGroup = String(data.get("userGroup") || "");
+				if (!email) return;
+				if (status) status.textContent = "sending...";
+				try {
+					const res = await fetch(form.action, {
+						method: "POST",
+						body: new URLSearchParams({ email, userGroup }),
+						headers: {
+							"Content-Type": "application/x-www-form-urlencoded",
+						},
+					});
+					if (!res.ok) throw new Error(String(res.status));
+					if (status) status.textContent = "got it — talk soon.";
+					form.reset();
+				} catch {
+					if (status)
+						status.textContent = "something broke — try again in a bit.";
+				}
+			});
+		})();
+	</script>
 </Base>
 
 <style>
@@ -381,6 +469,99 @@ integrations: [hevAsk(&#123; collections: ["docs"] &#125;)]</code></pre>
 		font-size: 0.875rem;
 		line-height: 1.55;
 		max-width: 44em;
+	}
+
+	.pitch {
+		margin-top: 4rem;
+		padding-top: 2.5rem;
+		border-top: 1px solid var(--rule);
+	}
+
+	.pitch .kicker {
+		margin-bottom: 1rem;
+	}
+
+	.pitch-line {
+		color: var(--muted);
+		font-size: 0.9375rem;
+		line-height: 1.6;
+		max-width: 44em;
+	}
+
+	.pitch-line a {
+		color: var(--signal);
+		text-decoration: none;
+	}
+
+	.pitch-line a:hover {
+		text-decoration: underline;
+	}
+
+	.pitch-links {
+		margin-top: 1.25rem;
+	}
+
+	.loops-form {
+		margin-top: 2.5rem;
+		padding-top: 2rem;
+		border-top: 1px dashed var(--rule);
+		max-width: 30rem;
+	}
+
+	.loops-form label {
+		display: block;
+		font-size: 0.9375rem;
+		color: var(--muted);
+		margin-bottom: 0.75rem;
+		line-height: 1.5;
+	}
+
+	.loop-row {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.loop-row input[type="email"] {
+		flex: 1;
+		min-width: 12rem;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.875rem;
+		padding: 0.65rem 0.85rem;
+		border: 1px solid var(--rule-strong);
+		border-radius: 2px;
+		background: var(--paper-warm);
+		color: var(--ink);
+	}
+
+	.loop-row input[type="email"]:focus {
+		outline: none;
+		border-color: var(--signal);
+	}
+
+	.loop-row button {
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.875rem;
+		border: 1px solid var(--ink);
+		border-radius: 2px;
+		background: var(--ink);
+		color: var(--paper);
+		padding: 0.65rem 1rem;
+		cursor: pointer;
+		transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.loop-row button:hover {
+		background: transparent;
+		color: var(--signal);
+		border-color: var(--signal);
+	}
+
+	.loop-note {
+		margin-top: 0.6rem;
+		font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+		font-size: 0.8125rem;
+		color: var(--muted);
 	}
 
 	.more {

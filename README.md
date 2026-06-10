@@ -44,20 +44,20 @@ pnpm digest:verify
 
 ## Publishing
 
-The package is structured for npm distribution as `@hevmind/ask`, with `src`
-exports for Astro/Vite consumers plus the `ask` bin for
-CLI use from `node_modules`. Until it's published, consume it from the package
-subdirectory on GitHub:
+The package is published to npm as
+[`@hevmind/ask`](https://www.npmjs.com/package/@hevmind/ask), with `src`
+exports for Astro/Vite consumers plus the `ask` bin for CLI use from
+`node_modules`:
 
 ```sh
-pnpm add "git+ssh://git@github.com/hev/ask.git#main&path:/packages/ui"
+pnpm add @hevmind/ask
 ```
 
-Before publishing:
+Releasing a new version:
 
 1. Set the intended semver in `packages/ui/package.json`.
 2. Run `pnpm build:npm-binaries` to populate the optional platform packages.
 3. Run `pnpm test`, `pnpm typecheck`, `pnpm build`, and `pnpm digest:verify`.
 4. Dry-run the package with `pnpm --filter @hevmind/ask pack --dry-run`.
 5. Publish from `packages/ui` with `pnpm publish --access public`.
-6. Move consumers from the Git dependency to `@hevmind/ask@<version>`.
+6. Bump consumers (`site/`, `../layer/site`) to the new version.

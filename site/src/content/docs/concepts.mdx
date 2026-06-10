@@ -1,25 +1,26 @@
 ---
 title: "Concepts"
-description: "How hev ask works: heading-chunk indexing with real anchors, keyword prefiltering widened by a glossary, the bounded agentic search loop, and the offline ask digest it reads progressively."
+description: "How hev ask works: heading-chunk indexing with real anchors, a committed ask digest directory read as a four-rung disclosure ladder, keyword retrieval widened by a glossary, and the bounded agentic loop that synthesizes grounded answers."
 group: "Overview"
-order: 2
+order: 3
 ---
 
 import Diagram from "../../components/docs/Diagram.astro";
 import Callout from "../../components/docs/Callout.astro";
-import { askMapDiagram } from "../../lib/diagrams";
+import { askMapDiagram, askLadderDiagram } from "../../lib/diagrams";
 
-hev ask is three parts: a **heading-chunk index** with real anchors, an offline
-**ask digest** — a distilled, source-grounded index of every section — and a
-**bounded agentic loop** that reads the digest **progressively**: primer first,
-summaries next, full source only when needed. This page explains each and how
-they fit together.
+hev ask rests on one idea: **the digest is just a directory.** Your docs are
+distilled into a committed tree of markdown files — one per section — and that
+tree is read two ways: a coding **agent** navigates it with the file
+tools it already has, and a `⌘K` **overlay** reads it server-side to synthesize
+a grounded answer for a human. Both climb the same tree progressively. This page
+explains the tree, the ladder over it, and the two readers.
 
-<Diagram label="build time versus runtime">{askMapDiagram}</Diagram>
+<Diagram label="build time, the artifact, and the three surfaces">{askMapDiagram}</Diagram>
 
-The split that matters: the digest is built **offline** with a strong
-model and committed to git; the index and search loop run **on demand** at the
-edge. No durable state lives in the running site.
+The split that matters: the tree is built **offline** with a strong model and
+committed to git; the readers run **on demand** — the overlay at the edge, the
+agent on its own machine. No durable state lives in the running site.
 
 ## Chunks and anchors
 
@@ -29,40 +30,122 @@ before the first heading becomes the *intro chunk* whose URL is the page itself.
 
 Each chunk carries the section's heading, its cleaned prose, and a URL of the
 form `basePath + slug + #anchor`. The anchor is generated with
-[`github-slugger`](https://github.com/Flet/github-slugger) — the same slugger
-Astro's renderer uses — so the link lands on a heading that actually exists in
-the rendered HTML.
+[`github-slugger`](https://github.com/Flet/github-slugger) by default — the same
+slugger Astro and GitHub-flavored renderers use — so the link lands on a heading
+that actually exists in the rendered HTML. Each framework adapter declares its
+slug scheme, so the rule generalizes: the Docusaurus adapter, for instance, also
+honors explicit `{#custom-id}` headings.
 
 <Callout label="why a result is an anchor">
 A page-level link drops the reader at the top of a long doc to scroll and hunt.
 A section-level link lands them on the exact heading that answers the query.
-Chunking by heading is what makes that possible.
+Chunking by heading is what makes that possible — and it's why one section is
+one file in the tree.
 </Callout>
 
-Both code paths chunk through the **same function**: the runtime index feeds it
-`getCollection` entries, and the offline build feeds it disk-parsed files. One
-source of truth for slugs means the anchors agree.
+Both code paths chunk through the **same function**: the offline build feeds it
+disk-parsed markdown, and the Astro runtime index feeds it `getCollection`
+entries. One source of truth for slugs means the anchors agree — and because the
+build reads *files*, not a renderer, the same digest comes out whatever
+framework renders the docs.
+
+## Host-neutral: one digest, any framework
+
+Everything above happens **before** a renderer touches your docs. The build
+reads markdown off the filesystem, chunks on headings, derives anchors in code,
+and writes the `.hev-ask/` tree — none of it imports Astro. So the digest is the
+same artifact whether Astro, Docusaurus, VitePress, or MkDocs renders the pages.
+What differs per framework is only the **adapter** — the thin glue that builds
+the digest at the right time and wires the overlay in:
+
+- **Astro (the flagship adapter).** The `hevAsk()` integration is batteries
+  included: it builds the digest during `astro build`, mounts the `/api/ask`
+  endpoint as an on-demand route, and ships `SearchOverlay.astro`. One config
+  block, one component.
+- **Every other framework.** Two host-neutral primitives stand in for the
+  integration:
+  - **the static overlay** — a `<script>` plus web component that reads the
+    committed digest tree and a prebuilt keyword index. No server, no API key,
+    no framework binding; it drops into Docusaurus, VitePress, MkDocs, or
+    hand-written HTML. This is the keyword path, fully static.
+  - **the hostable endpoint** — the bounded agentic loop (below) as a standalone
+    deployable: a Cloudflare Worker, a Node or Vercel function. The overlay
+    points at it with one config attribute. This is the agentic path, decoupled
+    from any one framework's routing.
+
+The CLI and MCP surfaces are host-neutral already — they read the committed tree
+directly — so a coding agent gets the same `tree`/`cat`/`grep` over your docs no
+matter what renders them. See [Frameworks](/docs/frameworks) for the concrete
+per-framework setup.
+
+## The ask digest directory
+
+The build distils each section into a small **markdown + frontmatter** file and
+writes the whole `.hev-ask/` tree — a committed, reviewable mirror of your docs:
+
+- **`overview/`, `api/`, …** — one file per section, mirroring your doc paths. The
+  body is the distilled summary and prose; the frontmatter carries the
+  `title`, the `url`+`anchor` to cite, the verbatim `facts` (flags, code,
+  identifiers), the `sources`, the `terms`, and the section's content `hash`.
+- **`_glossary/`** — one file per term, with its aliases and definition.
+- **`_meta.md`** — the overview, orientation `context`, suggested questions, and
+  the digest's content hash and version.
+
+There is no committed JSON. The artifact is markdown all the way down, so a
+section's distilled prose and its grounded facts change together in one diff,
+reviewable in the PR that changes the docs. The in-memory representation the
+overlay and CLI build from the tree is the same either way — the tree is the
+*format*, not a new runtime.
+
+<Callout label="titles do the deciding">
+A listing returns only frontmatter `title`s, so a title is the only thing a
+reader sees before choosing to open a file — it has to carry the decision.
+Page-level titles come from your content collection; sub-section titles are
+synthesized at build into a descriptive one-liner (while `heading` keeps the
+literal anchor text). Good titles are what make the ladder below worth climbing.
+</Callout>
+
+## Progressive disclosure as a directory
+
+Because the digest is a real directory, progressive disclosure is just the
+directory's own cost model. An agent already knows `ls` is cheap and `cat`
+might be large; hev ask leans on that intuition instead of inventing a new one.
+The reads form a **four-rung ladder**, each rung a strictly larger slice of one
+section file:
+
+<Diagram label="the four-rung ladder">{askLadderDiagram}</Diagram>
+
+Two properties make the ladder real. A **listing reads frontmatter only**, so
+`tree` and `ls` can never leak a body — their output is bounded by the number of
+sections, not the size of the docs, which is what makes them safe to call
+speculatively. And every deeper rung is an **explicit verb**: `head` for the
+summary, `cat` for the body, `facts` for the grounded literals. Nothing larger
+than a title is ever returned by surprise.
+
+A coding agent climbs this with its **own** `tree`/`cat`/`grep` once it has the
+tree on disk (see [MCP](/docs/api/mcp)); the `ask` CLI offers the same verbs for
+the keyless and remote cases (see the [CLI reference](/docs/api/cli)).
 
 ## Keyword search and the glossary
 
-When the reader types a single term, the server runs a dependency-free
-**prefilter** over the chunks:
+The overlay's instant path — and the CLI's `grep` over a remote tree — run a
+dependency-free **prefilter** over the chunks:
 
 1. **Expand the query.** Each term picks up its glossary aliases (`k8s` →
    `kubernetes`) and the tokens of any matched glossary term. The expansion is
    additive and capped.
-2. **Score by token overlap** between the expanded query and each chunk —
-   **widened by the digest**. When a `digest.json` with nodes is present, a
-   match also counts against that section's distilled `summary`, its `terms`,
-   and its verbatim `facts`, so the sections the digest considers central to a
-   term rank above an incidental mention buried in body prose.
-3. **Cap per document** (default 2 chunks per doc) so one long page can't
+2. **Score by token overlap** between the expanded query and each section —
+   **widened by the digest**. A match also counts against that section's
+   distilled `summary`, its `terms`, and its verbatim `facts`, so the sections
+   the digest considers central to a term rank above an incidental mention
+   buried in body prose.
+3. **Cap per document** (default 2 sections per doc) so one long page can't
    monopolize the results, then take the top pool.
 4. **Excerpt** around the first matched term for the snippet.
 
-This is the instant path. It needs no API key and no embeddings — just the
-chunk index and the committed digest. With **no digest** it degrades to plain
-token overlap over the raw chunk text, so keyword search always works.
+This needs no API key and no embeddings — just the section index and the
+committed tree. With **no tree** it degrades to plain token overlap over the raw
+chunk text, so keyword search always works.
 
 ## Asking is the default
 
@@ -70,8 +153,8 @@ The overlay is **ask-first**. A single word is treated as a keyword lookup and
 answered instantly from the index. The moment the query grows past one word — the
 reader types a **space** — the overlay stops the keyword type-ahead and switches
 to **ask mode**: pressing Enter sends the question to the agentic loop. On open
-it also shows a few **suggested questions** (baked into the digest at
-build time, so they cost nothing at runtime) to make asking the obvious move.
+it also shows a few **suggested questions** (baked into `_meta.md` at build time,
+so they cost nothing at runtime) to make asking the obvious move.
 
 None of this is forced. A reader can flip the overlay to **keyword-only**
 (persisted in `localStorage`); then a space just searches for a phrase and the
@@ -80,19 +163,20 @@ the exact interaction.
 
 ## The agentic search loop
 
-When the reader asks (presses Enter on a multi-word query, or clicks a suggested
-question, with an API key present), the query goes to a **bounded tool-use loop**
-that ends by **streaming a grounded answer**. The loop is **progressive
-disclosure** over the digest: the primer and section map come free in the
-prompt; everything deeper is opened on demand. It runs in two phases.
+The overlay answers humans, so it does the synthesis an agent would otherwise do
+itself. When the reader asks (presses Enter on a multi-word query, or clicks a
+suggested question, with an API key present), the query goes to a **bounded
+tool-use loop** that ends by **streaming a grounded answer**. The loop is the
+same disclosure ladder, climbed server-side over the in-memory tree. It runs in
+two phases.
 
-**Phase 1 — gather.** The model is given a **map** of every section (id +
-summary) up front, plus one tool:
+**Phase 1 — gather.** The model is given the **title-tree** of every section up
+front, plus one tool:
 
 - **`open_section({ id })`** — opens a section to read its distilled summary, its
-  verbatim `facts` (flags, code, identifiers), and — for reference sections — its
-  source text. The model opens the sections it needs; each open is streamed to
-  the overlay as a faint activity line. It may only cite sections it opened.
+  verbatim `facts`, and — for reference sections — its source text. The model
+  opens the sections it needs; each open is streamed to the overlay as a faint
+  activity line. It may only cite sections it opened.
 
 The model decides when it has enough context. It opens up to `maxIterations`
 rounds (default 4); when it stops opening, it's ready to answer.
@@ -114,64 +198,54 @@ it cannot ground in what retrieval never found. That ceiling is discussed in
 
 ### The system prompt is cached
 
-The digest's map and section summaries are injected into the system
-prompt with a `cache_control` marker, so across the rounds it's a prompt-cache
-hit rather than re-sent tokens. The answer turn changes the tool set (it has none),
-so it can't reuse the search rounds' cache — but it's the last call anyway. The
-loop model defaults to **Claude Haiku 4.5** and is configurable.
+The title-tree and section summaries are injected into the system prompt with a
+`cache_control` marker, so across the rounds it's a prompt-cache hit rather than
+re-sent tokens. The answer turn changes the tool set (it has none), so it can't
+reuse the search rounds' cache — but it's the last call anyway. The loop model
+defaults to **Claude Haiku 4.5** and is configurable.
 
-## The ask digest
+<Callout label="two agents, one ladder">
+Don't confuse the **reader's loop** (server-side, inside the overlay, synthesizes
+an answer for a human) with the **consumer's coding agent** (uses the CLI or MCP,
+navigates the files itself). Both climb the same four-rung ladder — one over the
+in-memory tree, the other over the same tree on its own disk.
+</Callout>
 
-The ask digest (`digest.json`) is built
-**offline** and committed to your repo as a reviewable artifact — the agent's
-view of your docs. It holds:
+## Two ways to build the tree
 
-- **`nodes`** — one distilled section per heading: a `summary` the agent reasons
-  from, the verbatim `facts` (flags, code, identifiers) it quotes exactly, and a
-  `source` link back to the real page. Reference sections are marked
-  `source-primary` so the agent reads their source text rather than a paraphrase.
-- **`overview`** — a deterministic map of every section, injected up front.
-- **`context`** and **`glossary`** — a compact orientation and the terms (with
-  aliases) that widen keyword search.
-- **`suggestions`** — a handful of natural questions the docs can answer, shown
-  in the overlay on open.
-
-Only the `summary`, `glossary`, `context`, and `suggestions` are
-model-authored; the node structure, facts, overview, and content hash are
-**derived deterministically** in code. So the model only ever supplies the
-distillation — which is exactly the part worth doing in a **Claude Code skill**.
-
-### Two ways to build it
-
-The model step can run two ways, and both feed the same deterministic assembler:
+Only the section `summary`, the glossary, the orientation `context`, and the
+`suggestions` are model-authored; the tree structure, the verbatim `facts`, the
+overview, the per-section hashes, and the anchors are **derived deterministically**
+in code. So the model only ever supplies the distillation — which is exactly the
+part worth doing in a **Claude Code skill**.
 
 - **Claude Code skill (recommended).** A skill walks Claude through reading the
-  corpus and writing the distillation, then assembles `digest.json` locally. It runs
-  inside your existing Claude Code subscription — **no `ANTHROPIC_API_KEY`, no
-  per-build token spend on your own key**, and it fits the editor workflow most
-  authors are already in.
+  corpus and writing the distillation, then assembles the `.hev-ask/` tree
+  locally. It runs inside your existing Claude Code subscription — **no
+  `ANTHROPIC_API_KEY`, no per-build token spend on your own key** — and fits the
+  editor workflow most authors are already in.
 - **`ask digest build` (fallback).** One `ANTHROPIC_API_KEY` call to
   **Claude Opus 4.8** (default) does the same distillation unattended — the right
   choice for CI or anyone not using Claude Code.
 
-Either way the build is **hash-gated**: it hashes the concatenated chunk text
-and, if a committed `digest.json` with nodes already matches that hash, it does no
-model work at all. The JSON is reviewed in pull requests like any other change.
-See the [digest reference](/docs/api/digest) and the
-[CLI reference](/docs/api/cli) for the file format and the build commands.
+Either way the build is **incremental and hash-gated**: each section carries the
+hash of the content it was distilled from, so a rebuild only re-distils the
+sections whose content actually changed, and a clean tree does no model work at
+all. The tree is reviewed in pull requests like any other change. See the
+[digest reference](/docs/api/digest) and the [CLI reference](/docs/api/cli).
 
 ## Degradation, by design
 
 hev ask is built to keep working as pieces drop away:
 
 - **No key at runtime** → keyword mode only. The overlay still searches.
-- **No key at build** → the committed `digest.json` is kept; the build warns but
-  never fails for lack of a key.
-- **No `digest.json`, or an older node-less one** → the agentic loop falls back to
-  keyword-style retrieval; keyword ranking falls back to raw token overlap; and
-  the overlay simply shows no suggested questions. Everything still works.
-- **Stale `digest.json`** → the runtime logs a one-line warning when the live index
-  hash differs from the digest's hash, but still serves.
+- **No key at build** → the committed tree is kept; the build warns but never
+  fails for lack of a key.
+- **No `.hev-ask/` tree** → the agentic loop falls back to keyword-style
+  retrieval; keyword ranking falls back to raw token overlap; and the overlay
+  simply shows no suggested questions. Everything still works.
+- **Stale tree** → the runtime logs a one-line warning when the live index hash
+  differs from `_meta.md`'s, but still serves.
 
 For the boundaries of what it can do, read [Limits](/docs/limits); for what
 you're choosing by adopting it, read [Tradeoffs](/docs/tradeoffs).

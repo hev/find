@@ -1,6 +1,6 @@
 ---
 title: "Introduction"
-description: "hev ask distills your Astro docs into a committed ask digest and serves it two ways: a ⌘K answer overlay for readers, and an `ask` CLI + MCP server so your coding agent can query the same docs."
+description: "hev ask distills your docs into a compact directory — a tree of markdown your coding agent can tree, cat, and grep, plus a ⌘K overlay that answers your readers. Astro integration, one-script drop-in everywhere else. Same artifact, three surfaces."
 group: "Overview"
 order: 0
 ---
@@ -9,38 +9,53 @@ import Diagram from "../../components/docs/Diagram.astro";
 import Callout from "../../components/docs/Callout.astro";
 import { askMapDiagram } from "../../lib/diagrams";
 
-**hev ask** distills an [Astro](https://astro.build) docs site into an
-**ask digest** — a token-efficient form of your docs, designed for agents to
-discover progressively through the `ask` CLI and for readers through a `⌘K`
-overlay.
+**hev ask** distills a docs site — [Astro](https://astro.build), Docusaurus,
+VitePress, MkDocs, or any folder of markdown — into an **ask digest**: a compact
+**directory**, one small markdown file per section, a distilled mirror of your
+docs that an agent navigates the way it navigates any directory, and that a
+`⌘K` overlay answers your readers from.
 
-Build the digest **offline** with the bundled skill (and your Claude Code
-subscription), then serve single-turn Q&A over your docs for a few cents per
-query. Perfect for technical documentation, internal wikis, and other
-medium-sized corpora.
+The digest is **host-neutral**: it's built from your markdown, not your
+renderer. Astro gets a turnkey integration; every other framework gets the same
+overlay as a one-script drop-in. Build the digest **offline** with the bundled
+skill (and your Claude Code subscription), commit the tree, and your docs become
+readable three ways from one artifact. Perfect for technical documentation,
+internal wikis, and other medium-sized corpora.
 
 <Diagram label="hev ask architecture">{askMapDiagram}</Diagram>
 
-## Build it with your coding agent
+## One artifact, three surfaces
 
-The digest is built **inside your coding agent** — the bundled Claude
-Code skill generates `.hev-ask/digest.json` using your existing **agentic coding
+The digest is built **inside your coding agent** — the bundled Claude Code
+skill writes the `.hev-ask/` tree using your existing **agentic coding
 subscription**, so there's no `ANTHROPIC_API_KEY` and no per-build token spend.
-Commit the JSON, drop `SearchOverlay.astro` into a layout, and your site has
-search — instant keyword results as readers type, plus a Claude answer loop on
-Enter, every result deep-linked to the exact heading.
+Commit the tree, and the same files serve:
 
-<Callout label="the corpus is your collection">
-hev ask only reads the Astro content collection(s) you configure. There's no
-crawler, no external index, and nothing to keep in sync — the docs you render
-*are* the digest, and the committed `digest.json` is reviewable in every PR.
+- **the `⌘K` overlay**, for humans — instant keyword results as readers type,
+  plus a grounded Claude answer on Enter, every result deep-linked to the exact
+  heading;
+- **the `ask` CLI**, for agents — `tree`, `ls`, `head`, `cat`, `facts`, `grep`
+  over path keys, keyless, from any shell;
+- **the `ask mcp` server**, for agents — one tool that hydrates the whole tree
+  to local disk, after which the agent reads it with the file tools it
+  already has.
+
+The overlay *synthesizes* for a human; the CLI and MCP hand an agent the
+*files* and let its own tools do the rest.
+
+<Callout label="the corpus is your content">
+hev ask only reads the content you point it at — an Astro content collection, a
+Docusaurus `docs/` tree, a set of markdown globs. There's no crawler, no
+external index, and nothing to keep in sync — the docs you render *are* the
+digest, and the committed `.hev-ask/` tree is reviewable per section in every PR.
 </Callout>
 
 ## Who this is for
 
-You're building or maintaining an Astro 5 docs site whose content lives in a
-[content collection](https://docs.astro.build/en/guides/content-collections/) as
-Markdown or MDX. You want search and answers that:
+You're building or maintaining a docs site whose content lives in Markdown or
+MDX — on **Astro** (the turnkey integration), **Docusaurus**, **VitePress**,
+**MkDocs**, or anything that renders a folder of markdown. You want search and
+answers that:
 
 - work out of the box without standing up a service or running a crawler,
 - deep-link to the right section instead of dumping the reader at the top of a
@@ -48,17 +63,24 @@ Markdown or MDX. You want search and answers that:
 - can answer a question phrased in the reader's words, not just match keywords, and
 - are **queryable by your coding agent**, not only by humans in a browser.
 
+On Astro that's one integration; on every other framework it's a static overlay
+you drop in, plus an optional hosted endpoint for the agentic answers. See
+[Frameworks](/docs/frameworks) for the path on yours.
+
 If you only need keyword search over a static site and never want an API key in
 the loop, [Pagefind](https://pagefind.app) is simpler and a great fit — see
 [Tradeoffs](/docs/tradeoffs) for an honest comparison.
 
 ## Next steps
 
-- [Quick start](/docs/quickstart) — add search to your site in five minutes.
-- [Concepts](/docs/concepts) — chunks, anchors, the agentic loop, and the
-  ask digest.
+- [Quick start](/docs/quickstart) — add search to an Astro site in five minutes.
+- [Frameworks](/docs/frameworks) — the path on Docusaurus, VitePress, MkDocs, or
+  any static site: the drop-in overlay and the hostable endpoint.
+- [Concepts](/docs/concepts) — chunks, anchors, the disclosure ladder, the
+  agentic loop, and the ask digest directory.
 - [Tradeoffs](/docs/tradeoffs) and [Limits](/docs/limits) — what you're choosing,
   and what hev ask deliberately doesn't do.
-- [CLI](/docs/api/cli) — build, verify, and query the digest from `ask`.
+- [CLI](/docs/api/cli) — browse and search the digest tree with `ask`:
+  `tree`, `cat`, `grep`.
 - [API reference](/docs/api/configuration) — every option, the component props,
   and the endpoint contract.

@@ -26,9 +26,9 @@ const rawJson = getDigestRawJson();
 			<h1>Ask digest</h1>
 			<p class="lede">
 				When you press <kbd>⌘K</kbd> and ask a question, the agent doesn't read
-				these pages — it reads this. It's committed as
-				<code>.hev-ask/digest.json</code>, rendered here exactly the way the loop
-				discloses it: a map it holds in context, and details it opens on demand.
+				these pages — it reads this. It's committed as a <code>.hev-ask/</code>
+				tree — one markdown file per section — rendered here the way the ladder
+				discloses it: titles you skim, details you open on demand.
 			</p>
 			<dl class="digest-meta">
 				<div><dt>version</dt><dd>{digestData.version}</dd></div>
@@ -42,23 +42,23 @@ const rawJson = getDigestRawJson();
 		<section class="disclosure" aria-label="How the agent reads the graph">
 			<ol>
 				<li>
-					<span class="lvl">level 1 · the map</span>
+					<span class="lvl">level 1 · tree</span>
 					<p>
-						Always in the prompt: every section's id, heading, and one-line
-						summary, plus the glossary's aliases for widening a query. This is the
-						collapsed row below.
+						The cheap rung: every section title, plus the glossary terms that widen
+						a query. Titles only — bounded, safe to skim. This is the group/row map
+						below.
 					</p>
 				</li>
 				<li>
-					<span class="lvl">level 2 · open_section()</span>
+					<span class="lvl">level 2 · cat &lt;section&gt;</span>
 					<p>
-						On demand, the agent opens a section to read its verbatim
+						On demand, open a section to read its verbatim
 						<strong>facts</strong> — and, for reference sections, the
 						<strong>source text</strong>. That's what expanding a row reveals.
 					</p>
 				</li>
 			</ol>
-			<p class="disclosure-note">Expand a row to make the same call the agent does.</p>
+			<p class="disclosure-note">Expand a row to cat a section, the way an agent would.</p>
 		</section>
 
 		<section class="digest-block">
@@ -99,8 +99,8 @@ const rawJson = getDigestRawJson();
 		</section>
 
 		<section class="digest-block">
-			<h2>Sections <span class="count">{nodeCount} nodes</span></h2>
-			<p class="block-note">One node per heading — the map the agent navigates. Collapsed shows the summary it always sees; open a section to reveal its facts, just like the loop's <code>open_section</code>.</p>
+			<h2>Sections <span class="count">{nodeCount} sections</span></h2>
+			<p class="block-note">One file per section — the tree the agent navigates. Collapsed shows the title and summary it skims; open a section to <code>cat</code> its facts.</p>
 			{
 				groups.map((grp) => (
 					<div class="digest-group">
@@ -149,7 +149,7 @@ const rawJson = getDigestRawJson();
 		</section>
 
 		<details class="digest-raw">
-			<summary>Raw <code>digest.json</code> artifact</summary>
+			<summary>Normalized digest data</summary>
 			<pre><code>{rawJson}</code></pre>
 		</details>
 	</main>

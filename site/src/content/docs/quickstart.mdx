@@ -20,6 +20,13 @@ runs the **agentic answer loop** on Enter. Don't want agent search? Just ship th
 search UI and skip the key.
 </Callout>
 
+<Callout label="on Docusaurus, VitePress, or MkDocs?">
+This quick start is the **Astro** integration. On any other framework you drop in
+the same overlay as a `<script>` tag and, for agentic answers, point it at a
+hosted endpoint — no Astro required. See [Frameworks](/docs/frameworks) for the
+step-by-step on yours.
+</Callout>
+
 ## Prerequisites
 
 - **Astro 5** with at least one [content collection](https://docs.astro.build/en/guides/content-collections/).
@@ -34,7 +41,7 @@ search UI and skip the key.
   { title: "Register the integration", body: "Add hevAsk() to astro.config.mjs and point it at your collection." },
   { title: "Add an adapter", body: "Install a server/hybrid adapter so /api/ask can render on demand." },
   { title: "Drop in the overlay", body: "Render SearchOverlay.astro once in your layout and add an opener." },
-  { title: "Build the digest", body: "Use the Claude Code skill (no key) and commit the JSON." },
+  { title: "Build the digest", body: "Use the Claude Code skill (no key) and commit the .hev-ask/ tree." },
 ]} />
 
 ### 1. Install
@@ -110,13 +117,13 @@ Keyword search now works. Run `astro dev`, press `⌘K`, and type.
 
 ### 5. Build the digest
 
-The digest is an offline-built JSON file you commit. It gives the
+The digest is an offline-built markdown tree you commit. It gives the
 agentic loop domain context, ranks keyword results, supplies the glossary (so
 `k8s` finds `kubernetes`), and holds the overlay's suggested questions.
 
 **Recommended — the Claude Code skill.** In
 [Claude Code](https://claude.com/claude-code), install the bundled skill and ask
-for it. It builds the digest inside your subscription — **no API key, no token
+for it. It builds the tree inside your subscription — **no API key, no token
 spend**:
 
 ```text
@@ -125,26 +132,26 @@ You: build the hev ask digest
 Claude runs:
   ask digest corpus       # emits the sections to distil
   …writes context/glossary/summaries/suggestions…
-  ask digest assemble     # writes .hev-ask/digest.json
+  ask digest assemble     # writes the .hev-ask/ tree
 ```
 
 **Or use the CLI** — for CI or outside Claude Code, one API call does the same:
 
 ```sh
 export ANTHROPIC_API_KEY=sk-ant-...
-pnpm exec ask digest build      # writes .hev-ask/digest.json
+pnpm exec ask digest build      # writes the .hev-ask/ tree
 ```
 
 Then verify and commit, however you built it:
 
 ```sh
 pnpm exec ask digest verify     # builds the site, checks every anchor resolves
-git add .hev-ask/digest.json
+git add .hev-ask
 ```
 
-Both paths are **hash-gated** — no model work when content is unchanged — and the
-integration runs the build automatically during `astro build` when a key is
-present. See the [CLI reference](/docs/api/cli).
+Both paths are **incremental and hash-gated** — model work only for the sections
+that changed — and the integration runs the build automatically during
+`astro build` when a key is present. See the [CLI reference](/docs/api/cli).
 
 ## Enable agentic search
 

@@ -1,0 +1,181 @@
+---
+title: "Frameworks"
+description: "hev ask is host-neutral: Astro gets a turnkey integration; Docusaurus, VitePress, MkDocs, and any static site get the same overlay as a one-script drop-in plus an optional hosted endpoint for agentic answers."
+group: "Overview"
+order: 2
+---
+
+import Callout from "../../components/docs/Callout.astro";
+import Steps from "../../components/docs/Steps.astro";
+
+The digest is built from your **markdown**, not your renderer — so the same
+artifact, overlay, CLI, and MCP server work whatever framework ships your docs.
+What changes per framework is only the **adapter**: the thin glue that builds the
+digest and wires the overlay in. Astro has a batteries-included integration;
+everywhere else you assemble the same result from two host-neutral primitives.
+
+<Callout label="already on Astro?">
+You don't need this page — the [Quick start](/docs/quickstart) is one integration
+and one component. This page is for everything else.
+</Callout>
+
+## The shape of support
+
+Every framework follows the same three moves; only the wiring differs.
+
+<Steps items={[
+  { title: "Build the digest", body: "ask digest build reads your markdown and writes the committed .hev-ask/ tree. Framework-agnostic — it never imports a renderer." },
+  { title: "Bundle the static assets", body: "ask digest bundle emits the browser payload (keyword index, glossary, suggestions, title-tree) into a static directory your site serves." },
+  { title: "Drop in the overlay", body: "A <script> tag registers the ⌘K overlay and any data-hev-ask-open opener. Keyword search now works, fully static, no key." },
+]} />
+
+<Callout label="the bundle is build output, not a commit">
+`ask digest bundle` runs *in* your build, like the step that renders your HTML.
+Its output is **served, not committed** — gitignore the output directory. Your
+reviewable source of truth stays the committed `.hev-ask/` tree; the browser
+assets are regenerated every build, so they can't drift from what you deploy.
+</Callout>
+
+That gets you the instant keyword path on any host. For **agentic answers**, add
+one more move: deploy the [hostable endpoint](#the-hostable-endpoint) and point
+the overlay at it. Keyword search needs nothing hosted; only the answer loop
+does.
+
+## The two primitives
+
+Off Astro, these stand in for the integration.
+
+### The static overlay
+
+A prebuilt web component shipped as `@hevmind/ask/overlay` (or from a CDN). It
+reads the bundled digest assets in the browser and renders the same `⌘K` palette
+the Astro component does. Configure it with data attributes on the script tag:
+
+```html
+<script
+  type="module"
+  src="https://cdn.jsdelivr.net/npm/@hevmind/ask/overlay.js"
+  data-hev-ask-digest="/hev-ask/"
+  data-hev-ask-endpoint="https://docs-ask.example.workers.dev/api/ask"
+></script>
+
+<button data-hev-ask-open>Search <kbd>⌘K</kbd></button>
+```
+
+- **`data-hev-ask-digest`** — the URL prefix where `ask digest bundle` wrote the
+  static assets. This is all keyword search needs.
+- **`data-hev-ask-endpoint`** — optional. Omit it and the overlay is
+  keyword-only; set it and pressing Enter runs the agentic loop. No key ever
+  reaches the browser — the key lives on the endpoint.
+
+The overlay reads your CSS custom properties (`--paper`, `--ink`, `--signal`,
+`--font-mono`) with dark fallbacks, so it inherits your site's theme.
+
+### The hostable endpoint
+
+The bounded agentic loop, packaged as a standalone deployable instead of an
+Astro route — a Cloudflare Worker, a Node server, or a Vercel function. It serves
+the same `POST /api/ask` contract the Astro endpoint does, holds the
+`ANTHROPIC_API_KEY` server-side, and reads the committed digest tree. Deploy it
+once, point any number of sites' overlays at it.
+
+```sh
+# scaffold and deploy the Worker flavor
+ask endpoint init --target cloudflare
+wrangler deploy            # set ANTHROPIC_API_KEY as a secret
+```
+
+<Callout label="one endpoint, many sites">
+The endpoint is just the answer loop over a digest. A docs team can run a single
+endpoint for several sites, or skip it entirely and ship keyword-only search with
+nothing hosted.
+</Callout>
+
+## Per-framework recipes
+
+### Astro
+
+The flagship adapter — `hevAsk()` builds the digest, mounts `/api/ask`, and
+ships `SearchOverlay.astro`. Follow the [Quick start](/docs/quickstart). The two
+primitives below are what that integration automates for you.
+
+### Docusaurus
+
+Emit the bundle into `static/` from your `build` script, and add the script via
+`docusaurus.config.js`:
+
+```js
+// docusaurus.config.js
+export default {
+  scripts: [
+    {
+      src: "https://cdn.jsdelivr.net/npm/@hevmind/ask/overlay.js",
+      type: "module",
+      "data-hev-ask-digest": "/hev-ask/",
+      "data-hev-ask-endpoint": "https://docs-ask.example.workers.dev/api/ask",
+    },
+  ],
+};
+```
+
+```jsonc
+// package.json — bundle into the static dir before docusaurus build
+"scripts": {
+  "build": "ask digest bundle --out static/hev-ask && docusaurus build"
+}
+```
+
+Docusaurus headings carry explicit `{#custom-id}` anchors; the Docusaurus slug
+mode honors them, and `ask digest verify` checks every anchor against the built
+`build/` HTML.
+
+### VitePress
+
+Bundle into `.vitepress/public/`, then register the overlay in your theme:
+
+```ts
+// .vitepress/theme/index.ts
+import DefaultTheme from "vitepress/theme";
+import { mountHevAsk } from "@hevmind/ask/overlay";
+
+export default {
+  extends: DefaultTheme,
+  enhanceApp() {
+    if (typeof window !== "undefined") {
+      mountHevAsk({ digest: "/hev-ask/", endpoint: import.meta.env.VITE_ASK_ENDPOINT });
+    }
+  },
+};
+```
+
+### MkDocs
+
+Bundle into `docs/hev-ask/` and reference the script with `extra_javascript`:
+
+```yaml
+# mkdocs.yml
+extra_javascript:
+  - hev-ask/overlay.js
+```
+
+### Any static site
+
+There's no framework to satisfy — run `ask digest bundle` as your build (or
+release) step, deploy its output alongside your HTML, and drop the `<script>` tag
+into your template. Add the endpoint attribute when you want answers.
+
+## Support at a glance
+
+| Framework | Digest build | Keyword overlay | Agentic answers | Adapter |
+|---|---|---|---|---|
+| **Astro** | `hevAsk()` integration | `SearchOverlay.astro` | mounted `/api/ask` route | turnkey |
+| **Docusaurus** | `ask digest` in build | `<script>` drop-in | hostable endpoint | drop-in |
+| **VitePress** | `ask digest` in build | theme `mountHevAsk` | hostable endpoint | drop-in |
+| **MkDocs** | `ask digest` in build | `extra_javascript` | hostable endpoint | drop-in |
+| **Static / HTML** | `ask digest` in CI | `<script>` drop-in | hostable endpoint | drop-in |
+
+The CLI and [MCP](/docs/api/mcp) surfaces are host-neutral on every row — a
+coding agent `tree`/`cat`/`grep`s the same digest no matter what renders the
+docs. For the design and current status of the non-Astro adapters, see
+[Concepts](/docs/concepts#host-neutral-one-digest-any-framework) and
+[Tradeoffs](/docs/tradeoffs#a-flagship-adapter-primitives-for-the-rest).

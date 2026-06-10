@@ -42,12 +42,18 @@ API key:
 | `GET /api/ask/glossary/{term}` | one `GlossaryEntry`, matched by term or alias |
 | `GET /api/ask/sections` | `{ "sections": SectionSummary[] }` |
 | `GET /api/ask/sections?group=API` | section summaries filtered by group |
-| `GET /api/ask/sections/{id}` | one full `KnowledgeNode` |
+| `GET /api/ask/sections/{id}` | one full `DigestNode` |
 | `GET /api/ask/overview` | `{ "overview": string, "context": string }` |
+| `GET /api/ask/archive` | gzip-compressed tar archive of the `.hev-ask/` tree |
 
 A `SectionSummary` is the lightweight shape `{ id, title, heading, group, url }`.
 For section IDs that contain `/` or `#`, URL-encode the ID when placing it in
 the path, for example `/api/ask/sections/api%2Fcli%23flags`.
+
+`GET /api/ask/archive` is the bulk transport used by `ask mcp --endpoint`.
+`HEAD /api/ask/archive` returns the same cache headers, including
+`x-hev-ask-content-hash`, without the archive body, so clients can skip a
+download when their local tree is already current.
 
 Missing glossary terms, section IDs, or unknown read routes return `404` with a
 JSON error:

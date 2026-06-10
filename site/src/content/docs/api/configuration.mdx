@@ -42,7 +42,7 @@ export default defineConfig({
 | `chunkHeadingDepth` | `number` | `3` | Deepest heading used as a chunk boundary. `2` = `##`; `3` = `##` and `###`. |
 | `candidatePerSearch` | `number` | `8` | Chunks returned by each `search` tool call. |
 | `perDocCap` | `number` | `2` | Max chunks from one document returned by a single prefilter call. |
-| `digestPath` | `string` | `'.hev-ask/digest.json'` | Path to the committed digest artifact, relative to the site root. |
+| `digestDir` | `string` | `'.hev-ask'` | Path to the committed digest tree, relative to the site root. |
 | `digestContentGlobs` | `string[]` | derived | Globs the offline builder reads. Defaults to Markdown/MDX under each configured collection directory. |
 
 <Callout label="changing the endpoint">
@@ -58,8 +58,8 @@ When Astro starts up (`astro:config:setup`) the integration:
 - injects the `endpoint` route, pointing at `@hevmind/ask/endpoint`, with
   `prerender: false` so it renders on demand;
 - registers two virtual modules — `virtual:hev-ask/config` (the resolved
-  options) and `virtual:hev-ask/digest` (the committed digest, inlined);
-- adds `digestPath` as a watched file so dev reloads when the digest changes;
+  options) and `virtual:hev-ask/digest` (the committed tree, globbed in);
+- adds the `digestDir` tree as watched files so dev reloads when the digest changes;
 - warns if `collections` is empty.
 
 At build (`astro:build:start`) it runs the digest build when

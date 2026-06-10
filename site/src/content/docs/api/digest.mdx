@@ -1,131 +1,144 @@
 ---
 title: "Digest format"
-description: "The committed .hev-ask/digest.json artifact — the ask digest: distilled section nodes with verbatim facts and source links, the glossary and overview, how each field is used, and how it degrades when absent."
+description: "The committed .hev-ask/ tree — the ask digest: one markdown+frontmatter file per section, with verbatim facts and source anchors, the glossary and meta, how each field is used, and how it degrades when absent."
 group: "API"
-order: 4
+order: 5
 ---
 
 import Callout from "../../../components/docs/Callout.astro";
 
 <Callout label="see it rendered">
 This site renders its own digest at [**/digest** — what the agent sees](/digest):
-the distilled summaries, verbatim facts, and glossary the loop reasons over.
+the distilled summaries, verbatim facts, and glossary an agent reads.
 </Callout>
 
-The ask digest is a single JSON file, by default `.hev-ask/digest.json`, built
-offline by [`ask digest build`](/docs/api/cli) and committed to your repo. (In
-earlier versions it was called the knowledge graph, or `kg`.) The
-integration inlines it into the build through the
+The ask digest is a committed **directory**, `.hev-ask/`, built offline by
+[`ask digest build`](/docs/api/cli) and committed to your repo. (In earlier
+versions it was a single `digest.json`; before 0.1 it was called the knowledge
+graph, or `kg`.) The integration globs the tree into the build through the
 `virtual:hev-ask/digest` module, so the running site reads it with no filesystem
 access.
 
-It is the **agent's view of your docs** — a distilled, source-grounded index
-read progressively. Humans read the rendered pages; the agentic loop reads the
-digest and links back to the real pages. Every node carries a `url#anchor` to
-its source.
+It is the **agent's view of your docs** — a distilled, source-grounded mirror,
+read progressively. Humans read the rendered pages; an agent reads the tree and
+links back to the real pages. Every section carries a `url`+`anchor` to its
+source.
 
-## Shape
+## Layout
 
-```json
-{
-  "version": 2,
-  "generatedAt": "2026-05-30T12:00:00.000Z",
-  "contentHash": "a1b2c3…",
-  "context": "## hev ask\n\nA search overlay for Astro docs…",
-  "glossary": [
-    { "term": "ask digest", "aliases": ["kg", "digest"], "definition": "The offline-built artifact distilled from the docs." }
-  ],
-  "overview": "## Overview\n- Kubernetes autoscaling — `concepts#kubernetes-autoscaling`\n…",
-  "suggestions": [
-    "How does the ask digest stay fresh?",
-    "What does keyword search fall back to without a digest?"
-  ],
-  "nodes": [
-    {
-      "id": "concepts#kubernetes-autoscaling",
-      "kind": "section",
-      "title": "Core Concepts",
-      "heading": "Kubernetes autoscaling",
-      "group": "Overview",
-      "url": "/docs/concepts#kubernetes-autoscaling",
-      "summary": "Scales workers from lag and throughput signals.",
-      "facts": [{ "kind": "flag", "literal": "--max-workers", "chunkId": "concepts#kubernetes-autoscaling" }],
-      "sources": [{ "chunkId": "concepts#kubernetes-autoscaling", "url": "/docs/concepts#kubernetes-autoscaling", "anchor": "kubernetes-autoscaling" }],
-      "mode": "agent-primary",
-      "terms": ["autoscaling", "workers", "signals"]
-    }
-  ],
-  "edges": []
-}
+```text
+.hev-ask/
+  _meta.md                     overview · context · suggestions · version · contentHash
+  _glossary/
+    digest.md                  one file per term: aliases + definition
+  overview/
+    quick-start.md             one file per section, mirroring your doc paths
+    limits.md
+  api/
+    cli.md
 ```
 
-## Fields
+One file per **section** (heading-level chunk). Underscore-prefixed names
+(`_meta`, `_glossary`) are the non-section entries, so they sort first and never
+collide with a real doc slug. There is no committed JSON — the whole artifact is
+markdown.
+
+## A section file
+
+```markdown
+---
+title: Quick start — add hev ask to an Astro site in five minutes
+heading: Quick start
+group: Overview
+order: 1
+url: /docs/quickstart
+anchor: quick-start
+terms: [digest, integration, adapter]
+hash: 7f3a…
+mode: agent-primary
+facts:
+  - { kind: command, literal: "pnpm add @hevmind/ask", chunkId: quickstart#install }
+sources:
+  - { chunkId: quickstart#install, url: /docs/quickstart#install, anchor: install }
+---
+
+Add hev ask to an Astro docs site in five minutes: install the package, register
+the integration, drop the overlay in a layout.
+
+<the full distilled section body continues here…>
+```
+
+The first paragraph is the **summary** (`head`'s payload). Everything below the
+frontmatter is the **body** (`cat`'s payload). The frontmatter arrays are the
+**facts** (`facts`' payload). One file, three rungs of the
+[disclosure ladder](/docs/concepts#progressive-disclosure-as-a-directory).
+
+## Frontmatter fields
 
 | Field | Type | Description |
 |---|---|---|
-| `version` | `2` | Schema version. |
-| `generatedAt` | `string` | ISO timestamp stamped by the build (Node time, not edge). |
-| `contentHash` | `string` | sha256 of the concatenated chunk text. The freshness gate. |
-| `context` | `string` | Compact orientation; degradation fallback when there are no nodes. |
-| `glossary` | `GlossaryEntry[]` | Terms with aliases and definitions; widens keyword search. |
-| `overview` | `string` | A deterministic grouped map of every section, injected into the agent's prompt. |
-| `suggestions` | `string[]` | Model-authored example questions the overlay shows on open. The endpoint serves them; absent ⇒ the overlay shows none. |
-| `nodes` | `DigestNode[]` | One distilled section per doc heading — the body of the digest. |
-| `edges` | `DigestEdge[]` | Reserved; ships empty. |
+| `title` | `string` | The listing title — the only field `tree`/`ls` return. Authored from your collection, or synthesized at build for sub-sections. |
+| `heading` | `string` | The literal rendered anchor text (may differ from a synthesized `title`). |
+| `group` | `string` | The doc group, for scoped `ls`. |
+| `order` | `number` | Position within the group. |
+| `url` | `string` | Deep link to the live section — what an answer cites. |
+| `anchor` | `string` | `github-slugger` output; `verify` gates it against the rendered `id`. |
+| `terms` | `string[]` | Distinctive tokens for keyword ranking and the render-time link-support check. |
+| `hash` | `string` | sha256 of this section's source content — the **incremental-build** gate. |
+| `mode` | `'agent-primary' \| 'source-primary'` | Reference/API sections are `source-primary`: an agent reads their source text verbatim. |
+| `facts` | `Fact[]` | Verbatim literals (flags, code, identifiers) extracted **deterministically**. The model never authors them, so an agent quotes exact strings without re-reading the page. |
+| `sources` | `SourceRef[]` | Provenance — the chunk the section came from, with its `url`/`anchor`. |
 
-### `DigestNode`
+## `_meta.md` and `_glossary/`
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | `string` | Equals the chunk id, so it maps 1:1 to a real anchor. |
-| `summary` | `string` | The model's paraphrase — what the agent reasons from. |
-| `facts` | `Fact[]` | Verbatim literals (flags, code, identifiers) extracted **deterministically**. The model never authors them, so the agent quotes exact strings without re-reading the page. |
-| `sources` | `SourceRef[]` | Provenance — the chunk the node came from, with its `url`/`anchor`. |
-| `mode` | `'agent-primary' \| 'source-primary'` | Reference/API sections are `source-primary`: the agent reads their source text verbatim. |
-| `terms` | `string[]` | Distinctive tokens for the render-time link-support check. |
+`_meta.md` carries the digest-level fields: `version`, `generatedAt`, and
+`contentHash` in frontmatter (the freshness gate and group/section ordering);
+the orientation `context`, the deterministic `overview` map, and the
+`suggestions` the overlay shows on open in the body.
+
+`_glossary/<term>.md` is one file per term — `term` and `aliases` in
+frontmatter, the `definition` in the body. The glossary widens keyword search:
+each query term picks up its aliases before retrieval, so `k8s` finds
+`kubernetes`.
 
 ## How each field is used
 
-- **`overview` + `nodes`** are injected into the agentic loop's system prompt
-  (prompt-cached). The agent opens the sections it needs and answers from their
-  summaries, quoting `facts` verbatim for exact strings.
-- **`glossary`** drives keyword **query expansion** — each query term picks up
-  its aliases before retrieval, so `k8s` finds `kubernetes` sections.
-- **`nodes`** also **rank keyword results**: a query term that hits a section's
-  `summary`, `terms`, or `facts` lifts that section above an incidental body
-  mention. Without nodes, ranking falls back to raw token overlap.
-- **`terms`** back a render-time check: a cited link degrades to plain text if
-  the surrounding answer shares none of the cited node's terms.
-- **`suggestions`** are returned by the endpoint's `GET` and rendered as the
-  overlay's suggested questions on open.
-- **`contentHash`** is the freshness gate. `build` recomputes it; if a committed
-  digest with nodes already matches, the build skips the model call.
+- **The title-tree + summaries** are injected into the agentic loop's system
+  prompt (prompt-cached). The loop opens the sections it needs and answers from
+  their summaries, quoting `facts` verbatim for exact strings.
+- **`_glossary/`** drives keyword **query expansion** — aliases before retrieval.
+- **`terms`, `summary`, `facts`** also **rank keyword results**: a query term
+  that hits any of them lifts that section above an incidental body mention.
+  Without a tree, ranking falls back to raw token overlap.
+- **`anchor`** is what `ask digest verify` checks against the rendered HTML, and
+  what every citation deep-links to.
+- **`hash`** is the incremental gate: `build` re-distils only the sections whose
+  source hash changed.
 
 ## Degradation
 
-The digest is read defensively. If the file is **missing or malformed**, or it is
-an older **node-less (v1) artifact**, the integration uses it as-is: with no
-nodes the agentic loop falls back to keyword-style search, and keyword mode still
-works. Nothing hard-fails.
+The tree is read defensively. If `.hev-ask/` is **missing or malformed**, the
+integration uses what it can: with no tree the agentic loop falls back to
+keyword-style search, keyword ranking falls back to raw token overlap, and the
+overlay shows no suggested questions. Nothing hard-fails.
 
 <Callout label="review it like code">
-Because the digest is committed JSON, it shows up in pull requests. Its structure
-— nodes, sources, facts, overview, hash — is deterministic and reviewable; only
-the distillation (`summary`, `glossary`, `context`, `suggestions`) is
-model-authored. That reviewability is the reason it's a file and not a runtime
+Because the digest is a committed markdown tree, it shows up in pull requests one
+section at a time — a section's distilled prose and its grounded facts change
+together, in the same diff, in the same format your docs are written in. That
+per-section reviewability is the reason it's a directory and not a runtime
 computation — and the reason the model step can move into a
-[Claude Code skill](/docs/api/cli#building-with-claude-code-recommended).
+[Claude Code skill](/docs/api/cli#claude-code-skill).
 </Callout>
 
 ## Regenerating
 
-Rebuild after content changes and commit the result. The hash gate makes this
-safe to run on every build — it only spends model work when the content actually
-changed. Build it with the bundled **Claude Code skill** (no API key) or
-`ask digest build` (one API call, bounded at ~600KB of corpus text); the
-integration also runs `ask digest build` during `astro build` when a key is
-present. Large sites use the
-[sharded flow](/docs/api/cli#sharded-builds-for-large-sites), which distils the
-corpus shard-by-shard in fresh contexts and re-distils only the shards a
-content edit touches. Run [`ask digest verify`](/docs/api/cli) to gate anchors,
-coverage, and literal fidelity.
+Rebuild after content changes and commit the result. The build is **incremental**
+— each section's `hash` means it only spends model work on the sections that
+actually changed. Build it with the bundled **Claude Code skill** (no API key) or
+`ask digest build` (one API call); the integration also runs `ask digest build`
+during `astro build` when a key is present. Large sites use the
+[sharded flow](/docs/api/cli#sharded-builds-for-large-sites). Run
+[`ask digest verify`](/docs/api/cli) to gate anchors, coverage, fidelity, and
+tree integrity. Migrating from a legacy `digest.json`? `ask digest migrate`
+explodes it into the tree with no model call.

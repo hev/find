@@ -1,14 +1,14 @@
 # hev ask — Agent Guide
 
-hev ask is a `⌘K` search overlay for **Astro docs sites**, shipped as the npm
-package `@hevmind/ask`. This file is for agents doing engineering, docs, and
-release work in this repo. Keep it practical and current.
+hev ask is a `⌘K` search overlay for docs sites, shipped as the npm package
+`@hevmind/ask`. This file is for agents doing engineering, docs, and release work
+in this repo. Keep it practical and current.
 
 ## What this is
 
-`@hevmind/ask` is an Astro integration. A consumer site adds `hevAsk()` to
-`astro.config`, drops `SearchOverlay.astro` in a layout, and gets two search
-paths over its content collection:
+`@hevmind/ask` ships today as an **Astro integration** — the flagship adapter. A
+consumer site adds `hevAsk()` to `astro.config`, drops `SearchOverlay.astro` in a
+layout, and gets two search paths over its content collection:
 
 - **Keyword (instant, keyless):** debounced token-overlap search over
   heading-level chunks, widened by a glossary. Results deep-link to
@@ -17,12 +17,24 @@ paths over its content collection:
   loop that issues its own `search` sub-queries, then streams a grounded answer
   (SSE) with inline deep links to the doc sections it drew from.
 
-A committed, offline-built **ask digest** (`.hev-ask/digest.json`) gives the loop
-domain context and a glossary. It was called the knowledge graph (`kg`) before
-0.1; the rename is complete — the CLI group is `ask digest`, the flag is
-`--digest-path`, the virtual module is `virtual:hev-ask/digest`. Don't
-reintroduce `kg` names or say "knowledge graph" in new code or copy (glossary
-aliases and old-URL redirects are the only places it remains on purpose).
+**Host-neutral core, Astro flagship.** The digest is built from markdown, not a
+renderer — the Go core and offline build have zero Astro deps — so the same
+digest, overlay, CLI, and MCP work whatever framework ships the docs. Astro is
+the only adapter wired end-to-end *today*; extending the same overlay to
+Docusaurus/VitePress/MkDocs (a static drop-in + a hostable endpoint) is designed
+in **RFC 0004**, not yet shipped. When editing engineering code, treat
+multi-framework as in-design; the marketing/docs in `site/` describe the target
+state per a working-backward exercise (nothing is deployed). Don't claim a
+non-Astro adapter works in code comments or commit messages until it does.
+
+A committed, offline-built **ask digest** (`.hev-ask/`, a markdown tree) gives
+the loop domain context, section summaries, grounded facts, source anchors, and a
+glossary. It was called the knowledge graph (`kg`) before 0.1; the rename is
+complete — the CLI group is `ask digest`, the artifact flag is `--digest-dir`,
+and the virtual module is `virtual:hev-ask/digest`. Don't reintroduce `kg` names
+or say "knowledge graph" in new code or copy (glossary aliases, old-URL
+redirects, and explicit legacy-migration docs are the only places it remains on
+purpose).
 
 ## Repo layout
 
@@ -30,6 +42,7 @@ aliases and old-URL redirects are the only places it remains on purpose).
 packages/ui    # the package @hevmind/ask — integration, endpoint, search, digest/, CLI
 playground     # minimal Astro site for fast local dev of the package
 site           # the public docs + showcase site (hevask.com); dogfoods @hevmind/ask
+docs/rfcs      # engineering RFCs (same process as ../layer); design alignment before code
 ```
 
 It's a pnpm workspace. `packages/ui` is the only published artifact; `playground`
@@ -55,12 +68,13 @@ docs are also the search corpus, so doc edits are product edits.
 - **Anchors come from `github-slugger`** (the one non-Astro dependency) to match
   Astro's rendered `id`s byte-for-byte. `ask digest verify` is the CI gate that
   catches drift — keep it green.
-- **The digest is committed JSON, hash-gated.** `ask digest build` skips the
-  model call when the content hash is unchanged. Regenerate and commit after
-  content changes. It's reviewable on purpose.
+- **The digest is a committed markdown tree, hash-gated.** `ask digest build`
+  skips the model call when the content hash is unchanged and re-distils only
+  changed sections when section hashes are available. Regenerate and commit
+  after content changes. It's reviewable on purpose.
 - **Everything degrades, nothing hard-fails:** no key at runtime → keyword
-  mode; no key at build → keep committed digest and warn; no `digest.json` →
-  empty digest.
+  mode; no key at build → keep committed digest tree and warn; no `.hev-ask/`
+  tree → empty digest.
 - **The endpoint renders on demand** (`prerender: false`), so consumers need a
   server/hybrid adapter. A static-only build can't serve search.
 - **Default models:** loop = `claude-haiku-4-5`, digest build = `claude-opus-4-8`.
@@ -74,8 +88,8 @@ docs are also the search corpus, so doc edits are product edits.
   `hev-ask:mode`.
 - `@hevmind/ask/endpoint` — `POST /api/ask`: keyword mode returns JSON, agentic
   mode streams SSE (`text/event-stream`). Contract in `api/endpoint.mdx`.
-- `ask` bin — read verbs, `mcp`, and `digest build` / `digest verify`. Flags in
-  `api/cli.mdx`.
+- `ask` bin — read verbs (`tree`, `ls`, `head`, `cat`, `facts`, `grep`),
+  `mcp`, and `digest build` / `digest verify`. Flags in `api/cli.mdx`.
 - Virtual modules `virtual:hev-ask/config` and `virtual:hev-ask/digest`.
 
 When any of these change, update the matching `site/src/content/docs/api/*.mdx`

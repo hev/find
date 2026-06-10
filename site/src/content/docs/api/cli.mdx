@@ -1,6 +1,6 @@
 ---
 title: "CLI"
-description: "The ask CLI reads, builds, verifies, and serves the committed ask digest for agents and CI."
+description: "The ask CLI reads the committed digest as a directory — tree, ls, head, cat, facts, grep over path keys — and builds, verifies, and serves it for agents and CI."
 group: "API"
 order: 3
 ---
@@ -9,136 +9,131 @@ import Callout from "../../../components/docs/Callout.astro";
 
 `@hevmind/ask` ships the `ask` binary. It has two command groups:
 
-- **Consumer commands** are progressive disclosure over the committed digest,
-  as verbs: skim (`overview`, `glossary`), find (`search`, `sections`), open
-  (`section get`), ask (`answer`), or serve the lot to an agent (`mcp`).
+- **Read verbs** are the shell over the committed digest tree: map it
+  (`tree`, `ls`), skim a section (`head`), open it (`cat`), pull its grounded
+  literals (`facts`), search it (`grep`) — plus `answer` for a synthesized,
+  cited reply and `mcp` to serve the lot to an agent.
 - **Producer commands** live under `ask digest`: `build`, `corpus`, `assemble`,
-  `verify`, and `status`.
+  `verify`, `status`, and `migrate`.
 
-## Reading the digest
+## Reading the digest as a directory
 
-By default, `ask` reads `.hev-ask/digest.json` from the current repo. Pass
-`--endpoint <url>` to read from a deployed site's HTTP API instead.
+By default, `ask` reads the `.hev-ask/` tree from the current repo. Pass
+`--endpoint <url>` to read from a deployed site's HTTP API instead. Reads are
+path-addressed, mirroring your doc URLs:
 
 ```sh
-ask glossary list
-ask glossary get "ask digest"
-ask sections list --group API
-ask section get api/endpoint#digest-reads-get
-ask overview
-ask search "read endpoints"
+ask tree                              # the whole title-tree — every section, no bodies
+ask ls api/                           # titles under one group
+ask head overview/quick-start         # title + one-line summary
+ask cat overview/quick-start          # the full distilled section
+ask facts api/endpoint                # verbatim flags / code / ids + sources to cite
+ask grep "read endpoints"             # keyword search, one hit per line
+ask cat _glossary/digest              # a glossary entry
 ask --endpoint https://hevask.com/api/ask answer "what read routes exist?"
 ask mcp
 ```
 
+The four rungs go cheap-to-expensive: `tree`/`ls` return **titles only** and are
+bounded by the number of sections, so they're safe to skim first; `head`, `cat`,
+and `facts` each open a larger slice of one section file. Nothing larger than a
+title is returned by a listing.
+
 `ask answer` uses the deployed endpoint's agentic SSE path, so it requires
-`--endpoint`. For keyless local retrieval, use `ask search`.
+`--endpoint`. For keyless local retrieval, use `ask grep` and `ask cat`.
 
 ## Building the digest
 
 Run producer commands from the Astro site root:
 
 ```sh
-ask digest build        # one-shot build; needs ANTHROPIC_API_KEY only when stale
+ask digest build        # incremental build; needs ANTHROPIC_API_KEY only for changed sections
 ask digest corpus       # emit sections for a keyless skill/model distillation
-ask digest assemble     # assemble .hev-ask/digest.json from that distillation
-ask digest verify       # build the site and verify anchors, coverage, fidelity
+ask digest assemble     # write the .hev-ask/ tree from that distillation
+ask digest verify       # build the site and verify anchors, coverage, fidelity, tree integrity
 ask digest status       # report shard coverage for a sharded build
+ask digest migrate      # one-shot, keyless: explode a legacy digest.json into the tree
 ```
 
-`ask digest build` is hash-gated. If the committed digest already matches the
-corpus, it exits without calling the model. Otherwise it asks the build model
-for the distillation and writes `.hev-ask/digest.json`. The one-shot build hands
-the whole corpus to a single model call, so it is bounded: past ~600KB of
-section text it fails with instructions to use the sharded flow below.
+`ask digest build` is **incremental and hash-gated**. Each section file carries
+the hash of the content it was distilled from, so the build re-distils only the
+sections whose content changed and leaves the rest; a clean tree calls the model
+zero times. The one-shot build hands the changed sections to a single model
+call, so it is bounded: past ~600KB of new section text it fails with
+instructions to use the sharded flow below.
 
-`ask digest corpus` writes `.hev-ask/digest-input.json`; `ask digest assemble` reads
-`.hev-ask/digest-distill.json` and writes `.hev-ask/digest.json`. These commands expose
-the same deterministic seam used by the bundled Claude Code skill: the model
-authors only `context`, `glossary`, per-section `summaries`, and `suggestions`.
-Chunking, facts, overview, node sources, and the content hash are computed in
-code.
+`ask digest corpus` writes the sections to distil; `ask digest assemble` reads
+the distillation and writes the `.hev-ask/` tree. These commands expose the same
+deterministic seam used by the bundled Claude Code skill: the model authors only
+`context`, the glossary, per-section `summaries`, and `suggestions`. Chunking,
+facts, the overview, per-section hashes, anchors, and the tree structure are
+computed in code.
+
+<Callout label="migrating from digest.json">
+Earlier versions committed a single `.hev-ask/digest.json`. `ask digest migrate`
+reads that file and writes the equivalent markdown tree with no model call — every
+field the frontmatter needs is already in the JSON. Run it once, review the diff,
+delete the JSON.
+</Callout>
 
 ## Sharded builds for large sites
 
-Corpus size is bounded by what fits in one model context only if the whole
-corpus is distilled in one pass. The sharded flow removes that bound: the
-corpus splits into shards along slug-prefix boundaries (`workers/...`,
-`pages/...`), each shard is distilled independently in a fresh context, and
-assembly merges the shards back into one digest.
+Even with incremental rebuilds, a first build distils the whole corpus, and that
+must fit a model context. The sharded flow removes the bound: the corpus splits
+into shards along slug-prefix boundaries (`workers/...`, `pages/...`), each shard
+is distilled independently in a fresh context, and assembly writes the merged
+tree.
 
 ```sh
 ask digest corpus --shards-dir .hev-ask/shards   # input-<id>.json per shard + manifest.json
 ask digest status --shards-dir .hev-ask/shards   # distilled / pending / stale, per shard
 # ...one distillation per shard writes distill-<id>.json; a final pass writes global.json...
-ask digest assemble --input-dir .hev-ask/shards  # merge + write .hev-ask/digest.json
+ask digest assemble --input-dir .hev-ask/shards  # merge + write the .hev-ask/ tree
 ```
 
 Sharding is **stable and incremental**: shard identity comes from the slug
-prefix, and each shard carries a content hash. Editing one doc re-pends only
-the shard that owns it — re-run `corpus`, re-distil that shard, re-assemble.
-A distillation names the shard hash it was built from, so stale work is
-detected, skipped with a warning, and the affected sections fall back to plain
-excerpts until re-distilled. The digest stays usable after every wave.
-
-Each `distill-<id>.json` contains the shard's `summaries` (one per section id),
-an optional shard `glossary`, the copied `shardHash`, and `notes` — a short
-gist consumed by the final synthesis pass that writes `global.json`
-(site-wide `context` and `suggestions`). Merged glossaries are deduped
-case-insensitively and capped at 75 terms. The bundled `build-digest` skill
-orchestrates this whole flow, one fresh context per shard.
+prefix, and each shard carries a content hash. Editing one doc re-pends only the
+shard that owns it — re-run `corpus`, re-distil that shard, re-assemble. A
+distillation names the shard hash it was built from, so stale work is detected,
+skipped with a warning, and the affected sections fall back to plain excerpts
+until re-distilled. The tree stays usable after every wave.
 
 `ask digest verify` builds the site unless `--skip-build` is set, then checks
-rendered heading anchors, digest coverage, and literal fidelity against the
-committed digest. Anchor drift is always fatal; coverage and literal-fidelity
-are warnings unless `--strict` is set.
-
-## Package scripts
-
-Use `ask digest` in site scripts:
-
-```json
-{
-  "scripts": {
-    "digest:build": "ask digest build",
-    "digest:verify": "ask digest verify"
-  }
-}
-```
+rendered heading anchors, digest coverage, literal fidelity, and tree integrity
+(every section file parses, `_meta.md`'s content hash matches, no orphans).
+Anchor drift is always fatal; coverage and literal-fidelity are warnings unless
+`--strict` is set.
 
 ## Claude Code skill
 
-The bundled `build-digest` skill can build the digest without using your
+The bundled `build-digest` skill builds the tree without using your
 `ANTHROPIC_API_KEY`. It runs the deterministic producer seam, sharded:
 
 ```text
 ask digest corpus --shards-dir .hev-ask/shards    -> input-<id>.json + manifest.json
 ...one fresh-context distillation per shard       -> distill-<id>.json...
 ...one synthesis pass over the shard notes        -> global.json...
-ask digest assemble --input-dir .hev-ask/shards   -> .hev-ask/digest.json
+ask digest assemble --input-dir .hev-ask/shards   -> the .hev-ask/ tree
 ```
 
-Because the model steps run inside your Claude Code subscription, the digest
-build costs no API tokens on your own key — and because each shard is its own
-context, corpus size never hits a context limit. The resulting `digest.json`
-has the same shape as `ask digest build` output, and the same hash gate
-applies.
+Because the model steps run inside your Claude Code subscription, the build costs
+no API tokens on your own key — and because each shard is its own context, corpus
+size never hits a context limit. The resulting tree has the same shape as
+`ask digest build` output, and the same incremental hash gate applies.
 
 ## Flags
 
 | Flag | Default | Description |
 |---|---|---|
-| `--digest-path <path>` | `.hev-ask/digest.json` | Local digest path for reads; output/input path for producer commands. |
+| `--digest-dir <dir>` | `.hev-ask` | Local digest tree for reads; output dir for producer commands. |
 | `--endpoint <url>` | - | Remote `/api/ask` base URL for read commands and `answer`. |
 | `--json` | automatic for non-TTY in the standalone CLI | Force machine-readable JSON output. |
-| `--max-results <n>` | `8` | Local search result cap. |
+| `--max-results <n>` | `8` | Local `grep` result cap. |
 | `--collection <name>` | `docs` | Collection to read for producer commands. Repeat for multiple. |
 | `--base-path <path>` | `/docs/` | Slug to URL prefix for producer commands. |
 | `--content-glob <glob>` | derived | Source globs for producer commands. Repeat for multiple. |
 | `--chunk-heading-depth <n>` | `3` | Deepest heading used as a chunk boundary. |
 | `--digest-model <model>` | `claude-opus-4-8` | Model used by `ask digest build`. |
-| `--out <path>` | `.hev-ask/digest-input.json` | Output path for `ask digest corpus`. |
-| `--input <path>` | `.hev-ask/digest-distill.json` | Input path for `ask digest assemble`. |
 | `--shards-dir <dir>` | - | Sharded mode for `corpus` and `status`: write/read per-shard inputs and `manifest.json` here. |
 | `--shard-bytes <n>` | `200000` | Target section-text bytes per shard (requires `--shards-dir`). |
 | `--input-dir <dir>` | - | Sharded mode for `assemble`: merge `distill-*.json` + `global.json` from this directory. |
@@ -149,32 +144,18 @@ applies.
 Global flags come before the command:
 
 ```sh
-ask --digest-path .hev-ask/digest.json --json search "openapi"
-ask --endpoint https://hevask.com/api/ask mcp
+ask --digest-dir .hev-ask --json grep "openapi"
+ask --endpoint https://hevask.com/api/ask cat api/endpoint
 ask digest build --collection docs --collection guides --chunk-heading-depth 2
 ask digest verify --skip-build
 ```
 
 ## MCP
 
-`ask mcp` runs a stdio MCP server over the same read/search surface:
-`glossary_list`, `glossary_get`, `sections_list`, `section_get`, `overview`,
-`search`, and `answer`.
-
-Use local digest reads for checked-out repos:
-
-```json
-{
-  "mcpServers": {
-    "docs": {
-      "command": "ask",
-      "args": ["--digest-path", ".hev-ask/digest.json", "mcp"]
-    }
-  }
-}
-```
-
-Use a deployed endpoint when the agent needs the remote digest or `answer`:
+`ask mcp` runs a stdio MCP server with **one tool** — it downloads the whole
+digest tree to local disk and returns the title-tree inline, after which the
+agent reads the files with its own `tree`/`cat`/`grep`. Point it at a checked-out
+repo or a deployed endpoint:
 
 ```json
 {
@@ -187,7 +168,8 @@ Use a deployed endpoint when the agent needs the remote digest or `answer`:
 }
 ```
 
-See the [MCP page](/docs/api/mcp) for tool schemas and behavior.
+See the [MCP page](/docs/api/mcp) for the tool, the instructions it ships, and
+the endpoint archive cache.
 
 ## Go library
 
@@ -196,28 +178,28 @@ control, or mount the dependency-free command group in your own CLI.
 
 ```go
 group := ask.NewCommandGroup(ask.CommandOptions{
-	DigestPath: ".hev-ask/digest.json",
+	DigestDir: ".hev-ask",
 })
-err := group.Run(ctx, []string{"search", "read endpoints"}, os.Stdin, os.Stdout, os.Stderr)
+err := group.Run(ctx, []string{"cat", "overview/quick-start"}, os.Stdin, os.Stdout, os.Stderr)
 ```
 
-The lower-level helpers include `LoadDigest`, `ListGlossary`, `GetSection`,
-`SearchDigest`, `NewEndpointClient`, `BuildDigest`, `VerifyAnchors`, and
-`ServeMCP`.
+The lower-level helpers include `LoadDigest` (reads the tree, or an
+`embed.FS`), `ListSectionSummaries`, `GetSection`, `SearchDigest`,
+`NewEndpointClient`, and `ServeMCP`.
 
 ## Distribution
 
-The npm package exposes one bin, `ask`. The launcher resolves `HEV_ASK_BINARY` first, then a platform-specific optional
-binary package when installed, then the checked-out Go source in this monorepo.
-That source fallback is for development; published installs use the packaged
-binary path.
+The npm package exposes one bin, `ask`. The launcher resolves `HEV_ASK_BINARY`
+first, then a platform-specific optional binary package when installed, then the
+checked-out Go source in this monorepo. That source fallback is for development;
+published installs use the packaged binary path.
 
 ## Where it runs
 
 The producer commands run locally or in CI with filesystem access. The Astro
 integration also invokes `ask digest build` during `astro build` when
-`ANTHROPIC_API_KEY` is present, then falls back to the committed artifact if the
-build command cannot run. The deployed site reads the committed digest through
+`ANTHROPIC_API_KEY` is present, then falls back to the committed tree if the
+build command cannot run. The deployed site reads the committed tree through
 `virtual:hev-ask/digest`; it does not need filesystem access for digest reads.
 
 <Callout label="put verify in CI">
