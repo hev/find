@@ -1,6 +1,6 @@
 ---
 title: "Introduction"
-description: "hev ask distills your docs into a compact directory — a tree of markdown your coding agent can tree, cat, and grep, plus a ⌘K overlay that answers your readers. Astro integration, one-script drop-in everywhere else. Same artifact, three surfaces."
+description: "hev ask distills your docs into a compact directory of markdown your coding agent can tree, cat, and grep, plus a ⌘K overlay that answers your readers. It ships a turnkey Astro integration, and every other framework adds the same overlay with one script."
 group: "Overview"
 order: 0
 ---
@@ -9,22 +9,24 @@ import Diagram from "../../components/docs/Diagram.astro";
 import Callout from "../../components/docs/Callout.astro";
 import { askMapDiagram } from "../../lib/diagrams";
 
-**hev ask** distills a docs site — [Astro](https://astro.build), Docusaurus,
-VitePress, MkDocs, or any folder of markdown — into an **ask digest**: a compact
-**directory**, one small markdown file per section, a distilled mirror of your
-docs that an agent navigates the way it navigates any directory, and that a
-`⌘K` overlay answers your readers from.
+**hev ask** distills a docs site into an **ask digest**: a compact
+**directory** with one small markdown file per section. The digest is a
+distilled mirror of your docs that an agent navigates the way it navigates any
+directory, and that a `⌘K` overlay answers your readers from. It works with
+[Astro](https://astro.build), Docusaurus, VitePress, MkDocs, or any folder of
+markdown.
 
 The digest is **host-neutral**: it's built from your markdown, not your
-renderer. Astro gets a turnkey integration; every other framework gets the same
-overlay as a one-script drop-in. Build the digest **offline** with the bundled
-skill (and your Claude Code subscription), commit the tree, and your docs become
-readable three ways from one artifact. Perfect for technical documentation,
-internal wikis, and other medium-sized corpora.
+renderer. hev ask ships a turnkey integration for Astro, and every other
+framework can add the same overlay with a single script. Build the digest
+**offline** with the bundled skill (and your Claude Code subscription), commit
+the tree, and your docs become readable three ways from one artifact. It's a
+good fit for technical documentation, internal wikis, and other medium-sized
+corpora.
 
 <Diagram label="hev ask architecture">{askMapDiagram}</Diagram>
 
-## One artifact, three surfaces
+## One artifact, three readers
 
 The digest is built **inside your coding agent** — the bundled Claude Code
 skill writes the `.hev-ask/` tree using your existing **agentic coding
@@ -40,8 +42,8 @@ Commit the tree, and the same files serve:
   to local disk, after which the agent reads it with the file tools it
   already has.
 
-The overlay *synthesizes* for a human; the CLI and MCP hand an agent the
-*files* and let its own tools do the rest.
+The overlay synthesizes an answer for the human reader. The CLI and MCP hand
+an agent the raw files and let its own tools do the rest.
 
 <Callout label="the corpus is your content">
 hev ask only reads the content you point it at — an Astro content collection, a
@@ -63,9 +65,11 @@ answers that:
 - can answer a question phrased in the reader's words, not just match keywords, and
 - are **queryable by your coding agent**, not only by humans in a browser.
 
-On Astro that's one integration; on every other framework it's a static overlay
-you drop in, plus an optional hosted endpoint for the agentic answers. See
-[Frameworks](/docs/frameworks) for the path on yours.
+On Astro, one integration covers all of that. Other frameworks drop in the
+static overlay and, for the agentic answers, point it at an optional hosted
+endpoint. See
+[the drop-in overlay](/docs/api/search-overlay#the-overlay-on-other-frameworks)
+for the path on yours.
 
 If you only need keyword search over a static site and never want an API key in
 the loop, [Pagefind](https://pagefind.app) is simpler and a great fit — see
@@ -74,8 +78,8 @@ the loop, [Pagefind](https://pagefind.app) is simpler and a great fit — see
 ## Next steps
 
 - [Quick start](/docs/quickstart) — add search to an Astro site in five minutes.
-- [Frameworks](/docs/frameworks) — the path on Docusaurus, VitePress, MkDocs, or
-  any static site: the drop-in overlay and the hostable endpoint.
+- [Digest creation](/docs/digest-creation) — how the tree is built, kept
+  fresh, and verified.
 - [Concepts](/docs/concepts) — chunks, anchors, the disclosure ladder, the
   agentic loop, and the ask digest directory.
 - [Tradeoffs](/docs/tradeoffs) and [Limits](/docs/limits) — what you're choosing,

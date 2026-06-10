@@ -17,8 +17,8 @@ The OpenAPI 3.1 contract is published at [`/openapi.yaml`](/openapi.yaml).
 
 ## Suggested questions (GET)
 
-`GET /api/ask` returns the digest's baked-in suggestions and the loop
-model — no query, no model call:
+`GET /api/ask` returns the digest's baked-in suggestions and the loop model,
+with no query and no model call:
 
 ```json
 {
@@ -28,8 +28,8 @@ model — no query, no model call:
 ```
 
 The overlay fetches this once on first open (when AI is on) to populate its
-suggested questions. An empty `suggestions` array — a graph without them, or no
-graph at all — just means the overlay shows none.
+suggested questions. An empty `suggestions` array (a digest without them, or no
+digest at all) just means the overlay shows none.
 
 ## Digest reads (GET)
 
@@ -172,10 +172,12 @@ both shapes from the one endpoint.
 
 ## The API key
 
-The endpoint resolves `ANTHROPIC_API_KEY` from, in order: the adapter runtime
-env (`locals.runtime.env`, e.g. Cloudflare), `process.env`, then
-`import.meta.env`. Set it wherever your host injects server secrets; it is never
-sent to the browser.
+The endpoint reads the key named by the configured provider —
+`ANTHROPIC_API_KEY` by default, `OPENAI_API_KEY` or `OPENROUTER_API_KEY` when
+the [`provider` option](/docs/api/configuration) is set — from, in order: the
+adapter runtime env (`locals.runtime.env`, e.g. Cloudflare), `process.env`,
+then `import.meta.env`. Set it wherever your host injects server secrets; it is
+never sent to the browser.
 
 ## LLM tracing
 
@@ -183,8 +185,8 @@ Set `POSTHOG_KEY` (or `POSTHOG_API_KEY`) in the same environment and every
 agentic answer emits a PostHog `$ai_generation` trace — model, tokens, latency,
 and the loop's tool calls. `POSTHOG_HOST` overrides the US-cloud ingestion host,
 and `POSTHOG_CAPTURE_CONTENT` (`off` | `redacted` | `full`, default `full`)
-controls how much prompt and answer text ships with each event. No key → no-op;
-the answer path never depends on telemetry.
+controls how much prompt and answer text ships with each event. Without a key
+it's a no-op; the answer path never depends on telemetry.
 
 ## Index lifecycle
 

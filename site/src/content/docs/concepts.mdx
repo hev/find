@@ -10,28 +10,29 @@ import Callout from "../../components/docs/Callout.astro";
 import { askMapDiagram, askLadderDiagram } from "../../lib/diagrams";
 
 hev ask rests on one idea: **the digest is just a directory.** Your docs are
-distilled into a committed tree of markdown files — one per section — and that
+distilled into a committed tree of markdown files, one per section, and that
 tree is read two ways: a coding **agent** navigates it with the file
 tools it already has, and a `⌘K` **overlay** reads it server-side to synthesize
 a grounded answer for a human. Both climb the same tree progressively. This page
 explains the tree, the ladder over it, and the two readers.
 
-<Diagram label="build time, the artifact, and the three surfaces">{askMapDiagram}</Diagram>
+<Diagram label="build time, the artifact, and the three readers">{askMapDiagram}</Diagram>
 
-The split that matters: the tree is built **offline** with a strong model and
-committed to git; the readers run **on demand** — the overlay at the edge, the
-agent on its own machine. No durable state lives in the running site.
+The split that matters is that the tree is built **offline** with a strong
+model and committed to git, while the readers run **on demand**: the overlay at
+the edge, the agent on its own machine. No durable state lives in the running
+site.
 
 ## Chunks and anchors
 
-hev ask does not index pages — it indexes **sections**. Each document is split
+hev ask indexes **sections**, not pages. Each document is split
 on its headings (up to a configurable depth, default `##` and `###`). Content
 before the first heading becomes the *intro chunk* whose URL is the page itself.
 
 Each chunk carries the section's heading, its cleaned prose, and a URL of the
 form `basePath + slug + #anchor`. The anchor is generated with
-[`github-slugger`](https://github.com/Flet/github-slugger) by default — the same
-slugger Astro and GitHub-flavored renderers use — so the link lands on a heading
+[`github-slugger`](https://github.com/Flet/github-slugger) by default, the same
+slugger Astro and GitHub-flavored renderers use, so the link lands on a heading
 that actually exists in the rendered HTML. Each framework adapter declares its
 slug scheme, so the rule generalizes: the Docusaurus adapter, for instance, also
 honors explicit `{#custom-id}` headings.
@@ -73,10 +74,11 @@ the digest at the right time and wires the overlay in:
     points at it with one config attribute. This is the agentic path, decoupled
     from any one framework's routing.
 
-The CLI and MCP surfaces are host-neutral already — they read the committed tree
-directly — so a coding agent gets the same `tree`/`cat`/`grep` over your docs no
-matter what renders them. See [Frameworks](/docs/frameworks) for the concrete
-per-framework setup.
+The CLI and MCP surfaces are host-neutral already: they read the committed tree
+directly, so a coding agent gets the same `tree`/`cat`/`grep` over your docs no
+matter what renders them. See
+[the drop-in overlay](/docs/api/search-overlay#the-overlay-on-other-frameworks)
+for the concrete per-framework setup.
 
 ## The ask digest directory
 
@@ -128,7 +130,7 @@ the keyless and remote cases (see the [CLI reference](/docs/api/cli)).
 
 ## Keyword search and the glossary
 
-The overlay's instant path — and the CLI's `grep` over a remote tree — run a
+The overlay's instant path, like the CLI's `grep` over a remote tree, runs a
 dependency-free **prefilter** over the chunks:
 
 1. **Expand the query.** Each term picks up its glossary aliases (`k8s` →
@@ -150,8 +152,8 @@ chunk text, so keyword search always works.
 ## Asking is the default
 
 The overlay is **ask-first**. A single word is treated as a keyword lookup and
-answered instantly from the index. The moment the query grows past one word — the
-reader types a **space** — the overlay stops the keyword type-ahead and switches
+answered instantly from the index. The moment the query grows past one word
+(the reader types a **space**) the overlay stops the keyword type-ahead and switches
 to **ask mode**: pressing Enter sends the question to the agentic loop. On open
 it also shows a few **suggested questions** (baked into `_meta.md` at build time,
 so they cost nothing at runtime) to make asking the obvious move.
@@ -174,7 +176,7 @@ two phases.
 front, plus one tool:
 
 - **`open_section({ id })`** — opens a section to read its distilled summary, its
-  verbatim `facts`, and — for reference sections — its source text. The model
+  verbatim `facts`, and, for reference sections, its source text. The model
   opens the sections it needs; each open is streamed to the overlay as a faint
   activity line. It may only cite sections it opened.
 
@@ -190,7 +192,7 @@ the question. Dropping the tools on the final turn is what guarantees the model
 answers instead of searching again.
 
 <Callout label="grounded, not free-form">
-The answer is constrained to the sections retrieval surfaced: the model links
+The answer is constrained to the sections retrieval returned: the model links
 only to provided URLs (the overlay downgrades any other link to plain text), and
 it cannot ground in what retrieval never found. That ceiling is discussed in
 [Limits](/docs/limits).
@@ -221,8 +223,8 @@ part worth doing in a **Claude Code skill**.
 
 - **Claude Code skill (recommended).** A skill walks Claude through reading the
   corpus and writing the distillation, then assembles the `.hev-ask/` tree
-  locally. It runs inside your existing Claude Code subscription — **no
-  `ANTHROPIC_API_KEY`, no per-build token spend on your own key** — and fits the
+  locally. It runs inside your existing Claude Code subscription (**no
+  `ANTHROPIC_API_KEY`, no per-build token spend on your own key**) and fits the
   editor workflow most authors are already in.
 - **`ask digest build` (fallback).** One `ANTHROPIC_API_KEY` call to
   **Claude Opus 4.8** (default) does the same distillation unattended — the right

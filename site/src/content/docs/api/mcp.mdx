@@ -17,7 +17,7 @@ points at it.
 <Callout label="why one tool, not seven">
 An MCP consumer is already an agent, so it needs your **corpus**, not your
 reasoning. Give it the files and its own `tree`/`cat`/`grep` become the
-disclosure ladder — `ls` is cheap, `cat` is opt-in — with no per-hop round-trip
+disclosure ladder (`ls` is cheap, `cat` is opt-in) with no per-hop round-trip
 through a query tool. Synthesis is the overlay's job, for humans; that's why
 there's no `answer` tool here.
 </Callout>
@@ -71,8 +71,8 @@ grep -r "prerender" ~/.cache/hev-ask/hevask.com
 
 `force: true` re-pulls even when unchanged. Otherwise `fetch_docs` compares the
 remote `contentHash` against the cached tree and re-downloads only on a mismatch
-(`upToDate: true` when nothing changed). Because the corpus is bounded —
-configured collections, no crawler — the whole tree compresses small enough to
+(`upToDate: true` when nothing changed). Because the corpus is bounded
+(configured collections, no crawler), the whole tree compresses small enough to
 ship in one shot, so there's no per-file delta protocol to reason about.
 
 ## The instructions

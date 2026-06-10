@@ -1,0 +1,152 @@
+---
+// Tabbed code examples — one tab per fenced code block placed in the slot.
+// By default tabs are labeled by each block's language. Pass `labels` when the
+// blocks share a language (e.g. provider variants of the same config); labels
+// map onto the blocks in order. Tab selection syncs across every CodeTabs
+// group on the page with the same sync key and persists across pages via
+// localStorage, so a reader who picks OpenRouter sees OpenRouter everywhere.
+// Styling lives in DocsLayout alongside the rest of the doc-body rules.
+interface Props {
+	/** Tab labels, one per code block in order. Defaults to block languages. */
+	labels?: string[];
+}
+const { labels } = Astro.props;
+// Identical label sets sync with each other; language groups sync as "lang".
+const syncKey = labels ? labels.join("|") : "lang";
+---
+
+<figure
+	class="code-tabs"
+	data-code-tabs
+	data-sync-key={syncKey}
+	data-labels={labels ? JSON.stringify(labels) : undefined}
+>
+	<figcaption class="code-tabs-bar">
+		<div class="code-tabs-langs" role="tablist" aria-label="Variant"></div>
+		<button type="button" class="code-copy" data-code-tabs-copy aria-label="Copy code">copy</button>
+	</figcaption>
+	<div class="code-tabs-panels">
+		<slot />
+	</div>
+</figure>
+
+<script>
+	const STORAGE_PREFIX = "hev-ask:docs-tabs:";
+	const LANG_LABELS: Record<string, string> = {
+		js: "JavaScript",
+		javascript: "JavaScript",
+		ts: "TypeScript",
+		typescript: "TypeScript",
+		astro: "Astro",
+		bash: "Shell",
+		sh: "Shell",
+		shell: "Shell",
+		http: "HTTP",
+		json: "JSON",
+		jsonc: "JSON",
+		yaml: "YAML",
+		toml: "TOML",
+		text: "Text",
+		plaintext: "Text",
+	};
+
+	interface Group {
+		root: HTMLElement;
+		syncKey: string;
+		tabs: string[];
+		buttons: Map<string, HTMLButtonElement>;
+		panels: Map<string, HTMLElement>;
+	}
+
+	const groups: Group[] = [];
+
+	function storedTab(syncKey: string): string | null {
+		try {
+			return localStorage.getItem(STORAGE_PREFIX + syncKey);
+		} catch {
+			return null;
+		}
+	}
+
+	function storeTab(syncKey: string, tab: string) {
+		try {
+			localStorage.setItem(STORAGE_PREFIX + syncKey, tab);
+		} catch {
+			/* private mode — selection still applies for this page */
+		}
+	}
+
+	function activate(group: Group, tab: string) {
+		for (const [key, button] of group.buttons) {
+			const active = key === tab;
+			button.setAttribute("aria-selected", active ? "true" : "false");
+			button.tabIndex = active ? 0 : -1;
+			const panel = group.panels.get(key);
+			if (panel) panel.hidden = !active;
+		}
+		group.root.dataset.activeTab = tab;
+	}
+
+	function select(syncKey: string, tab: string) {
+		storeTab(syncKey, tab);
+		for (const group of groups) {
+			if (group.syncKey === syncKey && group.tabs.includes(tab)) activate(group, tab);
+		}
+	}
+
+	for (const root of document.querySelectorAll<HTMLElement>("[data-code-tabs]")) {
+		const bar = root.querySelector<HTMLElement>(".code-tabs-langs");
+		const panelHost = root.querySelector<HTMLElement>(".code-tabs-panels");
+		if (!bar || !panelHost) continue;
+
+		let labels: string[] | null = null;
+		try {
+			labels = root.dataset.labels ? JSON.parse(root.dataset.labels) : null;
+		} catch {
+			labels = null;
+		}
+		const syncKey = root.dataset.syncKey || "lang";
+		const group: Group = { root, syncKey, tabs: [], buttons: new Map(), panels: new Map() };
+
+		const pres = panelHost.querySelectorAll<HTMLElement>("pre");
+		pres.forEach((pre, index) => {
+			const lang = pre.dataset.language || "text";
+			const tab = labels ? (labels[index] ?? `Tab ${index + 1}`) : lang;
+			if (group.panels.has(tab)) return;
+			group.tabs.push(tab);
+			group.panels.set(tab, pre);
+
+			const button = document.createElement("button");
+			button.type = "button";
+			button.role = "tab";
+			button.textContent = labels ? tab : (LANG_LABELS[lang] ?? lang);
+			button.setAttribute("aria-selected", "false");
+			button.addEventListener("click", () => select(syncKey, tab));
+			bar.appendChild(button);
+			group.buttons.set(tab, button);
+		});
+
+		if (group.tabs.length === 0) continue;
+		groups.push(group);
+
+		const initial = storedTab(syncKey);
+		activate(group, initial && group.tabs.includes(initial) ? initial : group.tabs[0]);
+
+		root
+			.querySelector<HTMLButtonElement>("[data-code-tabs-copy]")
+			?.addEventListener("click", async (event) => {
+				const button = event.currentTarget as HTMLButtonElement;
+				const active = group.panels.get(root.dataset.activeTab ?? "");
+				if (!active) return;
+				try {
+					await navigator.clipboard.writeText(active.textContent ?? "");
+					button.textContent = "copied";
+				} catch {
+					button.textContent = "failed";
+				}
+				setTimeout(() => {
+					button.textContent = "copy";
+				}, 1400);
+			});
+	}
+</script>

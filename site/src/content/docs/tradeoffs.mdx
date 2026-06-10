@@ -24,13 +24,13 @@ We think that's the right trade for docs, where queries split cleanly into
 
 ## A committed digest
 
-The digest is generated offline and **committed to git** as a markdown tree —
-one file per section — rather than computed at runtime or hidden in a service.
+The digest is generated offline and **committed to git** as a markdown tree,
+one file per section, rather than computed at runtime or hidden in a service.
 
 - **Upside:** it's reviewable in pull requests one section at a time,
   deterministic at runtime, free to read (no model call on the request path),
-  bundled into the edge worker with no runtime filesystem access, and — being a
-  real directory — something an agent can `tree`/`cat`/`grep` directly.
+  bundled into the edge worker with no runtime filesystem access, and, being a
+  real directory, something an agent can `tree`/`cat`/`grep` directly.
 - **Cost:** it can go stale. It only regenerates when content changes *and* a
   build runs. hev ask logs a warning when the live content hash differs from the
   digest's, but a forgotten rebuild means a slightly outdated glossary.
@@ -42,8 +42,8 @@ workflow.
 ## A flagship adapter, primitives for the rest
 
 hev ask is host-neutral at the core but **opinionated about Astro**: the Astro
-integration is batteries-included — build, endpoint, and overlay from one config
-block — while every other framework wires two primitives itself: drop in the
+integration is batteries-included (build, endpoint, and overlay from one config
+block) while every other framework wires two primitives itself: drop in the
 static overlay, and, for agentic answers, deploy the standalone endpoint.
 
 - **Upside:** the digest, the overlay, the CLI, and MCP are the same everywhere;
@@ -54,7 +54,8 @@ static overlay, and, for agentic answers, deploy the standalone endpoint.
   agentic path. A turnkey plugin for each framework is a goal, not a guarantee.
 
 If you're on Astro this is invisible — it's one integration. If you're not,
-[Frameworks](/docs/frameworks) is the honest map of what you wire by hand today.
+[the drop-in overlay reference](/docs/api/search-overlay#the-overlay-on-other-frameworks)
+is the honest map of what you wire by hand today.
 
 ## Keyword retrieval, not embeddings
 
@@ -64,7 +65,7 @@ embeddings, no vector store**.
 - **Upside:** nothing to host, nothing to keep in sync, edge-safe, and instant.
   The glossary recovers a lot of the synonym recall embeddings would give.
 - **Cost:** paraphrase recall has a ceiling. The agent answers well but can only
-  ground in what keyword retrieval surfaced. If your readers routinely search in
+  ground in what keyword retrieval found. If your readers routinely search in
   words that share no tokens with your docs and aren't in the glossary,
   embeddings would do better. That upgrade is deferred, not designed out.
 
@@ -113,8 +114,8 @@ The short version:
   are happy running a crawler and a dashboard.
 - Choose **Orama** if you specifically want client-side vector search and will
   manage embeddings.
-- Choose **hev ask** if your docs are a folder of markdown — on Astro,
-  Docusaurus, VitePress, MkDocs, or anything — you want deep links to sections,
+- Choose **hev ask** if your docs are a folder of markdown (on Astro,
+  Docusaurus, VitePress, MkDocs, or anything), you want deep links to sections,
   and you want a reader's *question*, not just their keywords, to find the right
   section.
 

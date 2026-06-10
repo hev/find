@@ -7,17 +7,17 @@ order: 5
 
 import Callout from "../../../components/docs/Callout.astro";
 
-<Callout label="see it rendered">
-This site renders its own digest at [**/digest** — what the agent sees](/digest):
-the distilled summaries, verbatim facts, and glossary an agent reads.
-</Callout>
-
 The ask digest is a committed **directory**, `.hev-ask/`, built offline by
 [`ask digest build`](/docs/api/cli) and committed to your repo. (In earlier
 versions it was a single `digest.json`; before 0.1 it was called the knowledge
 graph, or `kg`.) The integration globs the tree into the build through the
 `virtual:hev-ask/digest` module, so the running site reads it with no filesystem
 access.
+
+<Callout label="see it rendered">
+This site renders its own digest at [**/digest** — what the agent sees](/digest):
+the distilled summaries, verbatim facts, and glossary an agent reads.
+</Callout>
 
 It is the **agent's view of your docs** — a distilled, source-grounded mirror,
 read progressively. Humans read the rendered pages; an agent reads the tree and

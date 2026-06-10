@@ -1,0 +1,240 @@
+---
+// Bottom promo strip, ported from ../mind. Showcases docs sites running
+// hev ask in production; rotate in more as they ship. The cycle timing
+// assumes two promos — revisit the keyframes before adding a third.
+// Dismiss persists per session.
+const promos = [
+	{
+		key: "layer-docs",
+		label: "in the wild",
+		text: "try ⌘K on hev layer's docs",
+		href: "https://hevlayer.com/docs",
+	},
+];
+---
+
+<aside class="promo-bar" id="promo-bar" aria-label="Current promotions">
+	<div class="promo-inner">
+		<div class="promo-slot">
+			{
+				promos.map((p) => (
+					<a class="promo" href={p.href} data-promo={p.key}>
+						<span class="promo-label">{p.label}</span>
+						<span class="promo-text">{p.text}</span>
+						<span class="promo-arrow" aria-hidden="true">-&gt;</span>
+					</a>
+				))
+			}
+		</div>
+		<button
+			class="promo-dismiss"
+			id="promo-dismiss"
+			type="button"
+			aria-label="Dismiss promotions"
+		>
+			×
+		</button>
+	</div>
+</aside>
+
+<script is:inline>
+	(function () {
+		const bar = document.getElementById("promo-bar");
+		if (!bar) return;
+		try {
+			if (sessionStorage.getItem("hev-promo-dismissed")) {
+				bar.remove();
+				return;
+			}
+		} catch (e) {}
+		const dismiss = document.getElementById("promo-dismiss");
+		if (dismiss)
+			dismiss.addEventListener("click", () => {
+				try {
+					sessionStorage.setItem("hev-promo-dismissed", "1");
+				} catch (e) {}
+				bar.remove();
+			});
+		bar.addEventListener("click", (e) => {
+			const a = e.target.closest && e.target.closest("a[data-promo]");
+			if (!a || !window.posthog) return;
+			window.posthog.capture("promo_clicked", {
+				promo: a.dataset.promo,
+				page: location.pathname,
+			});
+		});
+	})();
+</script>
+
+<style>
+	.promo-bar {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 50;
+		background: var(--paper);
+		border-top: 1px solid var(--rule);
+		box-shadow: 0 -6px 24px rgba(17, 17, 17, 0.06);
+		font-family:
+			"JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular,
+			Menlo, monospace;
+		font-size: 0.8125rem;
+		animation: promo-rise 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) 0.6s both;
+	}
+
+	@keyframes promo-rise {
+		from {
+			transform: translateY(100%);
+		}
+		to {
+			transform: translateY(0);
+		}
+	}
+
+	.promo-inner {
+		max-width: 1080px;
+		margin: 0 auto;
+		padding: 0.55rem 1.5rem;
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	/* one promo shows at a time; they rotate through the slot */
+	.promo-slot {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		height: 1.35rem;
+	}
+
+	.promo {
+		position: absolute;
+		inset: 0;
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		color: var(--ink-soft);
+		text-decoration: none;
+		white-space: nowrap;
+		overflow: hidden;
+		opacity: 0;
+		animation: promo-cycle 12s ease-in-out infinite;
+	}
+
+	/* a lone promo sits still; cycling starts once a second one ships */
+	.promo:only-of-type {
+		animation: none;
+		opacity: 1;
+	}
+
+	.promo:nth-of-type(2) {
+		animation-delay: 6s;
+	}
+
+	@keyframes promo-cycle {
+		0% {
+			opacity: 0;
+			transform: translateY(0.5rem);
+		}
+		4%,
+		46% {
+			opacity: 1;
+			transform: translateY(0);
+		}
+		50%,
+		100% {
+			opacity: 0;
+			transform: translateY(-0.5rem);
+		}
+	}
+
+	.promo-label {
+		font-size: 0.6875rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--signal);
+		white-space: nowrap;
+	}
+
+	.promo-text {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.promo-label::before {
+		content: "// ";
+	}
+
+	.promo-arrow {
+		display: inline-block;
+		color: var(--signal);
+		animation: promo-nudge 5s ease-in-out infinite;
+	}
+
+	.promo:nth-of-type(2) .promo-arrow {
+		animation-delay: 2.5s;
+	}
+
+	/* a quick double-tap toward the link, most of the cycle at rest */
+	@keyframes promo-nudge {
+		0%,
+		86%,
+		100% {
+			transform: translateX(0);
+		}
+		89% {
+			transform: translateX(5px);
+		}
+		92% {
+			transform: translateX(0);
+		}
+		95% {
+			transform: translateX(5px);
+		}
+	}
+
+	/* reduced motion: no rise/nudge, no cycling — first promo, static */
+	@media (prefers-reduced-motion: reduce) {
+		.promo-bar,
+		.promo-arrow,
+		.promo {
+			animation: none;
+		}
+
+		.promo {
+			opacity: 1;
+		}
+
+		.promo:nth-of-type(n + 2) {
+			display: none;
+		}
+	}
+
+	.promo:hover .promo-text {
+		color: var(--signal);
+	}
+
+	.promo-dismiss {
+		margin-left: auto;
+		background: none;
+		border: 0;
+		color: var(--muted);
+		font-size: 1rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0.25rem 0.4rem;
+	}
+
+	.promo-dismiss:hover {
+		color: var(--ink);
+	}
+
+	@media (max-width: 720px) {
+		.promo-inner {
+			gap: 0.6rem;
+			padding: 0.55rem 1rem;
+		}
+	}
+</style>

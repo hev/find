@@ -8,7 +8,7 @@ export const docsNav = [
 		items: [
 			"index",
 			"quickstart",
-			"frameworks",
+			"digest-creation",
 			"concepts",
 			"tradeoffs",
 			"limits",

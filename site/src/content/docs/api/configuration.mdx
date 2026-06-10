@@ -6,6 +6,7 @@ order: 0
 ---
 
 import Callout from "../../../components/docs/Callout.astro";
+import CodeTabs from "../../../components/docs/CodeTabs.astro";
 
 The `hevAsk()` integration is the default export of `@hevmind/ask`. It takes one
 options object. Only `collections` is effectively required; everything else has
@@ -34,8 +35,10 @@ export default defineConfig({
 | `collections` | `string[]` | — | Content collection name(s) to index and search. Without it the endpoint errors and the integration warns at build. |
 | `basePath` | `string` | `'/docs/'` | Slug → URL prefix. A doc's URL is `basePath + slug`, plus `#anchor` for a section. |
 | `endpoint` | `string` | `'/api/ask'` | Route the search endpoint is injected at. Must match the overlay's `endpoint` prop if you change it. |
-| `model` | `string` | `'claude-haiku-4-5'` | Claude model for the agentic search loop. |
-| `digestModel` | `string` | `'claude-opus-4-8'` | Model for the offline digest builder. |
+| `provider` | `string` | `'anthropic'` | Inference provider for the agentic loop and digest builder: `'anthropic'`, `'openai'`, or `'openrouter'`. Each reads its own key: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `OPENROUTER_API_KEY`. |
+| `providerBaseUrl` | `string` | per provider | API base URL override for the OpenAI-compatible providers, so any Chat Completions-compatible endpoint works (a proxy, a gateway, a local server). |
+| `model` | `string` | per provider | Model for the agentic search loop. Defaults: `claude-haiku-4-5` (anthropic), `gpt-4.1-mini` (openai), `anthropic/claude-haiku-4.5` (openrouter). |
+| `digestModel` | `string` | per provider | Model for the offline digest builder. Defaults: `claude-opus-4-8` (anthropic), `gpt-5.1` (openai), `anthropic/claude-opus-4.8` (openrouter). |
 | `maxResults` | `number` | `6` | Source sections the AI answer may ground in and cite (the Sources footer size); also the keyword result row cap. |
 | `answerMaxTokens` | `number` | `1024` | Token budget for the streamed AI answer. |
 | `maxIterations` | `number` | `4` | Maximum `search` tool rounds before the model must stop searching and answer. |
@@ -44,6 +47,58 @@ export default defineConfig({
 | `perDocCap` | `number` | `2` | Max chunks from one document returned by a single prefilter call. |
 | `digestDir` | `string` | `'.hev-ask'` | Path to the committed digest tree, relative to the site root. |
 | `digestContentGlobs` | `string[]` | derived | Globs the offline builder reads. Defaults to Markdown/MDX under each configured collection directory. |
+
+## Choosing a provider
+
+`provider` selects who serves both the runtime loop and the offline digest
+build. The search behavior, digest format, and endpoint contract are identical
+across providers — only the model and the key env var change.
+
+<CodeTabs labels={["Anthropic", "OpenAI", "OpenRouter"]}>
+
+```js
+// astro.config.mjs — the default; reads ANTHROPIC_API_KEY
+hevAsk({
+  collections: ["docs"],
+  // model defaults to claude-haiku-4-5
+});
+```
+
+```js
+// astro.config.mjs — reads OPENAI_API_KEY
+hevAsk({
+  collections: ["docs"],
+  provider: "openai",
+  // model defaults to gpt-4.1-mini
+});
+```
+
+```js
+// astro.config.mjs — reads OPENROUTER_API_KEY
+hevAsk({
+  collections: ["docs"],
+  provider: "openrouter",
+  model: "anthropic/claude-haiku-4.5", // or any OpenRouter model slug
+});
+```
+
+</CodeTabs>
+
+OpenRouter is the widest door: one `OPENROUTER_API_KEY` reaches every model it
+routes. `providerBaseUrl` opens the rest — any OpenAI-compatible Chat
+Completions endpoint works with `provider: "openai"`:
+
+```js
+hevAsk({
+  collections: ["docs"],
+  provider: "openai",
+  providerBaseUrl: "https://my-gateway.example.com/v1",
+  model: "my-model",
+});
+```
+
+Models in the agentic loop must support tool calling; the digest builder also
+needs forced tool choice. Current models from the major providers all qualify.
 
 <Callout label="changing the endpoint">
 If you set `endpoint` to something other than `/api/ask`, pass the same value
@@ -62,10 +117,10 @@ When Astro starts up (`astro:config:setup`) the integration:
 - adds the `digestDir` tree as watched files so dev reloads when the digest changes;
 - warns if `collections` is empty.
 
-At build (`astro:build:start`) it runs the digest build when
-`ANTHROPIC_API_KEY` is present (hash-gated, usually a no-op), and otherwise logs
-a warning and proceeds with the committed artifact. **The build never fails for
-lack of a key.**
+At build (`astro:build:start`) it runs the digest build when the provider's key
+(`ANTHROPIC_API_KEY` by default) is present (hash-gated, usually a no-op), and
+otherwise logs a warning and proceeds with the committed artifact. **The build
+never fails for lack of a key.**
 
 ## TypeScript
 

@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
+import PromoBar from "../components/PromoBar.astro";
 import SearchOverlay from "@hevmind/ask/components/SearchOverlay.astro";
 
 interface Props {
@@ -40,6 +41,7 @@ const {
 		<Header current={current} />
 		<slot />
 		<Footer />
+		<PromoBar />
 		<!-- This site searches itself with hev ask: the docs are the corpus. -->
 		<SearchOverlay />
 	</body>

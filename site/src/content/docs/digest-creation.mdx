@@ -1,0 +1,106 @@
+---
+title: "Digest creation"
+description: "How the ask digest is built: an offline distillation of your markdown run through the Claude Code skill or the ask CLI, gated by per-section hashes, verified in CI, and committed like code."
+group: "Overview"
+order: 2
+---
+
+import Callout from "../../components/docs/Callout.astro";
+import CodeTabs from "../../components/docs/CodeTabs.astro";
+
+The ask digest is created offline and committed to your repo like any other
+source file. A build reads your markdown off the filesystem, distils each
+section into a small markdown file, and writes the `.hev-ask/` tree. The
+running site, the CLI, and the MCP server read that committed artifact and
+never call a model to serve it.
+
+## Built from markdown, not from a renderer
+
+The build never imports your framework. It reads files, chunks them on
+headings, derives anchors in code, and writes the tree, so the same artifact
+comes out whether Astro, Docusaurus, VitePress, MkDocs, or nothing at all
+renders the pages. What differs per host is only when the build runs: the
+Astro integration runs it during `astro build` when a key is present, and
+everywhere else it's a step in your build or CI. Wiring the overlay into a
+non-Astro site is a separate, smaller job — see
+[the drop-in overlay](/docs/api/search-overlay#the-overlay-on-other-frameworks).
+
+## What the model writes
+
+Only the distillation is model-authored: each section's summary, the
+glossary, the orientation context, and the suggested questions. Everything
+else in the tree is derived deterministically in code — the structure, the
+verbatim facts, the overview, the anchors, and the per-section hashes. That
+seam is what lets the model step run anywhere a model is available,
+including inside your editor.
+
+## Two ways to run the build
+
+**The Claude Code skill (recommended).** The bundled `build-digest` skill
+builds the tree inside your Claude Code subscription, so it needs no
+`ANTHROPIC_API_KEY` and spends no tokens on your own key. It shards the
+corpus and distils each shard in a fresh context, so corpus size never hits
+a context limit:
+
+```text
+You: build the hev ask digest
+
+Claude runs:
+  ask digest corpus       # emits the sections to distil
+  …writes context/glossary/summaries/suggestions…
+  ask digest assemble     # writes the .hev-ask/ tree
+```
+
+**The CLI.** For CI, or outside Claude Code, one API call does the same
+distillation unattended — **Claude Opus 4.8** on the default provider, or any
+[provider](/docs/api/configuration#choosing-a-provider) via `--provider`:
+
+<CodeTabs labels={["Anthropic", "OpenAI", "OpenRouter"]}>
+
+```sh
+export ANTHROPIC_API_KEY=sk-ant-...
+pnpm exec ask digest build
+```
+
+```sh
+export OPENAI_API_KEY=sk-...
+pnpm exec ask digest build --provider openai
+```
+
+```sh
+export OPENROUTER_API_KEY=sk-or-...
+pnpm exec ask digest build --provider openrouter
+```
+
+</CodeTabs>
+
+Both paths write the same tree, and the same hash gate applies to both. The
+full command set, the flags, and the sharded flow for large sites are in the
+[CLI reference](/docs/api/cli).
+
+## Incremental by hash
+
+Every section file records the hash of the content it was distilled from. A
+rebuild re-distils only the sections whose hash changed, and a clean tree
+does no model work at all. That makes "rebuild on every content change"
+cheap enough to be the intended workflow rather than a chore.
+
+## Verify, review, commit
+
+```sh
+pnpm exec ask digest verify     # builds the site, checks every anchor resolves
+git add .hev-ask
+```
+
+`ask digest verify` is the CI gate: it fails when any section's anchor is
+missing from the rendered HTML, and it warns on coverage or fidelity drift.
+Because the tree is markdown, a section's distilled prose and grounded facts
+change together in one reviewable diff, so the digest is reviewed in pull
+requests like the docs themselves.
+
+<Callout label="when it goes stale">
+The digest only regenerates when content changes and a build runs. The
+runtime logs a one-line warning when the live content hash differs from the
+committed tree's, which is your cue to rebuild. Until then everything keeps
+serving — a stale digest degrades, it never breaks.
+</Callout>

@@ -9,7 +9,7 @@ export const GET: APIRoute = async () => {
 
 	const parts: string[] = [];
 	parts.push("# hev ask — full docs\n\n");
-	parts.push(`> Concatenated docs surface. Index at ${SITE}/llms.txt.\n\n`);
+	parts.push(`> The full docs concatenated into one file. Index at ${SITE}/llms.txt.\n\n`);
 
 	for (const group of docsNav) {
 		for (const id of group.items) {

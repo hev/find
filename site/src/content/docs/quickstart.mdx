@@ -5,26 +5,21 @@ group: "Overview"
 order: 1
 ---
 
-import Steps from "../../components/docs/Steps.astro";
 import Callout from "../../components/docs/Callout.astro";
+import CodeTabs from "../../components/docs/CodeTabs.astro";
 
 Add search to an existing Astro 5 docs site whose content lives in a collection
-(say `src/content/docs`) in about five minutes. You'll get keyword search
-working first, then add an `ANTHROPIC_API_KEY` to turn on Claude-powered
-agentic answers.
-
-<Callout label="two ways to run it">
-`SearchOverlay.astro` gives you **instant keyword search** — keyless, runs
-anywhere. Add an **`ANTHROPIC_API_KEY`** on the server and the same overlay also
-runs the **agentic answer loop** on Enter. Don't want agent search? Just ship the
-search UI and skip the key.
-</Callout>
+(say `src/content/docs`) in about five minutes. You'll get **instant keyword
+search** working first, with no key and nothing to host. Then add an
+**`ANTHROPIC_API_KEY`** on the server and the same overlay also runs the
+**agentic answer loop** on Enter; if you only want the search UI, skip the key.
 
 <Callout label="on Docusaurus, VitePress, or MkDocs?">
 This quick start is the **Astro** integration. On any other framework you drop in
 the same overlay as a `<script>` tag and, for agentic answers, point it at a
-hosted endpoint — no Astro required. See [Frameworks](/docs/frameworks) for the
-step-by-step on yours.
+hosted endpoint — no Astro required. See
+[the drop-in overlay](/docs/api/search-overlay#the-overlay-on-other-frameworks)
+for the step-by-step on yours.
 </Callout>
 
 ## Prerequisites
@@ -32,17 +27,12 @@ step-by-step on yours.
 - **Astro 5** with at least one [content collection](https://docs.astro.build/en/guides/content-collections/).
 - A **server or hybrid adapter** (Node, Cloudflare, Vercel, …) — the `/api/ask`
   route renders on demand, so a fully static build can't serve it.
-- An **`ANTHROPIC_API_KEY`** to enable agentic search. Keyword search needs no key.
+- An **`ANTHROPIC_API_KEY`** to enable agentic search. Keyword search needs no
+  key. (OpenAI and OpenRouter work too, via the
+  [`provider` option](/docs/api/configuration#choosing-a-provider); this guide
+  uses the Anthropic default.)
 
 ## Set up keyword search
-
-<Steps items={[
-  { title: "Install the package", body: "Add @hevmind/ask with your package manager." },
-  { title: "Register the integration", body: "Add hevAsk() to astro.config.mjs and point it at your collection." },
-  { title: "Add an adapter", body: "Install a server/hybrid adapter so /api/ask can render on demand." },
-  { title: "Drop in the overlay", body: "Render SearchOverlay.astro once in your layout and add an opener." },
-  { title: "Build the digest", body: "Use the Claude Code skill (no key) and commit the .hev-ask/ tree." },
-]} />
 
 ### 1. Install
 
@@ -135,12 +125,27 @@ Claude runs:
   ask digest assemble     # writes the .hev-ask/ tree
 ```
 
-**Or use the CLI** — for CI or outside Claude Code, one API call does the same:
+**Or use the CLI** — for CI or outside Claude Code, one API call does the same.
+`--provider` picks who serves it and which key is read:
+
+<CodeTabs labels={["Anthropic", "OpenAI", "OpenRouter"]}>
 
 ```sh
 export ANTHROPIC_API_KEY=sk-ant-...
 pnpm exec ask digest build      # writes the .hev-ask/ tree
 ```
+
+```sh
+export OPENAI_API_KEY=sk-...
+pnpm exec ask digest build --provider openai
+```
+
+```sh
+export OPENROUTER_API_KEY=sk-or-...
+pnpm exec ask digest build --provider openrouter
+```
+
+</CodeTabs>
 
 Then verify and commit, however you built it:
 
@@ -149,17 +154,41 @@ pnpm exec ask digest verify     # builds the site, checks every anchor resolves
 git add .hev-ask
 ```
 
-Both paths are **incremental and hash-gated** — model work only for the sections
-that changed — and the integration runs the build automatically during
-`astro build` when a key is present. See the [CLI reference](/docs/api/cli).
+Both paths are **incremental and hash-gated**, spending model work only on the
+sections that changed, and the integration runs the build automatically during
+`astro build` when a key is present. See
+[Digest creation](/docs/digest-creation) and the [CLI reference](/docs/api/cli).
 
 ## Enable agentic search
 
-Set `ANTHROPIC_API_KEY` in the **server environment** where `/api/ask` runs
+Set the provider's API key in the **server environment** where `/api/ask` runs
 (your host's secrets, or `.env` in local dev). With a key present, pressing
 Enter in the overlay runs the [agentic loop](/docs/concepts#the-agentic-search-loop) —
 self-issued sub-queries, a grounded answer, and inline deep links. Without one,
 Enter returns keyword results.
+
+<CodeTabs labels={["Anthropic", "OpenAI", "OpenRouter"]}>
+
+```sh
+# the default provider — nothing else to configure
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+```sh
+# with provider: "openai" in the hevAsk() options
+export OPENAI_API_KEY=sk-...
+```
+
+```sh
+# with provider: "openrouter" in the hevAsk() options
+export OPENROUTER_API_KEY=sk-or-...
+```
+
+</CodeTabs>
+
+OpenAI and OpenRouter need the matching
+[`provider`](/docs/api/configuration#choosing-a-provider) set in the
+integration options; the Anthropic default needs only the key.
 
 ## Verify it works
 

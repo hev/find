@@ -1,6 +1,6 @@
 ---
 title: "SearchOverlay component"
-description: "The SearchOverlay.astro command palette: props, the data-hev-ask-open opener attribute, keyboard model, the mode toggle, and theming through CSS variables."
+description: "The SearchOverlay.astro command palette: props, the data-hev-ask-open opener attribute, keyboard model, the mode toggle, theming through CSS variables, and the drop-in script-tag overlay for Docusaurus, VitePress, MkDocs, or any static site."
 group: "API"
 order: 1
 ---
@@ -54,8 +54,8 @@ Two ways, both built in:
 
 The overlay is **ask-first**: the number of words you've typed decides the path.
 
-- **Open** (with AI on) → a few **suggested questions** appear. Click one — or
-  press `Tab` to drop the first into the input — to ask it.
+- **Open** (with AI on) → a few **suggested questions** appear. Click one, or
+  press `Tab` to drop the first into the input, to ask it.
 - **Type one word** → debounced keyword search runs; the first result is
   auto-active. This is the instant, keyless lookup path.
 - **Type a space** (a second word) → keyword type-ahead stops and the overlay
@@ -70,8 +70,9 @@ So *type a question → Enter* asks AI, and *type one word → Enter* (or *↓�
 opens a keyword hit. The footer hint reflects the current mode.
 
 <Callout label="when there's no API key">
-If the server has no ANTHROPIC_API_KEY, asking returns keyword results and the
-response carries a warning the overlay surfaces. Search still works; it just
+If the server has no provider API key (`ANTHROPIC_API_KEY` by default), asking
+returns keyword results and the
+response carries a warning the overlay shows. Search still works; it just
 doesn't escalate to the model.
 </Callout>
 
@@ -130,3 +131,138 @@ overlay inherits your palette:
 Because the component ships scoped styles keyed to these variables, matching
 your site's look is usually just defining the tokens — no overlay CSS to
 override.
+
+## The overlay on other frameworks
+
+`SearchOverlay.astro` is the Astro distribution of the overlay. The same
+palette ships as a prebuilt web component, `@hevmind/ask/overlay`, that any
+site loads with one script tag from npm or a CDN. It reads a bundled copy of
+the digest in the browser, so keyword search runs fully static, and it sends
+agentic questions to whatever endpoint you point it at.
+
+```html
+<script
+  type="module"
+  src="https://cdn.jsdelivr.net/npm/@hevmind/ask/overlay.js"
+  data-hev-ask-digest="/hev-ask/"
+  data-hev-ask-endpoint="https://docs-ask.example.workers.dev/api/ask"
+></script>
+
+<button data-hev-ask-open>Search <kbd>⌘K</kbd></button>
+```
+
+- **`data-hev-ask-digest`** — the URL prefix where `ask digest bundle` wrote
+  the static assets. This is all keyword search needs.
+- **`data-hev-ask-endpoint`** — optional. Omit it and the overlay is
+  keyword-only; set it and pressing Enter runs the agentic loop. The key
+  lives on the endpoint and never reaches the browser.
+
+The drop-in overlay reads the same CSS custom properties as the Astro
+component, so the [theming](#theming) section applies unchanged. The opener
+attribute and keyboard model are also identical.
+
+### Bundling the static assets
+
+`ask digest bundle` emits the browser payload (the keyword index, glossary,
+suggestions, and title-tree) into a directory your site serves. Run it in
+your build, like the step that renders your HTML. The output is served, not
+committed: gitignore it, and keep the committed `.hev-ask/` tree as the
+reviewable source of truth. Regenerating the assets every build means they
+can't drift from what you deploy.
+
+### The hostable endpoint
+
+For agentic answers without Astro, deploy the bounded answer loop as a
+standalone service: a Cloudflare Worker, a Node server, or a Vercel
+function. It serves the same [`POST /api/ask` contract](/docs/api/endpoint)
+the Astro route does, holds the `ANTHROPIC_API_KEY` server-side, and reads
+the committed digest tree. Deploy it once and point any number of sites'
+overlays at it. Keyword search runs entirely in the browser, and only the
+answer loop needs anything deployed.
+
+```sh
+# scaffold and deploy the Worker flavor
+ask endpoint init --target cloudflare
+wrangler deploy            # set ANTHROPIC_API_KEY as a secret
+```
+
+### Docusaurus
+
+Emit the bundle into `static/` from your `build` script, and add the script
+via `docusaurus.config.js`:
+
+```js
+// docusaurus.config.js
+export default {
+  scripts: [
+    {
+      src: "https://cdn.jsdelivr.net/npm/@hevmind/ask/overlay.js",
+      type: "module",
+      "data-hev-ask-digest": "/hev-ask/",
+      "data-hev-ask-endpoint": "https://docs-ask.example.workers.dev/api/ask",
+    },
+  ],
+};
+```
+
+```jsonc
+// package.json — bundle into the static dir before docusaurus build
+"scripts": {
+  "build": "ask digest bundle --out static/hev-ask && docusaurus build"
+}
+```
+
+Docusaurus headings carry explicit `{#custom-id}` anchors. The Docusaurus
+slug mode honors them, and `ask digest verify` checks every anchor against
+the built `build/` HTML.
+
+### VitePress
+
+Bundle into `.vitepress/public/`, then register the overlay in your theme:
+
+```ts
+// .vitepress/theme/index.ts
+import DefaultTheme from "vitepress/theme";
+import { mountHevAsk } from "@hevmind/ask/overlay";
+
+export default {
+  extends: DefaultTheme,
+  enhanceApp() {
+    if (typeof window !== "undefined") {
+      mountHevAsk({ digest: "/hev-ask/", endpoint: import.meta.env.VITE_ASK_ENDPOINT });
+    }
+  },
+};
+```
+
+### MkDocs
+
+Bundle into `docs/hev-ask/` and reference the script with `extra_javascript`:
+
+```yaml
+# mkdocs.yml
+extra_javascript:
+  - hev-ask/overlay.js
+```
+
+### Any static site
+
+There's no framework to satisfy. Run `ask digest bundle` as your build or
+release step, deploy its output alongside your HTML, and drop the `<script>`
+tag into your template. Add the endpoint attribute when you want answers.
+
+### Support at a glance
+
+| Framework | Digest build | Keyword overlay | Agentic answers | Adapter |
+|---|---|---|---|---|
+| **Astro** | `hevAsk()` integration | `SearchOverlay.astro` | mounted `/api/ask` route | turnkey |
+| **Docusaurus** | `ask digest` in build | `<script>` drop-in | hostable endpoint | drop-in |
+| **VitePress** | `ask digest` in build | theme `mountHevAsk` | hostable endpoint | drop-in |
+| **MkDocs** | `ask digest` in build | `extra_javascript` | hostable endpoint | drop-in |
+| **Static / HTML** | `ask digest` in CI | `<script>` drop-in | hostable endpoint | drop-in |
+
+The CLI and [MCP](/docs/api/mcp) surfaces are host-neutral on every row: a
+coding agent reads the same digest no matter what renders the docs. For the
+design behind this split, see
+[Concepts](/docs/concepts#host-neutral-one-digest-any-framework) and
+[Tradeoffs](/docs/tradeoffs#a-flagship-adapter-primitives-for-the-rest).

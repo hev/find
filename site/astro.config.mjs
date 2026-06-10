@@ -19,6 +19,10 @@ export default defineConfig({
 		hevAsk({ collections: ["docs"], basePath: "/docs/" }),
 	],
 	markdown: {
-		syntaxHighlight: false,
+		// Shiki over the dark code surface; vesper's peach accent sits close
+		// to the site's --signal orange. Background is overridden in
+		// DocsLayout to match the existing #0b0b0b code blocks.
+		syntaxHighlight: "shiki",
+		shikiConfig: { theme: "vesper" },
 	},
 });

@@ -1,11 +1,12 @@
 ---
 title: "CLI"
-description: "The ask CLI reads the committed digest as a directory — tree, ls, head, cat, facts, grep over path keys — and builds, verifies, and serves it for agents and CI."
+description: "The ask CLI reads the committed digest as a directory (tree, ls, head, cat, facts, grep over path keys) and builds, verifies, and serves it for agents and CI."
 group: "API"
 order: 3
 ---
 
 import Callout from "../../../components/docs/Callout.astro";
+import CodeTabs from "../../../components/docs/CodeTabs.astro";
 
 `@hevmind/ask` ships the `ask` binary. It has two command groups:
 
@@ -47,13 +48,36 @@ title is returned by a listing.
 Run producer commands from the Astro site root:
 
 ```sh
-ask digest build        # incremental build; needs ANTHROPIC_API_KEY only for changed sections
+ask digest build        # incremental build; needs the provider key only for changed sections
 ask digest corpus       # emit sections for a keyless skill/model distillation
 ask digest assemble     # write the .hev-ask/ tree from that distillation
 ask digest verify       # build the site and verify anchors, coverage, fidelity, tree integrity
 ask digest status       # report shard coverage for a sharded build
 ask digest migrate      # one-shot, keyless: explode a legacy digest.json into the tree
 ```
+
+`ask digest build` is the only command that calls a model, so it is the only
+one that needs a key. `--provider` selects who serves it and which environment
+variable is read:
+
+<CodeTabs labels={["Anthropic", "OpenAI", "OpenRouter"]}>
+
+```sh
+export ANTHROPIC_API_KEY=sk-ant-...
+ask digest build                    # claude-opus-4-8 by default
+```
+
+```sh
+export OPENAI_API_KEY=sk-...
+ask digest build --provider openai  # gpt-5.1 by default
+```
+
+```sh
+export OPENROUTER_API_KEY=sk-or-...
+ask digest build --provider openrouter   # anthropic/claude-opus-4.8 by default
+```
+
+</CodeTabs>
 
 `ask digest build` is **incremental and hash-gated**. Each section file carries
 the hash of the content it was distilled from, so the build re-distils only the
@@ -133,7 +157,9 @@ size never hits a context limit. The resulting tree has the same shape as
 | `--base-path <path>` | `/docs/` | Slug to URL prefix for producer commands. |
 | `--content-glob <glob>` | derived | Source globs for producer commands. Repeat for multiple. |
 | `--chunk-heading-depth <n>` | `3` | Deepest heading used as a chunk boundary. |
-| `--digest-model <model>` | `claude-opus-4-8` | Model used by `ask digest build`. |
+| `--digest-model <model>` | per provider | Model used by `ask digest build`; `claude-opus-4-8` on the default provider. |
+| `--provider <name>` | `anthropic` | Inference provider for `ask digest build`: `anthropic`, `openai`, or `openrouter`. Reads `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `OPENROUTER_API_KEY` respectively. |
+| `--provider-url <url>` | per provider | API base URL override for the OpenAI-compatible providers. |
 | `--shards-dir <dir>` | - | Sharded mode for `corpus` and `status`: write/read per-shard inputs and `manifest.json` here. |
 | `--shard-bytes <n>` | `200000` | Target section-text bytes per shard (requires `--shards-dir`). |
 | `--input-dir <dir>` | - | Sharded mode for `assemble`: merge `distill-*.json` + `global.json` from this directory. |

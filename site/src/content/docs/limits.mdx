@@ -12,8 +12,8 @@ are bugs — they're the edges of what the current design covers.
 
 ## The corpus is the content you configure
 
-hev ask searches the markdown you point it at — an Astro content collection, a
-Docusaurus `docs/` tree, a set of globs — and nothing else. There is no crawler,
+hev ask searches the markdown you point it at (an Astro content collection, a
+Docusaurus `docs/` tree, a set of globs) and nothing else. There is no crawler,
 no external sitemap ingestion, and no way to index pages that aren't part of the
 configured corpus (a hand-written `.astro` page or a bare React route, for
 example).
@@ -23,9 +23,9 @@ want searchable where the adapter looks.
 
 ## Recall has a keyword ceiling
 
-Retrieval is keyword token-overlap widened by the glossary — not embeddings.
-The agentic loop **grounds its answer** in what retrieval surfaces; it cannot
-ground in — or link to — what retrieval missed.
+Retrieval is keyword token-overlap widened by the glossary, not embeddings.
+The agentic loop **grounds its answer** in what retrieval finds; it cannot
+ground in, or link to, what retrieval missed.
 
 In practice the glossary recovers most synonym cases (`k8s` → `kubernetes`,
 abbreviations, product aliases). But if a reader searches in language that
@@ -73,8 +73,8 @@ instant lane and always available; agentic search is the considered one. Tune
 ## Anchors depend on the renderer's slugger
 
 Deep links are only correct as long as the heading slugs hev ask generates match
-your renderer's `id` attributes. hev ask uses `github-slugger` by default —
-aligned with Astro and GitHub — and each framework adapter declares its own
+your renderer's `id` attributes. hev ask uses `github-slugger` by default,
+aligned with Astro and GitHub, and each framework adapter declares its own
 scheme where that differs. Either way it ships an `ask digest verify` command
 that fails if any chunk anchor is missing from the built HTML.
 
@@ -85,15 +85,19 @@ verifier is what catches it before a broken link ships.
 
 **Keyword search runs fully static** — the drop-in overlay reads the committed
 digest in the browser, no server required, on any host. The **agentic** path is
-what needs a runtime: on Astro it's the `/api/ask` route rendered on demand (so
-you need a server or hybrid adapter — Node, Cloudflare, Vercel); on other
-frameworks it's the standalone [hostable endpoint](/docs/frameworks) you deploy
+what needs a runtime: on Astro it's the `/api/ask` route rendered on demand, so
+you need a server or hybrid adapter (Node, Cloudflare, Vercel). On other
+frameworks it's the standalone
+[hostable endpoint](/docs/api/search-overlay#the-hostable-endpoint) you deploy
 and point the overlay at. A purely static site can ship keyword search with
 nothing hosted, but can't answer questions until an endpoint exists somewhere.
 
 ## Secrets live server-side
 
-The agentic path needs `ANTHROPIC_API_KEY` in the **server environment** that
-runs `/api/ask`. The key is never exposed to the browser. If the key isn't
+The agentic path needs the provider's API key — `ANTHROPIC_API_KEY` by default,
+`OPENAI_API_KEY` or `OPENROUTER_API_KEY` with the
+[`provider` option](/docs/api/configuration#choosing-a-provider) — in the
+**server environment** that runs `/api/ask`. The key is never exposed to the
+browser. If the key isn't
 present at runtime, the endpoint serves keyword results — search degrades, it
 doesn't break.
