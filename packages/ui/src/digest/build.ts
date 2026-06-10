@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { callClaude, type AnthropicTool } from '../llm.ts';
+import { type AnthropicTool } from '../llm.ts';
+import { PROVIDERS, clientFor, resolveProviderName, type ProviderName } from '../providers.ts';
 import { chunkDocument, hashableChunkText, type Chunk, type SourceDocument } from '../search/chunk.ts';
 import { classifyMode, distinctiveTokens, extractFacts } from './facts.ts';
 import { parseFrontmatter } from './frontmatter.ts';
@@ -16,6 +17,8 @@ export interface DigestBuildOptions {
   digestContentGlobs?: string[];
   chunkHeadingDepth: number;
   digestModel: string;
+  provider?: ProviderName;
+  providerBaseUrl?: string;
   apiKey?: string;
 }
 
@@ -141,14 +144,15 @@ export async function buildDigest(options: DigestBuildOptions): Promise<DigestBu
     return { status: 'skipped', path: outPath, contentHash: corpus.contentHash, chunks: corpus.chunks.length };
   }
 
-  const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is required to build a fresh digest.');
+  const provider = resolveProviderName(options.provider);
+  const apiKey = options.apiKey ?? process.env[PROVIDERS[provider].envKey];
+  if (!apiKey) throw new Error(`${PROVIDERS[provider].envKey} is required to build a fresh digest.`);
 
   const corpusText = corpusSections(corpus)
     .map((section) => `id: ${section.id}\nurl: ${section.url}\ntitle: ${section.title}\n\n${section.text}`)
     .join('\n\n---\n\n');
 
-  const response = await callClaude({
+  const response = await clientFor(provider, options.providerBaseUrl).call({
     apiKey,
     model: options.digestModel,
     maxTokens: 8192,

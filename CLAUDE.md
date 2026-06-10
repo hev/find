@@ -13,7 +13,7 @@ layout, and gets two search paths over its content collection:
 - **Keyword (instant, keyless):** debounced token-overlap search over
   heading-level chunks, widened by a glossary. Results deep-link to
   `/docs/page#anchor`.
-- **Agentic (on Enter, needs `ANTHROPIC_API_KEY`):** a bounded Claude tool-use
+- **Agentic (on Enter, needs the provider API key):** a bounded Claude tool-use
   loop that issues its own `search` sub-queries, then streams a grounded answer
   (SSE) with inline deep links to the doc sections it drew from.
 
@@ -55,7 +55,8 @@ questions, in order, are: *What is this and why over Pagefind/Algolia/Orama? How
 does it work? What can't it do? What am I trading off? How do I add it in five
 minutes? What's the full API?* The docs nav (`site/src/lib/docs.ts`) is
 structured to answer them in that order: Overview (Introduction, Quick start,
-Concepts, Tradeoffs, Limits) then API reference.
+Digest creation, Concepts, Tradeoffs, Limits) then API reference. Per-framework
+overlay wiring lives on the SearchOverlay reference page, not an Overview page.
 
 Docs-first is the working principle: when changing the package's public
 surface, update the docs in `site/src/content/docs/` in the same change. The
@@ -77,7 +78,13 @@ docs are also the search corpus, so doc edits are product edits.
   tree → empty digest.
 - **The endpoint renders on demand** (`prerender: false`), so consumers need a
   server/hybrid adapter. A static-only build can't serve search.
-- **Default models:** loop = `claude-haiku-4-5`, digest build = `claude-opus-4-8`.
+- **Inference is provider-pluggable** (`provider` option: `anthropic` default,
+  `openai`, `openrouter`; registry in `packages/ui/src/providers.ts`). Each
+  provider reads its own key env var (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `OPENROUTER_API_KEY`). OpenAI and OpenRouter share the Chat Completions
+  client in `llm-openai.ts`; `providerBaseUrl` points it at any
+  OpenAI-compatible endpoint. Default models on Anthropic: loop =
+  `claude-haiku-4-5`, digest build = `claude-opus-4-8`.
 
 ## Public surface (don't break without a version bump + doc update)
 
@@ -99,8 +106,10 @@ page in the same PR.
 
 - Styles, layouts, and doc components are copied from `../layer/site` (the hev
   house style: dark, JetBrains Mono, `--signal` orange). Reuse them; don't
-  reinvent the look. The four doc components are `Callout`, `Diagram`, `Steps`,
-  `LinkGrid`.
+  reinvent the look. The five doc components are `Callout`, `Diagram`, `Steps`,
+  `LinkGrid`, and `CodeTabs` (tabbed code blocks with a copy button; a `labels`
+  prop for same-language variants like the provider examples). Standalone code
+  blocks get a floating copy button from `DocsLayout`.
 - Content lives in `site/src/content/docs/**`. Frontmatter schema
   (`content.config.ts`): `title`, `description`, `group`, `order` — all
   required. Nav order is driven by `site/src/lib/docs.ts`, not by `order` alone.

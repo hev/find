@@ -1,2 +1,2 @@
 export { default } from './integration';
-export type { HevAskOptions } from './types';
+export type { HevAskOptions, ProviderName } from './types';

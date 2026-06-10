@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { PROVIDERS, resolveProviderName } from '../providers.ts';
 import { assembleFromDistillation, buildDigest, writeCorpusInput } from './build.ts';
 import { verifyAnchors } from './verify.ts';
 
@@ -9,6 +10,8 @@ interface Flags {
   digestContentGlobs: string[];
   chunkHeadingDepth?: number;
   digestModel?: string;
+  provider?: string;
+  providerBaseUrl?: string;
   buildCommand?: string;
   skipBuild?: boolean;
   strict?: boolean;
@@ -21,6 +24,7 @@ const flags = parseFlags(args);
 
 try {
   if (command === 'build') {
+    const provider = resolveProviderName(flags.provider);
     const result = await buildDigest({
       siteRoot: process.cwd(),
       collections: flags.collections.length ? flags.collections : ['docs'],
@@ -28,7 +32,9 @@ try {
       digestPath: flags.digestPath ?? '.hev-ask',
       digestContentGlobs: flags.digestContentGlobs.length ? flags.digestContentGlobs : undefined,
       chunkHeadingDepth: flags.chunkHeadingDepth ?? 3,
-      digestModel: flags.digestModel ?? 'claude-opus-4-8',
+      digestModel: flags.digestModel ?? PROVIDERS[provider].defaultDigestModel,
+      provider,
+      providerBaseUrl: flags.providerBaseUrl,
     });
     console.log(`[hev-ask] digest:${result.status} ${result.path} (${result.chunks} chunks)`);
   } else if (command === 'corpus') {
@@ -97,7 +103,7 @@ try {
     }
   } else {
     console.error(
-      'Usage: ask digest build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--digest-dir .hev-ask] [--out path] [--input path] [--strict]',
+      'Usage: ask digest build|corpus|assemble|verify [--collection docs] [--base-path /docs/] [--digest-dir .hev-ask] [--provider anthropic|openai|openrouter] [--out path] [--input path] [--strict]',
     );
     process.exitCode = 1;
   }
@@ -128,6 +134,12 @@ function parseFlags(args: string[]): Flags {
       i += 1;
     } else if (arg === '--digest-model' && next) {
       flags.digestModel = next;
+      i += 1;
+    } else if (arg === '--provider' && next) {
+      flags.provider = next;
+      i += 1;
+    } else if (arg === '--provider-url' && next) {
+      flags.providerBaseUrl = next;
       i += 1;
     } else if (arg === '--build-command' && next) {
       flags.buildCommand = next;

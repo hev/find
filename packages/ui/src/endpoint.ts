@@ -11,6 +11,7 @@ import {
 } from './digest/read.ts';
 import { digestTreeFiles } from './digest/tree.ts';
 import { makeTelemetry, telemetryFromEnv } from './observability';
+import { PROVIDERS, clientFor, resolveProviderName } from './providers';
 import { hashableChunkText } from './search/chunk';
 import { buildIndex, prefilter, type Candidate, type Chunk } from './search/index';
 import { runAgenticAnswerLoop, type AgenticEvent } from './search/loop';
@@ -35,8 +36,13 @@ function resolveEnv(locals: unknown): Record<string, string | undefined> {
   return { ...fromImportMeta, ...fromProcess, ...fromRuntime };
 }
 
+// `config.provider` is baked at build time; only the key is read per-request.
+const provider = resolveProviderName(config.provider);
+const providerEnvKey = PROVIDERS[provider].envKey;
+const llm = clientFor(provider, config.providerBaseUrl);
+
 function resolveApiKey(locals: unknown): string | undefined {
-  return resolveEnv(locals).ANTHROPIC_API_KEY;
+  return resolveEnv(locals)[providerEnvKey];
 }
 
 // PostHog LLM tracing for the answer loop. On Cloudflare, capture promises
@@ -46,7 +52,7 @@ function resolveTelemetry(locals: unknown) {
   const ctx = (locals as { runtime?: { ctx?: { waitUntil?: (promise: Promise<unknown>) => void } } })
     ?.runtime?.ctx;
   const waitUntil = ctx?.waitUntil ? (promise: Promise<unknown>) => ctx.waitUntil!(promise) : undefined;
-  return makeTelemetry(telemetryFromEnv(resolveEnv(locals), { waitUntil }));
+  return makeTelemetry(telemetryFromEnv(resolveEnv(locals), { waitUntil, provider }));
 }
 
 // The overlay fetches suggested questions from the base route. Sub-routes expose
@@ -104,7 +110,7 @@ export const POST: APIRoute = async ({ request, locals, params }) => {
       query,
       model: config.model,
       mode: 'keyword',
-      warning: 'AI search is unavailable because ANTHROPIC_API_KEY is not configured.',
+      warning: `AI search is unavailable because ${providerEnvKey} is not configured.`,
     });
   }
 
@@ -130,6 +136,8 @@ export const POST: APIRoute = async ({ request, locals, params }) => {
           chunks,
           digest,
           telemetry: resolveTelemetry(locals),
+          call: llm.call,
+          stream: llm.stream,
           config: {
             model: config.model,
             maxIterations: config.maxIterations,

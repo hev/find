@@ -66,6 +66,8 @@ export interface TelemetryOptions {
   distinctId?: string;
   /** Optional label attached to every event as `agent_scope`. */
   scope?: string;
+  /** Inference provider reported as `$ai_provider`; defaults to `anthropic`. */
+  provider?: string;
   /** Reuse an existing trace id; one is generated otherwise. */
   traceId?: string;
   /** Cloudflare-style keep-alive so in-flight captures survive response end. */
@@ -113,7 +115,7 @@ export function makeTelemetry(options: TelemetryOptions = {}): Telemetry {
       distinct_id: distinctId,
       properties: {
         $ai_trace_id: traceId,
-        $ai_provider: 'anthropic',
+        $ai_provider: options.provider ?? 'anthropic',
         $process_person_profile: false, // anonymous — no person profile
         ...(scope ? { agent_scope: scope } : {}),
         ...properties,

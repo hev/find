@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { readDigestArtifact } from './digest/tree';
+import { PROVIDERS, resolveProviderName } from './providers';
 import type { HevAskOptions, ResolvedConfig } from './types';
 
 const CONFIG_VIRTUAL_ID = 'virtual:hev-ask/config';
@@ -14,10 +15,13 @@ const execFileAsync = promisify(execFile);
  * configuration plus the committed ask digest through virtual modules.
  */
 export default function hevAsk(options: HevAskOptions = {}): AstroIntegration {
+  const provider = resolveProviderName(options.provider);
   const config: ResolvedConfig = {
     collections: options.collections ?? null,
-    model: options.model ?? 'claude-haiku-4-5',
-    digestModel: options.digestModel ?? 'claude-opus-4-8',
+    provider,
+    providerBaseUrl: options.providerBaseUrl,
+    model: options.model ?? PROVIDERS[provider].defaultModel,
+    digestModel: options.digestModel ?? PROVIDERS[provider].defaultDigestModel,
     endpoint: options.endpoint ?? '/api/ask',
     basePath: options.basePath ?? '/docs/',
     maxResults: options.maxResults ?? 6,
@@ -56,9 +60,10 @@ export default function hevAsk(options: HevAskOptions = {}): AstroIntegration {
       },
       'astro:build:start': async ({ logger }) => {
         if (!config.collections?.length) return;
-        const apiKey = process.env.ANTHROPIC_API_KEY;
+        const envKey = PROVIDERS[config.provider].envKey;
+        const apiKey = process.env[envKey];
         if (!apiKey) {
-          logger.warn(`ANTHROPIC_API_KEY is not set; using committed ${config.digestPath} if present.`);
+          logger.warn(`${envKey} is not set; using committed ${config.digestPath} if present.`);
           return;
         }
 
@@ -120,7 +125,10 @@ async function runDigestBuild(siteRoot: string, config: ResolvedConfig): Promise
     String(config.chunkHeadingDepth),
     '--digest-model',
     config.digestModel,
+    '--provider',
+    config.provider,
   ];
+  if (config.providerBaseUrl) args.push('--provider-url', config.providerBaseUrl);
   for (const collection of config.collections ?? []) args.push('--collection', collection);
   for (const glob of config.digestContentGlobs ?? []) args.push('--content-glob', glob);
 

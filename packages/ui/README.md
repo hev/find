@@ -39,7 +39,9 @@ export default defineConfig({
 | Option | Default | Description |
 | --- | --- | --- |
 | `collections` | - | Content collections to index. |
-| `model` | `claude-haiku-4-5` | Runtime search-loop model. |
+| `provider` | `anthropic` | Inference provider: `anthropic`, `openai`, or `openrouter`. Each reads its own key: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `OPENROUTER_API_KEY`. |
+| `providerBaseUrl` | per provider | Base URL override for the OpenAI-compatible providers (any Chat Completions endpoint). |
+| `model` | per provider | Runtime search-loop model; `claude-haiku-4-5` on the default provider. |
 | `endpoint` | `/api/ask` | Injected on-demand route. |
 | `basePath` | `/docs/` | Turns a doc slug into its page URL. |
 | `maxResults` | `6` | Max results returned. |
@@ -47,7 +49,7 @@ export default defineConfig({
 | `chunkHeadingDepth` | `3` | Chunk at `##` through this heading depth. |
 | `candidatePerSearch` | `8` | Chunks returned by each search tool call. |
 | `perDocCap` | `2` | Max chunks per document in one prefilter call. |
-| `digestModel` | `claude-opus-4-8` | Offline digest build model. |
+| `digestModel` | per provider | Offline digest build model; `claude-opus-4-8` on the default provider. |
 | `digestDir` | `.hev-ask` | Committed digest tree directory. |
 | `digestPath` | `.hev-ask` | Deprecated alias for `digestDir`. |
 | `digestContentGlobs` | derived from `collections` | Build-time Markdown/MDX corpus globs. |
@@ -123,9 +125,9 @@ MkDocs, and plain-HTML recipes.
 - The **agentic** path needs a runtime: on Astro, `/api/ask` is rendered on
   demand (so the site needs a server adapter in production); on other frameworks,
   it's the standalone hostable endpoint.
-- Set `ANTHROPIC_API_KEY` in that server environment for AI search and fresh
-  digest generation. Without a runtime key, the endpoint still serves keyword
-  results.
+- Set the provider's API key (`ANTHROPIC_API_KEY` by default) in that server
+  environment for AI search and fresh digest generation. Without a runtime key,
+  the endpoint still serves keyword results.
 
 ## Theming
 

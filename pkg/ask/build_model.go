@@ -23,15 +23,25 @@ const (
 type BuildDigestOptions struct {
 	BuildOptions
 	DigestModel string
-	APIKey      string
-	APIURL      string
-	HTTPClient  *http.Client
+	// Provider selects the inference provider: anthropic (default), openai, or
+	// openrouter. Each reads its own key env var when APIKey is unset.
+	Provider string
+	// ProviderBaseURL overrides the OpenAI-compatible API base, so any Chat
+	// Completions endpoint works.
+	ProviderBaseURL string
+	APIKey          string
+	APIURL          string
+	HTTPClient      *http.Client
 }
 
 func BuildDigest(options BuildDigestOptions) (BuildResult, error) {
 	normalizeBuildOptions(&options.BuildOptions)
+	provider, err := ResolveProvider(options.Provider)
+	if err != nil {
+		return BuildResult{}, err
+	}
 	if options.DigestModel == "" {
-		options.DigestModel = defaultDigestModel
+		options.DigestModel = provider.DefaultDigestModel
 	}
 	corpus, err := BuildCorpus(options.BuildOptions)
 	if err != nil {
@@ -66,13 +76,13 @@ func BuildDigest(options BuildDigestOptions) (BuildResult, error) {
 
 	apiKey := options.APIKey
 	if apiKey == "" {
-		apiKey = os.Getenv("ANTHROPIC_API_KEY")
+		apiKey = os.Getenv(provider.EnvKey)
 	}
 	if apiKey == "" {
-		return BuildResult{}, fmt.Errorf("ANTHROPIC_API_KEY is required to build a fresh digest")
+		return BuildResult{}, fmt.Errorf("%s is required to build a fresh digest", provider.EnvKey)
 	}
 
-	emitted, err := callDigestModel(options, apiKey, CorpusBuild{Chunks: changed, ContentHash: corpus.ContentHash})
+	emitted, err := callDigestModel(options, provider, apiKey, CorpusBuild{Chunks: changed, ContentHash: corpus.ContentHash})
 	if err != nil {
 		return BuildResult{}, err
 	}
@@ -127,7 +137,17 @@ func digestWithContentHash(digest Digest, contentHash string) Digest {
 	return digest
 }
 
-func callDigestModel(options BuildDigestOptions, apiKey string, corpus CorpusBuild) (EmittedDistillation, error) {
+func callDigestModel(options BuildDigestOptions, provider Provider, apiKey string, corpus CorpusBuild) (EmittedDistillation, error) {
+	if provider.Name == "anthropic" {
+		return callAnthropicDigestModel(options, apiKey, corpus)
+	}
+	return callOpenAIDigestModel(options, provider, apiKey, corpus)
+}
+
+const digestUserMessage = "Emit the context, glossary, one summary per section id, and 3-5 suggested questions. " +
+	"Every id in the corpus must get a summary."
+
+func callAnthropicDigestModel(options BuildDigestOptions, apiKey string, corpus CorpusBuild) (EmittedDistillation, error) {
 	corpusText := renderCorpusText(CorpusSections(corpus))
 	// One summary per section makes the output scale with corpus size; a tight
 	// cap starves the trailing schema keys (the model emits suggestions last
@@ -148,9 +168,8 @@ func callDigestModel(options BuildDigestOptions, apiKey string, corpus CorpusBui
 		},
 		"messages": []map[string]any{
 			{
-				"role": "user",
-				"content": "Emit the context, glossary, one summary per section id, and 3-5 suggested questions. " +
-					"Every id in the corpus must get a summary.",
+				"role":    "user",
+				"content": digestUserMessage,
 			},
 		},
 		"tools": []map[string]any{digestTool()},
@@ -215,6 +234,114 @@ func callDigestModel(options BuildDigestOptions, apiKey string, corpus CorpusBui
 		return emitted, nil
 	}
 	return EmittedDistillation{}, fmt.Errorf("Anthropic response did not include emit_digest tool use")
+}
+
+// callOpenAIDigestModel speaks the OpenAI Chat Completions dialect, which
+// covers OpenAI, OpenRouter, and any compatible endpoint via ProviderBaseURL.
+func callOpenAIDigestModel(options BuildDigestOptions, provider Provider, apiKey string, corpus CorpusBuild) (EmittedDistillation, error) {
+	corpusText := renderCorpusText(CorpusSections(corpus))
+	// OpenAI's reasoning models reject `max_tokens`; OpenRouter normalizes it.
+	tokenParam := "max_tokens"
+	if provider.Name == "openai" {
+		tokenParam = "max_completion_tokens"
+	}
+	tool := digestTool()
+	body := map[string]any{
+		"model":    options.DigestModel,
+		tokenParam: 32000,
+		"messages": []map[string]any{
+			{
+				"role":    "system",
+				"content": digestSystemPrompt + "\n\n<corpus>\n" + corpusText + "\n</corpus>",
+			},
+			{
+				"role":    "user",
+				"content": digestUserMessage,
+			},
+		},
+		"tools": []map[string]any{
+			{
+				"type": "function",
+				"function": map[string]any{
+					"name":        tool["name"],
+					"description": tool["description"],
+					"parameters":  tool["input_schema"],
+				},
+			},
+		},
+		"tool_choice": map[string]any{
+			"type":     "function",
+			"function": map[string]string{"name": "emit_digest"},
+		},
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return EmittedDistillation{}, err
+	}
+	apiURL := options.APIURL
+	if apiURL == "" {
+		base := options.ProviderBaseURL
+		if base == "" {
+			base = provider.BaseURL
+		}
+		apiURL = strings.TrimRight(base, "/") + "/chat/completions"
+	}
+	request, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(data))
+	if err != nil {
+		return EmittedDistillation{}, err
+	}
+	request.Header.Set("content-type", "application/json")
+	request.Header.Set("authorization", "Bearer "+apiKey)
+
+	client := options.HTTPClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return EmittedDistillation{}, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		detail, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+		return EmittedDistillation{}, fmt.Errorf("%s API %d: %s", provider.Label, response.StatusCode, strings.TrimSpace(string(detail)))
+	}
+
+	var payload struct {
+		Choices []struct {
+			FinishReason string `json:"finish_reason"`
+			Message      struct {
+				ToolCalls []struct {
+					Function struct {
+						Name      string `json:"name"`
+						Arguments string `json:"arguments"`
+					} `json:"function"`
+				} `json:"tool_calls"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return EmittedDistillation{}, fmt.Errorf("decode %s response: %w", provider.Label, err)
+	}
+	if len(payload.Choices) == 0 {
+		return EmittedDistillation{}, fmt.Errorf("%s response had no choices", provider.Label)
+	}
+	choice := payload.Choices[0]
+	if choice.FinishReason == "length" {
+		return EmittedDistillation{}, fmt.Errorf("digest emission hit the max_tokens cap; the corpus may be too large for one pass")
+	}
+	for _, call := range choice.Message.ToolCalls {
+		if call.Function.Name != "emit_digest" {
+			continue
+		}
+		var emitted EmittedDistillation
+		if err := json.Unmarshal([]byte(call.Function.Arguments), &emitted); err != nil {
+			return EmittedDistillation{}, fmt.Errorf("parse digest tool input: %w", err)
+		}
+		normalizeDistillation(&emitted)
+		return emitted, nil
+	}
+	return EmittedDistillation{}, fmt.Errorf("%s response did not include emit_digest tool use", provider.Label)
 }
 
 func renderCorpusText(sections []CorpusSection) string {

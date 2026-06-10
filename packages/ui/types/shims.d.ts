@@ -10,6 +10,8 @@ declare module 'astro:content' {
 declare module 'virtual:hev-ask/config' {
   const config: {
     collections: string[] | null;
+    provider?: 'anthropic' | 'openai' | 'openrouter';
+    providerBaseUrl?: string;
     model: string;
     digestModel: string;
     basePath: string;

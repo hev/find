@@ -26,6 +26,8 @@ type options struct {
 	skipBuild         bool
 	strict            bool
 	digestModel       string
+	provider          string
+	providerURL       string
 }
 
 func main() {
@@ -244,12 +246,22 @@ func runDigest(_ context.Context, opts options, args []string, stdout io.Writer)
 		if err != nil {
 			return err
 		}
+		provider, rest, err := parseValueFlagDefault(rest, "--provider", opts.provider)
+		if err != nil {
+			return err
+		}
+		providerURL, rest, err := parseValueFlagDefault(rest, "--provider-url", opts.providerURL)
+		if err != nil {
+			return err
+		}
 		if len(rest) != 0 {
 			return fmt.Errorf("digest build got unexpected arguments: %s", strings.Join(rest, " "))
 		}
 		result, err := askpkg.BuildDigest(askpkg.BuildDigestOptions{
-			BuildOptions: buildOptions,
-			DigestModel:  digestModel,
+			BuildOptions:    buildOptions,
+			DigestModel:     digestModel,
+			Provider:        provider,
+			ProviderBaseURL: providerURL,
 		})
 		if err != nil {
 			return err
@@ -539,6 +551,18 @@ func parseGlobalFlags(args []string) (options, []string, error) {
 			}
 			opts.digestModel = args[i+1]
 			i++
+		case "--provider":
+			if i+1 >= len(args) {
+				return opts, nil, fmt.Errorf("--provider requires a value")
+			}
+			opts.provider = args[i+1]
+			i++
+		case "--provider-url":
+			if i+1 >= len(args) {
+				return opts, nil, fmt.Errorf("--provider-url requires a value")
+			}
+			opts.providerURL = args[i+1]
+			i++
 		case "--skip-build":
 			opts.skipBuild = true
 		case "--strict":
@@ -799,7 +823,7 @@ Commands:
   cat <path>
   facts <path>
   grep <query>
-  digest build [--digest-model model]
+  digest build [--digest-model model] [--provider anthropic|openai|openrouter] [--provider-url url]
   digest corpus [--out path | --shards-dir dir [--shard-bytes n]]
   digest assemble [--input path | --input-dir dir]
   digest verify [--skip-build] [--strict]

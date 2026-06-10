@@ -1,3 +1,6 @@
+/** Inference providers the search loop and digest builder can run against. */
+export type ProviderName = 'anthropic' | 'openai' | 'openrouter';
+
 export interface HevAskOptions {
   /**
    * Content collection name(s) to index and search over.
@@ -6,8 +9,24 @@ export interface HevAskOptions {
   collections?: string[];
 
   /**
-   * Claude model used by the bounded search loop.
-   * @default 'claude-haiku-4-5'
+   * Inference provider for the agentic loop and the digest builder. Each
+   * provider reads its own key from the environment: `ANTHROPIC_API_KEY`,
+   * `OPENAI_API_KEY`, or `OPENROUTER_API_KEY`.
+   * @default 'anthropic'
+   */
+  provider?: ProviderName;
+
+  /**
+   * Override the provider's API base URL. Applies to the OpenAI-compatible
+   * providers only, so any Chat Completions-compatible endpoint works
+   * (e.g. a proxy or a self-hosted gateway).
+   */
+  providerBaseUrl?: string;
+
+  /**
+   * Model used by the bounded search loop. Defaults per provider:
+   * `claude-haiku-4-5` (anthropic), `gpt-4.1-mini` (openai),
+   * `anthropic/claude-haiku-4.5` (openrouter).
    */
   model?: string;
 
@@ -38,8 +57,9 @@ export interface HevAskOptions {
   answerMaxTokens?: number;
 
   /**
-   * Model used by the offline digest builder.
-   * @default 'claude-opus-4-8'
+   * Model used by the offline digest builder. Defaults per provider:
+   * `claude-opus-4-8` (anthropic), `gpt-5.1` (openai),
+   * `anthropic/claude-opus-4.8` (openrouter).
    */
   digestModel?: string;
 
@@ -90,6 +110,8 @@ export interface HevAskOptions {
 /** The shape the integration serializes into `virtual:hev-ask/config`. */
 export interface ResolvedConfig {
   collections: string[] | null;
+  provider: ProviderName;
+  providerBaseUrl?: string;
   model: string;
   digestModel: string;
   endpoint: string;
